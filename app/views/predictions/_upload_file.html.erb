@@ -1,0 +1,16 @@
+<div>
+	<div id="file_upload_field">
+  			  <%= file_field_tag(:uploaded_file, 
+			  	id: 	"ajax_upload_file",
+			  	class: 	"ajax_upload_field",
+				data: 	{url: upload_file_path}) 
+			  %>
+			  <small id="example_file_field"> or <%= link_to("load example", 
+			  	load_example_path,
+			    {:remote => true, :onclick => "hide_show_waiting('show');", 
+			    	:style => "text-decoration: underline;"})%>
+		      </small>
+  	</div>
+  	<div id="uploaded_files">No file uploaded</div>
+  	<div style="clear: both;"></div>
+</div>

@@ -1,0 +1,41 @@
+# This output was generated with AUGUSTUS (version 2.6.1).
+# AUGUSTUS is a gene prediction tool for eukaryotes written by Mario Stanke (mario.stanke@uni-greifswald.de)
+# and Oliver Keller (keller@cs.uni-goettingen.de).
+# Please cite: Mario Stanke, Mark Diekhans, Robert Baertsch, David Haussler (2008),
+# Using native and syntenically mapped cDNA alignments to improve de novo gene finding
+# Bioinformatics 24: 637-644, doi 10.1093/bioinformatics/btn013
+# No extrinsic information on sequences given.
+# Initialising the parameters ...
+# saccharomyces_cerevisiae_S288C version. Using default transition matrix.
+# Looks like aug_in2.tmp is in fasta format.
+# We have hints for 0 sequences and for 0 of the sequences in the input set.
+#
+# ----- prediction on sequence number 1 (length = 3001, name = gi|90659824:182097-185097) -----
+#
+# Constraints/Hints:
+# (none)
+# Predicted genes for sequence number 1 on both strands
+# start gene g1
+gi|90659824:182097-185097	AUGUSTUS	gene	922	2004	0.96	+	.	g1
+gi|90659824:182097-185097	AUGUSTUS	transcript	922	2004	0.96	+	.	g1.t1
+gi|90659824:182097-185097	AUGUSTUS	start_codon	922	924	.	+	0	transcript_id "g1.t1"; gene_id "g1";
+gi|90659824:182097-185097	AUGUSTUS	CDS	922	2001	0.96	+	0	transcript_id "g1.t1"; gene_id "g1";
+gi|90659824:182097-185097	AUGUSTUS	stop_codon	2002	2004	.	+	0	transcript_id "g1.t1"; gene_id "g1";
+# protein sequence = [MCKAGFAGDDAPRAVFPSLVGRPRHQGIMVGMGQKDSYVGDEAQSKRGILTLRYPIEHGIVSNWDDMEKIWHHTFYNE
+# LRVAPEEHPVLLTEAPMNPKSNREKMTQIMFETFNVPAFYVSIQAVLSLYSSGRTTGIVLDSGDGVTHVVPIYAGFSLPHGILRIDLAGRDLTNHLSK
+# ILSERGYSFTTSAEREIVRDIKERLCYVALDFEQEMQTSSQSSAIEKSYELPDGQVITIGNERFRAPEALFRPADLGLEAAGIDQTTFNSIMKCDMDV
+# RKELYGNIVMSGGTTMFPGIAERMQKEITALAPSSMKVKIIAPPERKYSVWIGGSILASLSTFQQMWISKQEYDESGPSIVHHKCF]
+# end gene g1
+###
+# start gene g2
+gi|90659824:182097-185097	AUGUSTUS	gene	2278	2574	1	-	.	g2
+gi|90659824:182097-185097	AUGUSTUS	transcript	2278	2574	1	-	.	g2.t1
+gi|90659824:182097-185097	AUGUSTUS	stop_codon	2278	2280	.	-	0	transcript_id "g2.t1"; gene_id "g2";
+gi|90659824:182097-185097	AUGUSTUS	CDS	2281	2574	1	-	0	transcript_id "g2.t1"; gene_id "g2";
+gi|90659824:182097-185097	AUGUSTUS	start_codon	2572	2574	.	-	0	transcript_id "g2.t1"; gene_id "g2";
+# protein sequence = [MSNSSSNPSKNEYFIKQRDLLIQEISNNLSIVQTNLETLNRSLHELKQIGKEFDDVARLWSTFYDGMNGMNHQTRENT
+# RDENNKISSSDTEDENNNKI]
+# end gene g2
+###
+# command line:
+# /usr/local/bin/augustus/src/augustus --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --species=saccharomyces_cerevisiae_S288C aug_in2.tmp

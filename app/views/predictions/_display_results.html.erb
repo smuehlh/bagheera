@@ -1,0 +1,25 @@
+<% @predicted_prots.each_pair do |key, value| %>
+    <h3><%= key%></h3>  
+    <% data, pct_field, pos_field = "", "", ""%>
+  	<% if value[:has_ctg] then %>
+  		<% if value[:ctg_pos].any? then%>
+  			<% data, pos_field, pct_field = 
+                        format_output(value[:pred_prot], value[:ctg_pos], value[:aa_comp])%>
+            <% div_class = "pred_data"%>
+  		<% else %>
+	  		<% data = "No significant position"%>
+            <% div_class = "pred_nothing"%>
+  		<% end %>
+  	<% else %>
+  		<% data = "No CTG in predicted gene"%>
+        <% div_class = "pred_nothing"%>
+  	<% end %>
+    <div class="pred_data_wrapper">
+        <div class="<%= div_class %>"><%= raw(data)%></div>
+        <% unless data.include?("No")%>
+            <div class="pred_stats_left"><%= raw(pos_field)%></div>
+            <div class="pred_stats_right"><%= raw(pct_field)%></div>
+        <% end %>
+    </div>
+
+<% end %>

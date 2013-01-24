@@ -1,0 +1,12 @@
+<% if @errors.any? then%>
+	show_error('<%=raw(@errors.join("<br />"))%>');
+<% else %>
+	$('#results_section').show();
+	<% new_content = escape_javascript(render(partial: "display_results"))%>
+	$('#results_pred').html('<%=new_content%>');
+	<% new_content = escape_javascript(render(partial: "display_stats"))%>
+	$('#results_stats').html('<%=new_content%>');
+<% end %>
+// nur einen Teil der Variablen uebergeben geht so:
+// escape_javascript(render(partial: "bin_jung", locals: {dsa: @asd}))
+hide_show_waiting('hide');

@@ -1,0 +1,16 @@
+
+<% values = @predicted_prots.values %>
+<div class="stats">
+	Found
+		<%= values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_pos].length : res + 0} %>
+	significant positions in
+		<%= @predicted_prots.keys.length %>
+	predicted proteins. <br />
+	<%= values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_transl].count("S") : res + 0} %>
+	suggest yeast alternative codon usage. <br />
+
+	<%= values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_transl].count("L") : res + 0} %>
+	suggest usage of the standard code.
+</div>
+
+<!-- if n_pol + n_hyd != n_dis then show_error -->
