@@ -1,25 +1,29 @@
-<% @predicted_prots.each_pair do |key, value| %>
-    <h3><%= key%></h3>  
-    <% data, pct_field, pos_field = "", "", ""%>
-  	<% if value[:has_ctg] then %>
-  		<% if value[:ctg_pos].any? then%>
-  			<% data, pos_field, pct_field = 
-                        format_output(value[:pred_prot], value[:ctg_pos], value[:aa_comp])%>
-            <% div_class = "pred_data"%>
-  		<% else %>
-	  		<% data = "No significant position"%>
-            <% div_class = "pred_nothing"%>
-  		<% end %>
-  	<% else %>
-  		<% data = "No CTG in predicted gene"%>
-        <% div_class = "pred_nothing"%>
-  	<% end %>
-    <div class="pred_data_wrapper">
-        <div class="<%= div_class %>"><%= raw(data)%></div>
-        <% unless data.include?("No")%>
-            <div class="pred_stats_left"><%= raw(pos_field)%></div>
-            <div class="pred_stats_right"><%= raw(pct_field)%></div>
-        <% end %>
-    </div>
+<%# @predicted_prots.each_pair do |key, value| %>
+<% @predicted_prots.sort.map do |key, value| %>
+    <%= content_tag(:h3, key) %>  
+    <% data, pct_field, pos_field, side = "", "", "", ""%>
+    <div class="pred_data_wrapper" style="clear:both">
+  	<%= 
+    if value[:has_ctg] then
+  		if value[:ctg_pos].any? then
+  			data, pos_field, pct_field, side = 
+                        format_output(value[:pred_prot], value[:ctg_pos], value[:aa_comp])
+            content_tag(:div, "Position", :class => "pred_pct_header" ) +
+            content_tag(:div, raw(data), :class => "pred_data") +
+            content_tag(:div, raw(side), :class => "pred_pct", :style => "clear:right") +
+            content_tag(:h4, "Chemical properties of reference data") +
+            content_tag(:div, raw(pos_field), :class => "pred_stats_left") +
+            content_tag(:div, raw(pct_field), :class => "pred_stats_right") +
+            "</div>".html_safe + 
+            "<div class=\"pred_data_wrapper\" style=\"clear:both\">".html_safe +
+            content_tag(:h4, "CTG encoding in reference data")
 
+  		else
+            content_tag(:div, "No significant position", :class => "pred_nothing")
+  		end
+  	else
+        content_tag(:div, "No CTG in predicted gene", :class => "pred_nothing")
+  	end 
+    %>
+    </div>
 <% end %>

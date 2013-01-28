@@ -5,9 +5,15 @@
 <%= render :partial => "upload_file" %>
 </p>
 <br />
-<div id="predict_button" style="display:none;">
-	<%= link_to("Predict", predict_genes_path , {:remote => true, :class =>"nice_button", :id => "predict_genes", :onclick => "hide_show_waiting('show');"}) %>
+<div id="options_section" style="display:none;">
+	<h2>Alignment options</h2>
+	<div id="set_options"></div>
 </div>
+<p>
+<!-- uncomment if alignment options should have an own submit-button instead of the big "Predict one: the following is the this big predict-button  -->
+<!-- <div id="predict_button" style="display:none;">
+	<%#= link_to("Predict", predict_genes_path , {:remote => true, :class =>"nice_button", :id => "predict_genes", :onclick => "hide_show_waiting('show');"}) %>
+</div> -->
 <div id="results_section" style="display:none;">
 	<h1>Results</h1>
 	<h2>Predicted Genes</h2>

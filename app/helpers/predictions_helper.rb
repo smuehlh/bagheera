@@ -1,5 +1,14 @@
 module PredictionsHelper
 
+	# fill in alignment options from pairAlign into selection_tag
+	def fill_selection_tags()
+		arr_algo = [['Needleman-Wunsch', 'nw'], ['Gotoh', 'gotoh'], ['Smith-Waterman', 'sw'], ['Longest Common Subsequence', 'lcs']]
+		pre_select_algo = 'gotoh'
+		arr_conf = [['End gap free', 'tttt'], ['Standard global alignment', 'ffff']]
+		pre_select_conf = 'tttt'
+		return arr_algo, pre_select_algo, arr_conf, pre_select_conf
+	end
+
 	# return pretty formatted ctg-usage
 	# input:
 		# predictd protein sequence,
@@ -12,7 +21,7 @@ module PredictionsHelper
 			# aa_pct [div bottom-right]
 
 	def format_output(prot, ctgpos, aa_stats)
-		str, aa_pos, aa_pct = [], [], []
+		str, aa_pos, aa_pct, side_str = [], [], [], []
 
 		# mark all significant positions by "!" to find them unambigously
 		seq = String.new(prot)
@@ -22,16 +31,19 @@ module PredictionsHelper
 		seq.scan(/.{1,#{Line_width}}/).each do |part|
 			# indices = part.enum_for(:scan,/!/).map { Regexp.last_match.begin(0) }
 			# indices.each do |i|
+			side = []
 			part.count("!").times do |i|
 				pos = ctgpos[ind]
 				part.sub!("!", "<span title=\"Position: #{pos}\" class=highlight_aa>#{prot[ctgpos[ind]]}</span>")
 				aa_pos << ("Position: " + pos.to_s)
 				aa_pct << format_aa_stats(aa_stats[ind])
+				side << pos
 				ind = ind + 1
 			end
 			str << part
+			side_str << side.join(", ")
 		end
-		return str.join("<br />"), aa_pos.join("<br />"), aa_pct.join("<br />")
+		return str.join("<br />"), aa_pos.join("<br />"), aa_pct.join("<br />"), side_str.join("<br />")
 	end
 
 	# return pretty formatted amino acid statistics

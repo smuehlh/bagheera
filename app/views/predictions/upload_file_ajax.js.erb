@@ -1,12 +1,16 @@
 <% if @content_error.blank? then %>
 	hide_show_waiting('hide');
 	$('#uploaded_files').html('<%=session[:file][:name]%>');
-	$('#predict_button').show();
+	$('#predict_button').hide();
+	$('#options_section').show();
+	<% new_content = escape_javascript(render(partial: "show_options"))%>
+	$('#set_options').html('<%=new_content%>');
 	// hide results to avoid showing results of last file
 	$('#results_section').hide();
 	$('#example_file_field').hide(); 
 <% else%>
 	$('#uploaded_files').html('No file uploaded');
+	$('#options_section').hide();
 	$('#predict_button').hide();
 	$('#results_section').hide();
 	// show_error hides waiting animation
