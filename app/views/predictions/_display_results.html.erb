@@ -1,29 +1,34 @@
-<%# @predicted_prots.each_pair do |key, value| %>
 <% @predicted_prots.sort.map do |key, value| %>
     <%= content_tag(:h3, key) %>  
-    <% data, pct_field, pos_field, side = "", "", "", ""%>
+    <% seq, seq_pos, aa_pct = "", "", ""%>
+    <% tab_seq, tab_aa, tab_ctg = {}, {}, {} %>
+    <% tab_seq = {table_class: "predTable", th_left: "Predicted protein sequence", 
+        th_right: "CTG position", col_left: "leftcol", col_right: "rightcol"} %>
+    <% tab_aa = {table_class: "predTable", 
+        th_left: "CTG Position", th_middle: "Distribution of amino acids in reference data", th_right: "Number of amino acids", 
+        col_left: "", col_middle: "", col_right: ""} %>
+    <% tab_ctg = {table_class: "refTable", th_left: "CTG Position", th_right: "CTG usage in reference data", 
+        col_left: "", col_right: ""} %>
     <div class="pred_data_wrapper" style="clear:both">
-  	<%= 
+    <%= 
     if value[:has_ctg] then
-  		if value[:ctg_pos].any? then
-  			data, pos_field, pct_field, side = 
-                        format_output(value[:pred_prot], value[:ctg_pos], value[:aa_comp])
-            content_tag(:div, "Position", :class => "pred_pct_header" ) +
-            content_tag(:div, raw(data), :class => "pred_data") +
-            content_tag(:div, raw(side), :class => "pred_pct", :style => "clear:right") +
-            content_tag(:h4, "Chemical properties of reference data") +
-            content_tag(:div, raw(pos_field), :class => "pred_stats_left") +
-            content_tag(:div, raw(pct_field), :class => "pred_stats_right") +
-            "</div>".html_safe + 
-            "<div class=\"pred_data_wrapper\" style=\"clear:both\">".html_safe +
-            content_tag(:h4, "CTG encoding in reference data")
-
-  		else
+        if value[:ctg_pos].any? then
+            seq, seq_pos, aa_pct = 
+                        format_seq(value[:pred_prot], value[:ctg_pos], value[:aa_comp])
+            content_tag(:div, draw_table(seq, seq_pos, tab_seq), :class => "wrapper") + 
+            # content_tag(:h4, "Chemical properties of reference data") +
+            tag("br") +
+            draw_table(value[:ctg_pos], aa_pct, value[:aa_comp].map{|arr| arr[1]}, tab_aa) +
+            content_tag(:p, pluralize(value[:aa_comp][0][2].to_s, "sequence") << " in reference alignment") +
+            # content_tag(:h4, "CTG encoding in reference data") +
+            tag("br") +
+            draw_table(value[:ctg_pos], format_ctg_stats(value[:ctg_ref]), tab_ctg)
+        else
             content_tag(:div, "No significant position", :class => "pred_nothing")
-  		end
-  	else
+        end
+    else
         content_tag(:div, "No CTG in predicted gene", :class => "pred_nothing")
-  	end 
+    end 
     %>
     </div>
-<% end %>
+<% end %> 

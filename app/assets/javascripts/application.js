@@ -151,29 +151,3 @@ function hide_show_waiting(kind) {
         $('#waiting').hide();
     }
 };
-
-
-// not needed anymore, instead of requesting file from api, simply an error will be displayed
-// function call_api(){
-//     // XMLHttpRequest cannot load http://fab8:5000/api_cug_alignment/all?_=1354740810353. Origin http://fab8:7001 is not allowed by Access-Control-Allow-Origin.
-//     console.log('HA!');
-//     $.ajax({ 
-//         url: 'http://fab8:5000/api_cug_alignment/all', 
-//         success: function(receivedData, textStatus, jqXHR){
-//             console.log('Ajax call success callback...');
-//             console.log(receivedData);
-//             console.log(textStatus);
-//             console.log(jqXHR);
-//         },
-//         error: function(jqXHR, textStatus, errorThrown){
-//             console.log('Ajax call error method...');
-//             console.log(errorThrown);
-//             console.log(textStatus);
-//             console.log(jqXHR);  
-//         },
-//         complete: function(){
-//             hide_show_waiting('hide');
-//         }
-//     });
-    
-// };

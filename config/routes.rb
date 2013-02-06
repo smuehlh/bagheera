@@ -8,8 +8,7 @@ Bagheera::Application.routes.draw do
   match 'upload_file', to: 'predictions#upload_file', as: 'upload_file', :via => [:post]
   match 'predict_genes', to: 'predictions#predict_genes', as: 'predict_genes', :via => [:post]
   match 'load_example', to: 'predictions#load_example', as: 'load_example', :via => [:get]
-  # match 'set_alignment_options', to: 'predictions#set_alignment_options', as: 'set_alignment_options', :via => [:post]
-
+ 
   # The priority is based upon order of creation:
   # first created -> highest priority.
 

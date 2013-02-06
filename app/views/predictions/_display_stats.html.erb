@@ -1,16 +1,20 @@
-
-<% values = @predicted_prots.values %>
-<div class="stats">
-	Found
-		<%= values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_pos].length : res + 0} %>
-	significant positions in
-		<%= @predicted_prots.keys.length %>
-	predicted proteins. <br />
-	<%= values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_transl].count("S") : res + 0} %>
-	suggest yeast alternative codon usage. <br />
-
-	<%= values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_transl].count("L") : res + 0} %>
-	suggest usage of the standard code.
-</div>
-
-<!-- if n_pol + n_hyd != n_dis then show_error -->
+<%=
+values = @predicted_prots.values
+content_tag(:p, 
+	"Found " << values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_pos].length : res + 0}.to_s <<
+	" significant positions in " << @predicted_prots.keys.length.to_s << " predicted proteins.",
+	:class => "stats") +
+content_tag(:p,
+	values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_transl].count("S") : res + 0}.to_s <<
+	" suggest yeast alternative codon usage.",
+	:class => "stats") +
+content_tag(:p,
+	values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_transl].count("L") : res + 0}.to_s <<
+	" suggest usage of the standard code.",
+	:class => "stats") +
+content_tag(:p, 
+	"In " << values.inject(0) {|res, val| 
+		val[:has_ctg] ? res + val[:ctg_ref].collect {|hash| hash.values}.flatten.count{|x| x >= 0.5} : res + 0}.to_s <<
+	" positions, more than 50% of all amino acids in the reference data are encoded by CTG.", 
+	:class => "stats")
+%>

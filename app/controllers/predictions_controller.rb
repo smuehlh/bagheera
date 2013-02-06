@@ -1,4 +1,3 @@
-require "benchmark"
 require 'peach'
 
 class PredictionsController < ApplicationController
@@ -12,6 +11,7 @@ class PredictionsController < ApplicationController
 	FASTACMD = "/usr/bin/fastacmd"
 	AUGUSTUS = "/usr/local/bin/augustus/src/augustus"
 	PAIR_ALIGN =  Rails.root + "lib/pair_align" #"/usr/local/bin/pair_align"
+	DIALIGN2 = "/usr/local/bin/dialign_package/src/dialign2-2"
 	HYDORPHOBIC_AAS = ["V", "I", "L"]
 	POLAR_AAS = ["S", "T"]
 
@@ -71,8 +71,6 @@ class PredictionsController < ApplicationController
 		# 3.2) Compare with reference genes
 
 		# implementation
-# TODO: benchmark entfernen
-time = Benchmark.realtime do
 
 		# add alignment options to session
 		session[:align] = { algo: params[:algo], config: params[:config] }
@@ -87,7 +85,7 @@ time = Benchmark.realtime do
 			output = `#{FORMATDB} -i #{session[:file][:path]} -p F -n #{genome_db} -o T 2>&1`
 			if ! $?.success? || output.include?("ERROR") then
 				@errors << "Gene prediction failed: Cannot create BLAST database"
-				next
+				return
 			end 
 			# all other tasks need to be done for each ref protein
 			ref_data.peach(10) do |prot, all_prot_data|
@@ -124,12 +122,13 @@ time = Benchmark.realtime do
 				fasta = str2fasta(prot_basename, ref_prot_seq)
 				File.open(file_in, 'w'){|file| file.write(fasta)}
 				# 2.1)
-						# -p [PROGRAM] protein query against nt-db -d [DATABASE] -m8 [OUTPUT FORMAT] | sort by e-value
-				output = `#{BLASTALL} -p tblastn -d #{genome_db} -i #{file_in} -m8 2>&1 | #{SORT} -g -k 11 | head -1`
+						# -p [PROGRAM] protein query against nt-db -d [DATABASE] -m8 [OUTPUT FORMAT] -F filtering -s T smith-waterman alignment| print best hit
+				output = `#{BLASTALL} -p tblastn -d #{genome_db} -i #{file_in} -m8 -F "m S" -s T2>&1 | head -1`
 				if ! $?.success? || output.include?("ERROR") then
 					@errors << "#{prot}: Gene prediction (BLAST) failed"
 					next
 				end
+
 				# parse blast output and add start/stop position to selected_ref_prots
 				output_fields = output.chomp.split("\t") # best hit
 				seq_id = output_fields[1] # sequence contig
@@ -143,6 +142,7 @@ time = Benchmark.realtime do
 					start = stop
 					stop = tmp
 				end
+
 				### 2.2) AUGUSTUS
 				# 2.2.1) get matching search sequence 
 				file_in.gsub!("blast_in", "aug_in")
@@ -154,16 +154,17 @@ time = Benchmark.realtime do
 					next
 				end
 				# 2.2.2) augustus
-						# --species [REFERENCE SPEC] QUERY
-	 			output = `#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --species=saccharomyces_cerevisiae_S288C #{file_in}`
+						# --species [REFERENCE SPEC] QUERY --genemodel [predict exactly one complete gene] --codingseq=on [output also coding sequence]
+	 			output = `#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --species=candida_albicans --genemodel=exactlyone --codingseq=on #{file_in}`
 				if ! $?.success? || output.include?("ERROR") then
 					@errors << "#{prot}: Gene prediction (AUGUSTUS) failed"
 					next
 				end
+
 				# 2.2.3) parse augustus output
 				# return longest predicted protein and according coding sequence
-				pred_seq, pred_dnaseq = parse_augustus(output, fasta2str(File.read(file_in)))
-				pred_seq.upcase!
+# TODO genemodel???
+				pred_seq, pred_dnaseq = parse_augustus(output)
 
 				### 3.1) Compare with reference alignment
 				@predicted_prots[prot] = {has_ctg: true, pred_prot: pred_seq, ctg_pos: [], ctg_transl: [], aa_comp: [], ctg_ref: []}
@@ -176,7 +177,7 @@ time = Benchmark.realtime do
 					@predicted_prots[prot][:has_ctg] = false
 					next
 				end
-				ctg_pos = codons.each.with_index.map{ |ele, ind| (ele == "CTG") ? ind : nil }.compact
+				ctg_pos = codons.each_with_index.map{ |ele, ind| (ele == "CTG") ? ind : nil }.compact
 
 				### 3.1.1) map predicted gene onto reference protein
 				file_in.gsub!("aug_in", "align_in")
@@ -184,40 +185,54 @@ time = Benchmark.realtime do
 
 				fasta = str2fasta("ref", ref_prot_seq) << "\n" << str2fasta("pred", pred_seq)
 				File.open(file_in, 'w'){|file| file.write(fasta)}
-					# -c tttt: initialize first row & column with zeros, search last row & column for maximum
-					# 	=> end gap free alignment
-					# --matrx matrix file
-					# implicit options: gap open penalty: -11, gap extension penalty: -1
-					# 					protein sequences
-				output = `#{PAIR_ALIGN} --seq #{file_in} --matrix #{Rails.root+"lib/blosum62"} --config #{session[:align][:config]} --method #{session[:align][:algo]} --outfile #{file_out}`
-				if ! $?.success? || ! output.include?("Alignment score") then
-					@errors << "#{prot}: Codon usage prediction (Seqan::pair_align) failed"
-					next
+
+				# use pairalign or dialign
+				if session[:align][:algo] == "dialign" then
+					output = `#{DIALIGN2} -fa -fn #{file_out} #{file_in}`
+					if ! $?.success? || ! output.blank? then
+						@errors << "#{prot}: Codon usage prediction (DIALIGN2) failed"
+						next
+					end
+					file_out = file_out << ".fa" # dialign automatically adds ".fa" to basic output filename
+				else
+						# -c tttt: initialize first row & column with zeros, search last row & column for maximum
+						# 	=> end gap free alignment
+						# --matrx matrix file
+						# implicit options: gap open penalty: -11, gap extension penalty: -1
+						# 					protein sequences
+					output = `#{PAIR_ALIGN} --seq #{file_in} --matrix #{Rails.root+"lib/blosum62"} --config #{session[:align][:config]} --method #{session[:align][:algo]} --outfile #{file_out}`
+					if ! $?.success? || ! output.include?("Alignment score") then
+						@errors << "#{prot}: Codon usage prediction (Seqan::pair_align) failed"
+						next
+					end
 				end
-				ref_seq_aligned, pred_seq_aligned = parse_seqan(File.read(file_out))
+
+				ref_seq_aligned, pred_seq_aligned = parse_seqan(File.read(file_out).upcase)
 
 				### 3.1.2a) map CTG positions in predicted protein onto reference alignment columns
-				### 3.1.2b) compare with chemical properties of reference alignment columns 
+				### 3.1.2b) compare with chemical properties of reference alignment columns
+				### 3.2) Compare with reference genes: count usage of CTG for each mapped L and S 
 				cymo_algnmnt = Hash[*ref_data[prot]["alignment"].split("\n")] # cymo-alignment
 				ctg_pos.each do |pos|
-
+					# 3.1.2)
 					algnmnt_col_aa, algnmnt_col_pos = parse_alignment_by_ctgpos(cymo_algnmnt, pos, pred_seq_aligned, ref_seq_aligned, ref_prot_key)
-					aa_freq = word_frequency(algnmnt_col_aa)
-					is_significant, prob_transl = predict_translation(aa_freq)
-					if is_significant then
-						@predicted_prots[prot][:ctg_pos] << pos
-						@predicted_prots[prot][:ctg_transl] << prob_transl
-						@predicted_prots[prot][:aa_comp] << aa_freq
-					end
-
-					### 3.2) Compare with reference genes: count usage of CTG for each mapped L and S
-					pct_ctg_S, pct_ctg_L = ref_ctg_usage(cymo_algnmnt, algnmnt_col_pos, ref_data[prot]["genes"])
-					@predicted_prots[prot][:ctg_ref] << {ser: pct_ctg_S, leu: pct_ctg_L}
-				end
+					if !(algnmnt_col_aa.nil? && algnmnt_col_pos.nil?) then
+						# mapping was possible
+						aa_freq, aa_num = word_frequency(algnmnt_col_aa)
+						seq_num = cymo_algnmnt.keys.length
+						is_significant, prob_transl = predict_translation(aa_freq)
+						# 3.2)
+						pct_ctg_ser, pct_ctg_leu = ref_ctg_usage(cymo_algnmnt, algnmnt_col_pos, ref_data[prot]["genes"])
+						if is_significant then
+							@predicted_prots[prot][:ctg_pos] << pos
+							@predicted_prots[prot][:ctg_transl] << prob_transl
+							@predicted_prots[prot][:aa_comp] << [aa_freq, aa_num, seq_num]
+							@predicted_prots[prot][:ctg_ref] << {ser: pct_ctg_ser, leu: pct_ctg_leu}
+						end # if is_significant
+					end # if !(algnmnt_col_aa.nil? && algnmnt_col_pos.nil?)
+				end # ctg_pos.each do |pos|
 			end # ref_data.peach do |prot, des|
 		end # if @errors.empty?
-end
-puts "Time elapsed #{time*1000} milliseconds"
 		render :predict_genes
 	end
 
@@ -290,7 +305,7 @@ puts "Time elapsed #{time*1000} milliseconds"
 		return fasta
 	end
 
-	# expects fasta-formatted string (header + seq, containing \n) and returns the sequence
+	# expects fasta-formatted string (header + seq, containing \n) and returns everything but the header
 	def fasta2str(fasta)
 		return fasta.split("\n")[1..-1].join("")
 	end
@@ -303,9 +318,9 @@ puts "Time elapsed #{time*1000} milliseconds"
 	end
 
 	def delete_old_data(days = 1)
-		system("find #{BASE_PATH}uploaded_genomefile_* -mtime +#{days} -type f -delete 2&> /dev/null")
-		system("find #{BASE_PATH}formatdb.log -mtime +#{days} -type f -delete 2&> /dev/null")
-		system("find #{BASE_PATH}*.fasta -mtime +#{days} -type f -delete 2&> /dev/null")
+		system("find #{BASE_PATH} -type f -name \'uploaded_genomefile_*\' -mtime +#{days} -delete 2> /dev/null")
+		system("find #{BASE_PATH} -type f -name \'formatdb.log\' -mtime +#{days} -delete 2> /dev/null")
+		system("find #{BASE_PATH} -type f -name \'*.fasta*\' -mtime +#{days} -delete 2> /dev/null")
 	end
 
 	def load_ref_data
@@ -323,28 +338,15 @@ puts "Time elapsed #{time*1000} milliseconds"
 	    return true
 	end
 
-	def parse_augustus(output, dna_seq)
-		# input: augustus output
-		#        dna sequence used by augustus
-
-		# output: predicted protein sequence
-		#         coding sequence of predicted protein
-
-		if output =~ /start gene g2/ then
-			# more than one hit predicted, find longest one
-			hits = output.scan(/\[(.*?)\]\n# end gene g(\d+)/m) # [[prot, hit], [prot, hit], ...]
-			pred_prot, best_hit = hits.max_by{|ele| ele[0].length}
-			# combine with right gene!!! gene_id "g1"
-			cds_pos = output.scan(/AUGUSTUS\tCDS\t(\d+)\t(\d+)\t.*?gene_id "g#{best_hit}"/)
-		else
-			# only one hit predicted
-			pred_prot = output.match(/\[(.*)\]/m)[1]
-			cds_pos = output.scan(/AUGUSTUS\tCDS\t(\d+)\t(\d+)\t/) # [[exon1_start, exon1_stop], [exon2_start, exon2_stop], ...]
-		end
-
+	# input: augustus output
+	# output: predicted protein sequence
+	#         coding sequence of predicted protein
+	def parse_augustus(output)
+		pred_prot = output.match(/protein sequence = \[(.*)\]/m)[1]
+		pred_dna = output.match(/coding sequence = \[(.*?)\]/m)[1]
 		# prepare output
-		pred_prot.gsub!("\n# ", "")
-		pred_dna = cds_pos.inject("") {|res, exon| res += dna_seq[(exon[0].to_i - 1) .. (exon[1].to_i - 1)].upcase }
+		pred_prot.gsub!("\n# ", "").upcase!
+		pred_dna.gsub!("\n# ", "").upcase!
 		return pred_prot, pred_dna
 	end
 
@@ -366,8 +368,17 @@ puts "Time elapsed #{time*1000} milliseconds"
 
 	# get alignment column corresponding to ctg position in predicted protein
 	def parse_alignment_by_ctgpos(algnmnt, pred_spos, pred_aseq, ref_aseq, ref_key)
-		# 1) ctg pos -> pos in predicted sequence aligned with reference seq
+		# 1) ctg pos in unaligned seq -> pos in aligned predicted sequence (aligned with reference seq)
 		pred_apos = sequence_pos2alignment_pos(pred_spos, pred_aseq) # = pos_ref_seq_aligned
+
+		# matching possible at all?
+		# NO: gap in reference sequence at ctg pos in predicted sequence
+		if ref_aseq[pred_apos] == "-" then
+			return nil, nil
+		end
+
+		# YES
+
 		# 2) pos aligned -> cymo alignment
 		ref_spos = alignment_pos2sequence_pos(pred_apos, ref_aseq)
 		ref_cymopos = sequence_pos2alignment_pos(ref_spos, algnmnt[">"<<ref_key])
@@ -376,13 +387,17 @@ puts "Time elapsed #{time*1000} milliseconds"
 		return col, ref_cymopos
 	end
 
-	# counting the frequency (absolute number) of words (amino acids...) in an array
+	# counting the frequency (relative number) of words (amino acids...) in an array
 	# returning hash of aa1: count; aa2: count
+	# and total number of amino acids
 	def word_frequency(arr)
 		res = Hash.new(0)
 		arr.each { |a| res[a] += 1 }
 		res.delete("-") # delete count for gaps in alignment!
-		return res
+		# normalize word frequency
+		sum = res.inject(0) {|sum, (_,val)| sum + val}.to_f
+		norm_res = res.each {|k,v| res[k] = v/sum} # normalize
+		return norm_res, sum.to_i
 	end
 
 	# def predict_translation_old(aas)
@@ -408,7 +423,7 @@ puts "Time elapsed #{time*1000} milliseconds"
 	# end
 
 	def predict_translation(aa_freq)
-		num_aas = aa_freq.inject(0){|res, obj| res += obj[1]} # total number of amino acids
+		num_aas = aa_freq.inject(0) {|sum, (_,val)| sum + val} # total number of amino acids
 		pol_aas = POLAR_AAS.collect{|aa| aa_freq[aa]}.sum # polar amino acids
 		hyd_aas = HYDORPHOBIC_AAS.collect{|aa| aa_freq[aa]}.sum # hydrophobic amino acids
 		pct_pol = pol_aas/num_aas.to_f
@@ -441,7 +456,8 @@ puts "Time elapsed #{time*1000} milliseconds"
 			spos = alignment_pos2sequence_pos(apos, algnmnt[ref_key]) # access via ">gene-name"
 			ref_codons << codons_ref[spos]
 		end
-		pct_ctg_S = ref_codons.count("CTG")/ref_codons.length.to_f 
+		pct_ctg_S = ref_codons.count("CTG").to_f/ref_codons.length 
+		pct_ctg_S = 0.0 if pct_ctg_S.nan?
 
 		# same for Leucine
 		ref_codons = []
@@ -451,7 +467,8 @@ puts "Time elapsed #{time*1000} milliseconds"
 			spos = alignment_pos2sequence_pos(apos, algnmnt[ref_key]) # access via ">gene-name"
 			ref_codons << codons_ref[spos]
 		end
-		pct_ctg_L = ref_codons.count("CTG")/ref_codons.length.to_f
+		pct_ctg_L = ref_codons.count("CTG").to_f/ref_codons.length
+		pct_ctg_L = 0.0 if pct_ctg_L.nan?
 		return pct_ctg_S.round(2), pct_ctg_L.round(2)
 	end
 end
