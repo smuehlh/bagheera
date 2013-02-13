@@ -3,8 +3,8 @@ require 'peach'
 class PredictionsController < ApplicationController
 
 	MAX_SIZE = 52428800
-	BASE_PATH = Dir::tmpdir + "/cug/" # resulting in final filename /tmp/cug/uploaded_genomefile_#{id}
-	REF_DATA = BASE_PATH + "alignment_gene_structure.json"
+	BASE_PATH = Dir::tmpdir + "/cug/" # all data files are stored in /tmp
+	REF_DATA = "alignment_gene_structure.json"
 	SORT = "/usr/bin/sort"
 	FORMATDB = "/usr/bin/formatdb"
 	BLASTALL = "/usr/bin/blastall"
@@ -72,8 +72,9 @@ class PredictionsController < ApplicationController
 
 		# implementation
 
-		# add alignment options to session
+		# add options to session
 		session[:align] = { algo: params[:algo], config: params[:config] }
+		session[:augustus] = { species: params[:species] }
 		ref_data, @errors = load_ref_data
 		@predicted_prots = {} # containing final results
 		if @errors.empty? then
@@ -88,9 +89,10 @@ class PredictionsController < ApplicationController
 				return
 			end 
 			# all other tasks need to be done for each ref protein
+			# peach for paralell execution, maximum 10 threads
 			ref_data.peach(10) do |prot, all_prot_data|
 				### 1) extract reference proteins
-				ref_prot_species, ref_prot_stat, ref_prot_seq, ref_prot_geneseq, ref_prot_key = "", "", "", "", ""
+				ref_prot_species, ref_prot_stat, ref_prot_seq, ref_prot_key = "", "", "", ""
 
 				sc_genes = all_prot_data["genes"].keys.select {|key| key =~ /Sc_/ && all_prot_data["genes"][key]["completeness"] =~ /[complete|partial]/}
 				if sc_genes.any? then
@@ -109,7 +111,7 @@ class PredictionsController < ApplicationController
 				ref_prot_species = all_prot_data["genes"][ref_prot_key]["species"]
 				ref_prot_stat = all_prot_data["genes"][ref_prot_key]["completeness"]
 				ref_prot_seq = all_prot_data["genes"][ref_prot_key]["gene"].match(/prot_seq: (.*?)\n/)[1]
-				ref_prot_geneseq = extract_gene_seq(all_prot_data["genes"][ref_prot_key]["gene"])
+#				ref_prot_geneseq = extract_gene_seq(all_prot_data["genes"][ref_prot_key]["gene"])
 				prot_basename = prot.gsub(" ", "-").downcase
 
 				### 2) gene prediction foreach reference protein:
@@ -130,7 +132,7 @@ class PredictionsController < ApplicationController
 				end
 
 				# parse blast output and add start/stop position to selected_ref_prots
-				output_fields = output.chomp.split("\t") # best hit
+				output_fields = output.chomp.split("\t") # output is best hit
 				seq_id = output_fields[1] # sequence contig
 				start = output_fields[8].to_i # sequence start
 				stop = output_fields[9].to_i # sequence stop
@@ -153,9 +155,12 @@ class PredictionsController < ApplicationController
 					@errors << "#{prot}: Gene prediction (BLAST-FASTACMD) failed"
 					next
 				end
+
+
 				# 2.2.2) augustus
-						# --species [REFERENCE SPEC] QUERY --genemodel [predict exactly one complete gene] --codingseq=on [output also coding sequence]
-	 			output = `#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --species=candida_albicans --genemodel=exactlyone --codingseq=on #{file_in}`
+						# --species [REFERENCE SPEC] QUERY --genemodel=exactlyone [predict exactly one complete gene] --codingseq=on [output also coding sequence]
+	 			output = `#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --species=#{session[:augustus][:species]} --genemodel=exactlyone --codingseq=on #{file_in}`
+
 				if ! $?.success? || output.include?("ERROR") then
 					@errors << "#{prot}: Gene prediction (AUGUSTUS) failed"
 					next
@@ -163,7 +168,6 @@ class PredictionsController < ApplicationController
 
 				# 2.2.3) parse augustus output
 				# return longest predicted protein and according coding sequence
-# TODO genemodel???
 				pred_seq, pred_dnaseq = parse_augustus(output)
 
 				### 3.1) Compare with reference alignment
@@ -171,7 +175,7 @@ class PredictionsController < ApplicationController
 				# tracking of ctg_pos, ctg_transl, aa_comp, ctg_ref only for significant positions!
 
 				# has predicted protein CTG codons?
-				codons = pred_dnaseq.scan /.{1,3}/
+				codons = pred_dnaseq.scan(/.{1,3}/)
 				if !codons.include?("CTG")
 					# nope, no CTG => nothing to predict
 					@predicted_prots[prot][:has_ctg] = false
@@ -207,7 +211,11 @@ class PredictionsController < ApplicationController
 					end
 				end
 
-				ref_seq_aligned, pred_seq_aligned = parse_seqan(File.read(file_out).upcase)
+				ref_seq_aligned, pred_seq_aligned = parse_seqan(File.read(file_out))
+# puts prot
+# puts ref_seq_aligned
+# puts pred_seq_aligned
+# puts ""
 
 				### 3.1.2a) map CTG positions in predicted protein onto reference alignment columns
 				### 3.1.2b) compare with chemical properties of reference alignment columns
@@ -234,6 +242,28 @@ class PredictionsController < ApplicationController
 			end # ref_data.peach do |prot, des|
 		end # if @errors.empty?
 		render :predict_genes
+	end
+
+	def prepare_new_session
+		reset_session
+	    session[:file] = {} 		# uploaded genome described by keys: :name, :id, :path
+	    session[:align] = {}		# alignment options for seqan: pair_align or DIALIGN
+	    session[:augustus] = {}		# options for augustus gene prediction
+	    return true
+	end
+
+	def delete_old_data(days = 1)
+		# delete all files older than one day but file "alignment_gene_structure.json"
+		system("find #{BASE_PATH} -type f \\! -name '#{REF_DATA}' -mtime +#{days} -delete 2> /dev/null")
+	end
+
+	def load_ref_data
+		path = BASE_PATH + REF_DATA
+		if ! FileTest.file?(path) then
+			errors = ["Sorry, cannot load reference data. Please contact us!"]
+			return false, errors
+		end
+		return JSON.load(File.read(path)), []
 	end
 
 	def check_filesize(size)
@@ -301,7 +331,7 @@ class PredictionsController < ApplicationController
 	def str2fasta(header, str)
 		fasta = header.include?(">") ? header << "\n" : ">" << header << "\n"
 		# breaking string at every 80th character, joining by newline
-		fasta += (str.scan /.{1,80}/).join("\n")
+		fasta += str.scan(/.{1,80}/).join("\n")
 		return fasta
 	end
 
@@ -315,27 +345,6 @@ class PredictionsController < ApplicationController
 		a = gene.scan(/\sseq:\s?(\w+)\n/).flatten
 		# quick & dirty version: every second entry belongs to an exon
 		a.values_at(*a.each_index.select(&:even?)).join("").upcase
-	end
-
-	def delete_old_data(days = 1)
-		system("find #{BASE_PATH} -type f -name \'uploaded_genomefile_*\' -mtime +#{days} -delete 2> /dev/null")
-		system("find #{BASE_PATH} -type f -name \'formatdb.log\' -mtime +#{days} -delete 2> /dev/null")
-		system("find #{BASE_PATH} -type f -name \'*.fasta*\' -mtime +#{days} -delete 2> /dev/null")
-	end
-
-	def load_ref_data
-		if ! FileTest.file?(REF_DATA) then
-			errors = ["Sorry, cannot load reference data. Please contact us!"]
-			return false, errors
-		end
-		return JSON.load(File.read(REF_DATA)), []
-	end
-
-	def prepare_new_session
-		reset_session
-	    session[:file] = {} 		# uploaded genome described by keys: :name, :id, :path
-	    session[:align] = {}		# alignment options for seqan: pair_align
-	    return true
 	end
 
 	# input: augustus output
@@ -373,7 +382,9 @@ class PredictionsController < ApplicationController
 
 		# matching possible at all?
 		# NO: gap in reference sequence at ctg pos in predicted sequence
-		if ref_aseq[pred_apos] == "-" then
+		# or, in case of dialign: important positions are not aligned at all (= in lowercase letters)
+		if (ref_aseq[pred_apos] == "-" || 
+			ref_aseq[pred_apos].match(/\p{Lower}/) || pred_aseq[pred_spos].match(/\p{Lower}/)) then
 			return nil, nil
 		end
 
@@ -395,7 +406,7 @@ class PredictionsController < ApplicationController
 		arr.each { |a| res[a] += 1 }
 		res.delete("-") # delete count for gaps in alignment!
 		# normalize word frequency
-		sum = res.inject(0) {|sum, (_,val)| sum + val}.to_f
+		sum = res.inject(0) {|s, (_,val)| s + val}.to_f
 		norm_res = res.each {|k,v| res[k] = v/sum} # normalize
 		return norm_res, sum.to_i
 	end
@@ -452,7 +463,7 @@ class PredictionsController < ApplicationController
 		ref_codons = []
 		algnmnt.collect{|k,v| k if v[apos]=="S"}.compact.each do |ref_key|
 			dna_seq = extract_gene_seq(genes[ref_key.gsub(">", "")]["gene"]) # access via "gene-name"
-			codons_ref = dna_seq.scan /.{1,3}/
+			codons_ref = dna_seq.scan(/.{1,3}/)
 			spos = alignment_pos2sequence_pos(apos, algnmnt[ref_key]) # access via ">gene-name"
 			ref_codons << codons_ref[spos]
 		end
@@ -463,7 +474,7 @@ class PredictionsController < ApplicationController
 		ref_codons = []
 		algnmnt.collect{|k,v| k if v[apos]=="L"}.compact.each do |ref_key|
 			dna_seq = extract_gene_seq(genes[ref_key.gsub(">", "")]["gene"]) # access via "gene-name"
-			codons_ref = dna_seq.scan /.{1,3}/
+			codons_ref = dna_seq.scan(/.{1,3}/)
 			spos = alignment_pos2sequence_pos(apos, algnmnt[ref_key]) # access via ">gene-name"
 			ref_codons << codons_ref[spos]
 		end

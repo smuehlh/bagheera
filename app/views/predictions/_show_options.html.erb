@@ -1,4 +1,4 @@
-<%opt_algo, pre_select_algo, opt_config, pre_select_config = fill_selection_tags%>
+<%opt_algo, pre_select_algo, opt_config, pre_select_config, opt_species, pre_select_species = fill_selection_tags%>
 <%= 
 	form_tag(predict_genes_path, :remote => true) do
 		content_tag(:p, "Alignment method") +
@@ -6,8 +6,11 @@
 			onchange:  
 			"if ($('#algo').val() == 'dialign') {$('#config').attr('disabled', 'disabled');} else {$('#config').removeAttr('disabled');}") +
 		tag(:br) +
-		content_tag(:p, "Alignment configuration") + 
+		content_tag(:p, "Alignment configuration") +
 		select_tag(:config, options_for_select(opt_config, pre_select_config)) +
+		tag(:br) +
+		content_tag(:p, "Species (reference species for gene prediction)") +
+		select_tag(:species, options_for_select(opt_species, pre_select_species)) +
 		tag(:br) +
 		# uncomment if submit tag should be used
 		# submit_tag("Use options")

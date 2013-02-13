@@ -385,7 +385,10 @@ input.defaulttext, textarea.defaulttext {
 
 .highlight_aa {
     border: 1px solid $h1_color;
+    background-color: $h1_color;
+    -moz-opacity:0.8; -webkit-opacity:0.8;
     font-weight: bold;
+    color: white;
 }
 
 .format_ctg_stats {
