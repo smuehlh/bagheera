@@ -1,0 +1,6 @@
+hide_show_waiting('hide');
+<% iframe_src = LUCULLUS_URL + "?source=" + @id %>
+<% new_content = content_tag(:iframe, "Loading ...", :src => iframe_src, 
+	:width => "675px", :height => "100px", :id => "lucullus_alignment_frame") %>
+$('#alignment_<%= @prot.gsub(" ", "-").downcase %>').html('<%=new_content%>');
+$('#show_alignment_button').hide();	

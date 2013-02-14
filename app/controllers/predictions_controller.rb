@@ -59,6 +59,20 @@ class PredictionsController < ApplicationController
 	# 	render :set_options
 	# end
 
+	# prepare alignment file for view show_alignment
+	def show_alignment
+		@prot = params[:prot].gsub(" ", "-").downcase
+		# copy file to /tmp/cymo_alignment_
+		@id = "cug" + @prot.gsub("-", "") + session[:file][:id]
+		# set correct file extension for dialign/ seqan files
+		ext = session[:align][:algo] == "dialign" ? ".fasta.fa" : ".fasta"
+		file_scr = BASE_PATH + "align_out_" + @prot + "_" + session[:file][:id] + ext
+		file_dest = Dir::tmpdir + "/cymobase_alignment_" + @id + ".fasta"
+		FileUtils::cp(file_scr, file_dest)
+		# TODO seqan add sequence to complete cymo-alignment?
+		render :show_alignment
+	end
+
 	def predict_genes
 		# general workflow
 
@@ -187,7 +201,7 @@ class PredictionsController < ApplicationController
 				file_in.gsub!("aug_in", "align_in")
 				file_out = file_in.gsub("align_in", "align_out")
 
-				fasta = str2fasta("ref", ref_prot_seq) << "\n" << str2fasta("pred", pred_seq)
+				fasta = str2fasta(ref_prot_key, ref_prot_seq) << "\n" << str2fasta("Prediction", pred_seq)
 				File.open(file_in, 'w'){|file| file.write(fasta)}
 
 				# use pairalign or dialign
@@ -255,6 +269,8 @@ class PredictionsController < ApplicationController
 	def delete_old_data(days = 1)
 		# delete all files older than one day but file "alignment_gene_structure.json"
 		system("find #{BASE_PATH} -type f \\! -name '#{REF_DATA}' -mtime +#{days} -delete 2> /dev/null")
+		# delete alignment file for show-alignment function
+		FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
 	end
 
 	def load_ref_data
@@ -351,6 +367,7 @@ class PredictionsController < ApplicationController
 	# output: predicted protein sequence
 	#         coding sequence of predicted protein
 	def parse_augustus(output)
+# TODO robust machen gegen nichts vorhergesagt! match sollte gehen, aber gsub, upcase nicht?!
 		pred_prot = output.match(/protein sequence = \[(.*)\]/m)[1]
 		pred_dna = output.match(/coding sequence = \[(.*?)\]/m)[1]
 		# prepare output

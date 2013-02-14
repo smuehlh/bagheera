@@ -17,12 +17,16 @@
                         format_seq(value[:pred_prot], value[:ctg_pos], value[:aa_comp])
             content_tag(:div, draw_table(seq, seq_pos, tab_seq), :class => "wrapper") + 
             # content_tag(:h4, "Chemical properties of reference data") +
-            tag("br") +
+            tag(:br) +
             draw_table(value[:ctg_pos], aa_pct, value[:aa_comp].map{|arr| arr[1]}, tab_aa) +
             content_tag(:p, pluralize(value[:aa_comp][0][2].to_s, "sequence") << " in reference alignment") +
             # content_tag(:h4, "CTG encoding in reference data") +
-            tag("br") +
-            draw_table(value[:ctg_pos], format_ctg_stats(value[:ctg_ref]), tab_ctg)
+            tag(:br) +
+            draw_table(value[:ctg_pos], format_ctg_stats(value[:ctg_ref]), tab_ctg) +
+            tag(:br) +
+            button_to("Show alignment", show_alignment_path(prot: key), id: "show_alignment_button", 
+                onclick: "hide_show_waiting('show');", remote: true, method: :get) + 
+            content_tag(:div, "", :id => "alignment_#{key.gsub(" ", "-").downcase}")
         else
             content_tag(:div, "No significant position", :class => "pred_nothing")
         end
