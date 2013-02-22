@@ -28,11 +28,14 @@
                 onclick: "hide_show_waiting('show');", remote: true, method: :get) + 
             content_tag(:div, "", :id => "alignment_#{key.gsub(" ", "-").downcase}")
         else
-            content_tag(:div, "No significant position", :class => "pred_nothing")
+            content_tag(:div, value[:message], :class => "pred_nothing")
         end
     else
-        content_tag(:div, "No CTG in predicted gene", :class => "pred_nothing")
-    end 
+        content_tag(:div, value[:message], :class => "pred_nothing")
+    end + 
+    tag(:br) +
+    content_tag(:normal, "Restart gene prediction with the five best BLAST hits" ) +
+    check_box_tag('multi')
     %>
     </div>
 <% end %> 

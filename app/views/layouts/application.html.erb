@@ -34,7 +34,9 @@
         </div>
         <div id="footer">
           &#169; <%= link_to( "Bagheera Team #{Time.now.year}", team_path, :class => "internal") %> |
-          <%= link_to "Impressum", "http://www.mpibpc.gwdg.de/metanavi/impressum/index.html", :target => "_blank", :class => "external"%><br /><br />
+           All Disney-related pictures are &#169; <%= link_to("Disney", "http://disney.com/", :target => "_blank", 
+             :class => "external") %> |
+          <%= link_to " Impressum", "http://www.mpibpc.gwdg.de/metanavi/impressum/index.html", :target => "_blank", :class => "external"%><br /><br />
           <%= link_to(image_tag("layout/firefox.png", :alt=>"MPI for biophysical chemistry"), "http://www.mozilla.org/products/firefox", :target => "_blank") %>
           <%= link_to(image_tag("layout/web_2_0.png", :alt=>"Web_2.0"), "http://en.wikipedia.org/wiki/Web_2.0", :target => "_blank") %>
           <%= link_to(image_tag("layout/ror.gif", :alt=>"Ruby on Rails"), "http://www.rubyonrails.org", :target => "_blank") %>

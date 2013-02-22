@@ -65,11 +65,11 @@ class PredictionsController < ApplicationController
 		# copy file to /tmp/cymo_alignment_
 		@id = "cug" + @prot.gsub("-", "") + session[:file][:id]
 		# set correct file extension for dialign/ seqan files
-		ext = session[:align][:algo] == "dialign" ? ".fasta.fa" : ".fasta"
-		file_scr = BASE_PATH + "align_out_" + @prot + "_" + session[:file][:id] + ext
+		ext = session[:align][:algo] == "dialign" ? "_aligned.fasta.fa" : "_aligned.fasta"
+		file_scr = BASE_PATH + @prot + "_" + session[:file][:id] + ext
 		file_dest = Dir::tmpdir + "/cymobase_alignment_" + @id + ".fasta"
 		FileUtils::cp(file_scr, file_dest)
-		# TODO seqan add sequence to complete cymo-alignment?
+		# TODO use complete cymoalignment for prot instead of only one ref seq?
 		render :show_alignment
 	end
 
@@ -89,22 +89,26 @@ class PredictionsController < ApplicationController
 		# add options to session
 		session[:align] = { algo: params[:algo], config: params[:config] }
 		session[:augustus] = { species: params[:species] }
+		session[:multi_hits] = params.has_key?(:multi) ? true : false
+
 		ref_data, @errors = load_ref_data
-		@predicted_prots = {} # containing final results
+		@predicted_prots = {} # containing final results ...
 		if @errors.empty? then
 			# sucessfully loaded reference data file
-
-			# for BLAST (2.1): convert uploaded genome into blast-db
+			# setup blast database
 			genome_db = session[:file][:path].gsub(".fasta", "_db")
-				# -i [INPUT: GENOME FILE] -p [PROTEIN] FALSE -n [DB NAME] -o [CREATE INDEX OVER SEQID] TRUE
-			output = `#{FORMATDB} -i #{session[:file][:path]} -p F -n #{genome_db} -o T 2>&1`
-			if ! $?.success? || output.include?("ERROR") then
-				@errors << "Gene prediction failed: Cannot create BLAST database"
+			error = create_blast_db(genome_db)
+			if ! error.blank? then
+				# database setup failed; no cug-usage can be predicted
+				@errors << error
 				return
-			end 
+			end
+			
 			# all other tasks need to be done for each ref protein
 			# peach for paralell execution, maximum 10 threads
 			ref_data.peach(10) do |prot, all_prot_data|
+				@predicted_prots[prot] = {} # ... final results for each protein!
+
 				### 1) extract reference proteins
 				ref_prot_species, ref_prot_stat, ref_prot_seq, ref_prot_key = "", "", "", ""
 
@@ -126,136 +130,92 @@ class PredictionsController < ApplicationController
 				ref_prot_stat = all_prot_data["genes"][ref_prot_key]["completeness"]
 				ref_prot_seq = all_prot_data["genes"][ref_prot_key]["gene"].match(/prot_seq: (.*?)\n/)[1]
 #				ref_prot_geneseq = extract_gene_seq(all_prot_data["genes"][ref_prot_key]["gene"])
+
 				prot_basename = prot.gsub(" ", "-").downcase
+
+				# save reference protein in fasta format in file (needed for blast alignment of reference and predicted protein)
+				file = BASE_PATH + prot_basename + "_" + session[:file][:id] + ".fasta"
+				fasta = str2fasta(ref_prot_key, ref_prot_seq)
+				File.open(file, 'w'){|file| file.write(fasta)}
 
 				### 2) gene prediction foreach reference protein:
 
 				### 2.1) BLAST
 				# 2.1.1) convert uploaded genome into blast-db
 				# 2.1.2) blast-query
-				file_in = BASE_PATH + "blast_in_" + prot_basename + "_" + session[:file][:id] + ".fasta"
-				# create file_in (protein file) for blast query
-				fasta = str2fasta(prot_basename, ref_prot_seq)
-				File.open(file_in, 'w'){|file| file.write(fasta)}
-				# 2.1)
-						# -p [PROGRAM] protein query against nt-db -d [DATABASE] -m8 [OUTPUT FORMAT] -F filtering -s T smith-waterman alignment| print best hit
-				output = `#{BLASTALL} -p tblastn -d #{genome_db} -i #{file_in} -m8 -F "m S" -s T2>&1 | head -1`
+				file_out = file.gsub(".fasta", ".blastout") # store blast hits
+						# -p [PROGRAM] protein query against nt-db -d [DATABASE] -i [FILE] -m8 [OUTPUT FORMAT] -F [FILTERING] -s [SMITH-WATERMAN ALIGNMENT] T 
+						# use tee to get both output to parse and a file (for later, independent gene prediction)
+				output = `#{BLASTALL} -p tblastn -d #{genome_db} -i #{file} -m8 -F "m S" -s T 2>&1 | tee #{file_out}`
+
 				if ! $?.success? || output.include?("ERROR") then
 					@errors << "#{prot}: Gene prediction (BLAST) failed"
+					@predicted_prots[prot][:message] = "Sorry, an error occured"
+					# delete file with blast hits, its contains only error messages
+					File.delete(file_out)
 					next
 				end
 
-				# parse blast output and add start/stop position to selected_ref_prots
-				output_fields = output.chomp.split("\t") # output is best hit
-				seq_id = output_fields[1] # sequence contig
-				start = output_fields[8].to_i # sequence start
-				stop = output_fields[9].to_i # sequence stop
-				strand = 1 # set strand to plus for fastacmd
-				if stop < start then
-					# change start/ stop if prediction on minus strand 
-					strand = 2 # set strand to minus for fastacmd
-					tmp = start
-					start = stop
-					stop = tmp
-				end
-
-				### 2.2) AUGUSTUS
-				# 2.2.1) get matching search sequence 
-				file_in.gsub!("blast_in", "aug_in")
-						# -d [DB] -p [PROTEIN] false -s [SEARCH STRING] -L [START,STOP]
-						# add 1000 nucleotides to start/stop 
-				output = `#{FASTACMD} -d #{genome_db} -p F -s \'#{seq_id}\' -L #{start-1000},#{stop+1000} -S #{strand} > #{file_in}` 
-				if ! $?.success? || output.include?("ERROR") then
-					@errors << "#{prot}: Gene prediction (BLAST-FASTACMD) failed"
+				is_success, pred_seq, pred_dnaseq = perform_gene_pred(prot, output)
+				if ! is_success then
+					# an error occured
+					# variable called "pred_seq" actually contains the program whith caused the error
+					@errors << "#{prot}: Gene prediction (#{pred_seq}) failed"
+					@predicted_prots[prot][:message] = "Sorry, an error occured"
 					next
 				end
-
-
-				# 2.2.2) augustus
-						# --species [REFERENCE SPEC] QUERY --genemodel=exactlyone [predict exactly one complete gene] --codingseq=on [output also coding sequence]
-	 			output = `#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --species=#{session[:augustus][:species]} --genemodel=exactlyone --codingseq=on #{file_in}`
-
-				if ! $?.success? || output.include?("ERROR") then
-					@errors << "#{prot}: Gene prediction (AUGUSTUS) failed"
+				
+				is_success, ref_seq_aligned, pred_seq_aligned = align_pred_ref(file, pred_seq)
+				if ! is_success then
+					# an error occured
+					# variable called "ref_seq_aligned" actually contains the program which caused the error 
+					@error << "#{prot}: Gene prediction (#{ref_seq_aligned}) failed"
+					@predicted_prots[prot][:message] = "Sorry, an error occured"
 					next
 				end
-
-				# 2.2.3) parse augustus output
-				# return longest predicted protein and according coding sequence
-				pred_seq, pred_dnaseq = parse_augustus(output)
-
-				### 3.1) Compare with reference alignment
-				@predicted_prots[prot] = {has_ctg: true, pred_prot: pred_seq, ctg_pos: [], ctg_transl: [], aa_comp: [], ctg_ref: []}
-				# tracking of ctg_pos, ctg_transl, aa_comp, ctg_ref only for significant positions!
-
-				# has predicted protein CTG codons?
-				codons = pred_dnaseq.scan(/.{1,3}/)
-				if !codons.include?("CTG")
-					# nope, no CTG => nothing to predict
-					@predicted_prots[prot][:has_ctg] = false
-					next
-				end
-				ctg_pos = codons.each_with_index.map{ |ele, ind| (ele == "CTG") ? ind : nil }.compact
-
-				### 3.1.1) map predicted gene onto reference protein
-				file_in.gsub!("aug_in", "align_in")
-				file_out = file_in.gsub("align_in", "align_out")
-
-				fasta = str2fasta(ref_prot_key, ref_prot_seq) << "\n" << str2fasta("Prediction", pred_seq)
-				File.open(file_in, 'w'){|file| file.write(fasta)}
-
-				# use pairalign or dialign
-				if session[:align][:algo] == "dialign" then
-					output = `#{DIALIGN2} -fa -fn #{file_out} #{file_in}`
-					if ! $?.success? || ! output.blank? then
-						@errors << "#{prot}: Codon usage prediction (DIALIGN2) failed"
-						next
-					end
-					file_out = file_out << ".fa" # dialign automatically adds ".fa" to basic output filename
+			
+				is_success, results, message = compare_pred_gene(ref_data, ref_prot_key, prot, ref_seq_aligned, pred_seq_aligned, pred_dnaseq)
+				if ! is_success then
+					@predicted_prots[prot][:message] = message
 				else
-						# -c tttt: initialize first row & column with zeros, search last row & column for maximum
-						# 	=> end gap free alignment
-						# --matrx matrix file
-						# implicit options: gap open penalty: -11, gap extension penalty: -1
-						# 					protein sequences
-					output = `#{PAIR_ALIGN} --seq #{file_in} --matrix #{Rails.root+"lib/blosum62"} --config #{session[:align][:config]} --method #{session[:align][:algo]} --outfile #{file_out}`
-					if ! $?.success? || ! output.include?("Alignment score") then
-						@errors << "#{prot}: Codon usage prediction (Seqan::pair_align) failed"
-						next
-					end
+					@predicted_prots[prot][:message] = ""
 				end
+				@predicted_prots[prot].merge!(results)
 
-				ref_seq_aligned, pred_seq_aligned = parse_seqan(File.read(file_out))
-# puts prot
-# puts ref_seq_aligned
-# puts pred_seq_aligned
-# puts ""
-
-				### 3.1.2a) map CTG positions in predicted protein onto reference alignment columns
-				### 3.1.2b) compare with chemical properties of reference alignment columns
-				### 3.2) Compare with reference genes: count usage of CTG for each mapped L and S 
-				cymo_algnmnt = Hash[*ref_data[prot]["alignment"].split("\n")] # cymo-alignment
-				ctg_pos.each do |pos|
-					# 3.1.2)
-					algnmnt_col_aa, algnmnt_col_pos = parse_alignment_by_ctgpos(cymo_algnmnt, pos, pred_seq_aligned, ref_seq_aligned, ref_prot_key)
-					if !(algnmnt_col_aa.nil? && algnmnt_col_pos.nil?) then
-						# mapping was possible
-						aa_freq, aa_num = word_frequency(algnmnt_col_aa)
-						seq_num = cymo_algnmnt.keys.length
-						is_significant, prob_transl = predict_translation(aa_freq)
-						# 3.2)
-						pct_ctg_ser, pct_ctg_leu = ref_ctg_usage(cymo_algnmnt, algnmnt_col_pos, ref_data[prot]["genes"])
-						if is_significant then
-							@predicted_prots[prot][:ctg_pos] << pos
-							@predicted_prots[prot][:ctg_transl] << prob_transl
-							@predicted_prots[prot][:aa_comp] << [aa_freq, aa_num, seq_num]
-							@predicted_prots[prot][:ctg_ref] << {ser: pct_ctg_ser, leu: pct_ctg_leu}
-						end # if is_significant
-					end # if !(algnmnt_col_aa.nil? && algnmnt_col_pos.nil?)
-				end # ctg_pos.each do |pos|
 			end # ref_data.peach do |prot, des|
 		end # if @errors.empty?
 		render :predict_genes
+	end
+
+	def todo
+# gene prediction nachliefern:
+				file_out = file.gsub(".fasta", ".blastout") # store blast hits
+
+				is_success, pred_seq, pred_dnaseq = perform_gene_pred(prot, File.read(file_out))
+				if ! is_success then
+					# an error occured
+					# variable called "pred_seq" actually contains the program whith caused the error
+					@errors << "#{prot}: Gene prediction (#{pred_seq}) failed"
+					@predicted_prots[prot][:message] = "Sorry, an error occured"
+					next
+				end
+				
+				is_success, ref_seq_aligned, pred_seq_aligned = align_pred_ref(file, pred_seq)
+				if ! is_success then
+					# an error occured
+					# variable called "ref_seq_aligned" actually contains the program which caused the error 
+					@error << "#{prot}: Gene prediction (#{ref_seq_aligned}) failed"
+					@predicted_prots[prot][:message] = "Sorry, an error occured"
+					next
+				end
+			
+				is_success, results, message = compare_pred_gene(ref_data, ref_prot_key, prot, ref_seq_aligned, pred_seq_aligned, pred_dnaseq)
+				if ! is_success then
+					@predicted_prots[prot][:message] = message
+				else
+					@predicted_prots[prot][:message] = ""
+				end
+				@predicted_prots[prot].merge!(results)
 	end
 
 	def prepare_new_session
@@ -263,6 +223,7 @@ class PredictionsController < ApplicationController
 	    session[:file] = {} 		# uploaded genome described by keys: :name, :id, :path
 	    session[:align] = {}		# alignment options for seqan: pair_align or DIALIGN
 	    session[:augustus] = {}		# options for augustus gene prediction
+	    session[:multi_hits] = ""	# predict genes based on single best hit or many best hits
 	    return true
 	end
 
@@ -343,6 +304,200 @@ class PredictionsController < ApplicationController
 		return errors
 	end
 
+	# creating blast db from uploaded genome file with formatdb
+	# for the blast search performed later
+	# input: genome database name (full path)
+	# return an error if formatdb failed
+	def create_blast_db(genome_db)
+		error = ""
+			# -i [INPUT: GENOME FILE] -p [PROTEIN] FALSE -n [DB NAME] -o [CREATE INDEX OVER SEQID] TRUE
+		output = `#{FORMATDB} -i #{session[:file][:path]} -p F -n #{genome_db} -o T 2>&1`
+		if ! $?.success? || output.include?("ERROR") then
+			error = "Gene prediction failed: Cannot create BLAST database"
+		end 
+		return error
+	end
+
+	# parse blast output 
+	# input: blast output (including all hits)
+	# 		number of the blast hit of interest
+	# output:
+	# 	sequence contig, sequence start, sequence stop, strand
+	# 	OR false if number exceeds found blast hits
+	def parse_blast_hits(hits, nr)
+		hit = hits.lines.to_a[nr-1] # hit number count starts with 1, ruby starts counting arrays with 0
+		if hit.nil? then
+			# requested hit execceds number of hits
+			return false
+		end
+		# hit exits
+		fields = hit.split("\t") 
+		seq_id = fields[1] # sequence contig
+		start = fields[8].to_i # sequence start
+		stop = fields[9].to_i # sequence stop
+		strand = 1 # set strand to plus for fastacmd
+		if stop < start then
+			# change start/ stop if prediction on minus strand 
+			strand = 2 # set strand to minus for fastacmd
+			tmp = start
+			start = stop
+			stop = tmp
+		end
+		return true, seq_id, start, stop, strand
+	end
+
+	# perform gene prediction with augustus
+	# input: 
+	# 	seq_file: nucleotide sequence identified by blast
+	# output: 
+	# 	predicted protein, and coding sequence
+	# 	OR false if an error occured
+	def run_augustus(seq_file)
+			# --species [REFERENCE SPEC] QUERY --genemodel=exactlyone [predict exactly one complete gene] --codingseq=on [output also coding sequence]
+			# redirection: add stderr to stdout (screen)
+		output = `#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --species=#{session[:augustus][:species]} --genemodel=exactlyone --codingseq=on #{seq_file} 2>&1`
+		if ! $?.success? || output.include?("ERROR") || output.blank? then
+			return false
+		end
+
+		# no error, parse augustus
+		pred_seq, pred_dnaseq = parse_augustus(output)
+		return true, pred_seq, pred_dnaseq
+	end
+
+
+	# performing gene prediction for given protein:
+	# 2.2) AUGUSTUS (based on best blast hit number blast_hit_nr)
+	# input:
+	# 	protein to query
+	# 	number of blast hit to use for gene prediction (optional)
+	# output: 
+	# 	true if everything went fine, prediced prot and dna sequence
+	# 	OR false and string indicating the failing program otherwise
+	def perform_gene_pred(prot, blast_hits, blast_hit_nr=1)
+		# parse blast output
+		is_success, seq_id, start, stop, strand = parse_blast_hits(blast_hits, blast_hit_nr) 
+		if ! is_success then
+			# number exceeds blast hits!
+			return false, "BLAST"
+		end 
+
+		# 2.2) AUGUSTUS
+		# 2.2.1) get matching search sequence 
+		file = BASE_PATH + session[:file][:id] + "_" + rand(1000000000).to_s + ".fasta"
+		genome_db = session[:file][:path].gsub(".fasta", "_db")
+				# -d [DB] -p [PROTEIN] false -s [SEARCH STRING] -L [START,STOP]
+				# add 1000 nucleotides to start/stop 
+				# redirection: stderr to stdout (at this moment: sreen), stdout to file file
+		output = `#{FASTACMD} -d #{genome_db} -p F -s \'#{seq_id}\' -L #{start-1000},#{stop+1000} -S #{strand} 2>&1 > #{file}` 
+		if ! $?.success? || output.include?("ERROR") then
+			return false, "BLAST-FASTACMD"
+		end
+
+		is_success, pred_seq, pred_dnaseq = run_augustus(file)
+		if ! is_success then
+			# gene prediction failed
+			return false, "AUGUSTUS"
+		end
+
+		return true, pred_seq, pred_dnaseq
+	end
+
+	# align reference protein with the predicted protein
+	# input:
+	# 	file containing reference sequence
+	# output:
+	# 	aligned reference sequence
+	# 	aligned predicted sequence
+	# 	OR false if an error occured
+	def align_pred_ref(file_in, pred_seq)
+
+		# prepare input data for alignment program: needs to contain both ref and pred. seq
+		fasta = str2fasta("Prediction", pred_seq)
+		File.open(file_in, 'a') {|file| file.write("\n" + fasta)}
+
+		file_out = file_in.gsub(".fasta", "_aligned.fasta")
+
+		# use pairalign or dialign
+		if session[:align][:algo] == "dialign" then
+			# redirection of stderr: none, as dialign has no easy-parsable error messages (like containing "ERROR")
+			# check exit status for success 
+			output = `#{DIALIGN2} -fa -fn #{file_out} #{file_in}`
+			if ! $?.success? || ! output.blank? then
+				return false, "Dialign2"
+			end
+			file_out = file_out << ".fa" # dialign automatically adds ".fa" to basic output filename
+		else
+				# -c tttt: initialize first row & column with zeros, search last row & column for maximum
+				# 	=> end gap free alignment
+				# --matrx matrix file
+				# implicit options: gap open penalty: -11, gap extension penalty: -1
+				# 					protein sequences
+				# redirection of stderr: none, as pair_align has no easy-parsalbe error messages but easy parable "success" output (including "Alignment score")
+			output = `#{PAIR_ALIGN} --seq #{file_in} --matrix #{Rails.root+"lib/blosum62"} --config #{session[:align][:config]} --method #{session[:align][:algo]} --outfile #{file_out}`
+			if ! $?.success? || ! output.include?("Alignment score") then
+				return false, "Seqan::pair_align"
+			end
+		end
+
+		ref_seq_aligned, pred_seq_aligned = parse_seqan(File.read(file_out))
+		return true, ref_seq_aligned, pred_seq_aligned
+	end
+
+	# preforming cug-usage prediction 
+	# 3.1) Compare with reference alignment
+	# 3.1.1) map predicted gene onto reference protein
+	# 3.2) Compare with reference genes
+	# input: reference data, key of reference protein, protein name and aligned sequence and predicted protein
+	# output:
+	# 	true and hash containing all data
+	# 	OR false and message describing the problem
+	def compare_pred_gene(ref_data, ref_prot_key, prot, ref_seq_aligned, pred_seq_aligned, pred_dnaseq)
+		results = {has_ctg: "", pred_prot: "", ctg_pos: [], ctg_transl: [], aa_comp: [], ctg_ref: []}
+
+		# has predicted protein CTG codons?
+		codons = pred_dnaseq.scan(/.{1,3}/)
+		if !codons.include?("CTG")
+			# nope, no CTG => nothing to predict
+			results[:has_ctg] = false
+	puts "#{prot}: no CTG"
+			return false, results, "No CTG in prediced gene"
+		else
+			results[:pred_prot] = pred_seq_aligned.gsub("-", "")
+			results[:has_ctg] = true
+		end
+		ctg_pos = codons.each_with_index.map{ |ele, ind| (ele == "CTG") ? ind : nil }.compact
+
+		# Compare with reference alignment
+		# => map CTG positions in predicted protein onto reference alignment columns
+		# => compare with chemical properties of reference alignment columns
+		# => Compare with reference genes: count usage of CTG for each mapped L and S 
+		cymo_algnmnt = Hash[*ref_data[prot]["alignment"].split("\n")]
+		ctg_pos.each do |pos|
+			# map CTG positions
+			algnmnt_col_aa, algnmnt_col_pos = parse_alignment_by_ctgpos(cymo_algnmnt, pos, pred_seq_aligned, ref_seq_aligned, ref_prot_key)
+			if !(algnmnt_col_aa.nil? && algnmnt_col_pos.nil?) then
+				# mapping was possible, compare with chemical properties
+				aa_freq, aa_num = word_frequency(algnmnt_col_aa)
+				seq_num = cymo_algnmnt.keys.length
+				is_significant, prob_transl = predict_translation(aa_freq)
+				# compare with reference genes
+				pct_ctg_ser, pct_ctg_leu = ref_ctg_usage(cymo_algnmnt, algnmnt_col_pos, ref_data[prot]["genes"])
+				if is_significant then
+					results[:ctg_pos] << pos
+					results[:ctg_transl] << prob_transl
+					results[:aa_comp] << [aa_freq, aa_num, seq_num]
+					results[:ctg_ref] << {ser: pct_ctg_ser, leu: pct_ctg_leu}
+	puts "#{prot}: is significant!!!"
+				else
+	puts "#{prot}: not significant"
+					return false, results, "No significant position"
+				end # if is_significant
+			end # if !(algnmnt_col_aa.nil? && algnmnt_col_pos.nil?)
+		end # ctg_pos.each do |pos|
+		return true, results
+	end
+
 	# expects header and fasta-sequence as string and converts both in fasta-format
 	def str2fasta(header, str)
 		fasta = header.include?(">") ? header << "\n" : ">" << header << "\n"
@@ -367,7 +522,6 @@ class PredictionsController < ApplicationController
 	# output: predicted protein sequence
 	#         coding sequence of predicted protein
 	def parse_augustus(output)
-# TODO robust machen gegen nichts vorhergesagt! match sollte gehen, aber gsub, upcase nicht?!
 		pred_prot = output.match(/protein sequence = \[(.*)\]/m)[1]
 		pred_dna = output.match(/coding sequence = \[(.*?)\]/m)[1]
 		# prepare output
@@ -427,28 +581,6 @@ class PredictionsController < ApplicationController
 		norm_res = res.each {|k,v| res[k] = v/sum} # normalize
 		return norm_res, sum.to_i
 	end
-
-	# def predict_translation_old(aas)
-	# 	# statistics
-	# 	# use only amino acids, no gaps: exclude "-" from statistics
-	# 	num_aas = aas.count{|ele| ele =~ /[A-Z]/} # total number of amino acids
-	# 	pol_aas = aas.count{|ele| POLAR_AAS.include?(ele)} # polar amino acids
-	# 	hyd_aas = aas.count{|ele| HYDORPHOBIC_AAS.include?(ele)} # hydrophobic amino acids
-	# 	pct_pol = pol_aas/num_aas.to_f
-	# 	pct_hyd = hyd_aas/num_aas.to_f
-	# 	# requirements for a discriminative position:
-	# 		# 1) occurence in more than half of sequences
-	# 		# 2) the other usage should occure in less than quater or sequences
-	# 	is_discrim = ([pct_hyd, pct_pol].max > 0.5 && [pct_hyd, pct_pol].min < 0.25) ? true : false 
-	# 	# default translation = ""
-	# 		# discriminative AND more hydrophobic aas: "L"
-	# 		# discriminative AND more polar aas: "S"
-	# 	transl = ""
-	# 	if is_discrim then
-	# 		transl = (pol_aas > hyd_aas) ? "S" : "L"
-	# 	end
-	# 	return is_discrim, transl, pct_pol.round(2), pct_hyd.round(2)
-	# end
 
 	def predict_translation(aa_freq)
 		num_aas = aa_freq.inject(0) {|sum, (_,val)| sum + val} # total number of amino acids

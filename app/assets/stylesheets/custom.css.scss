@@ -344,12 +344,7 @@ input.defaulttext, textarea.defaulttext {
     margin-top: 5px;
 }
 
-.user_values {
-    height:20px;
-    padding-top: 10px;
-}
-
-// /* display results */
+/* display results */
 .pred_nothing {
     font-style: italic;
 }
@@ -401,16 +396,6 @@ input.defaulttext, textarea.defaulttext {
 }
 /* end display results */
 
-.init_header {
-    display:block;
-    width: 100px;
-    position: relative;
-    float: left;
-}
-
-.init_value {
-
-}
 
 .notice {
     -webkit-border-radius: 10px;
@@ -449,124 +434,3 @@ input.defaulttext, textarea.defaulttext {
 #errors_container {
     color: red;
 }
-
-.log {
-    border: 1px solid gray;
-    color: white;
-    background: black;
-    max-height: 500px;
-    overflow:auto;
-    padding-left: 5px;
-}
-
-.regime_model {
-    width: 100px;
-}
-
-.radio_icon {
-    margin-top: -3px;
-    margin-right: 2px;
-}
-
-.disabled {
-    color: gray;
-    cursor:help;
-}
-
-.disabled_radio {
-    margin-top: -3px;
-    margin-right: 2px;
-}
-
-#next_prev {
-    display: none;
-    width: 100%;
-    margin: auto;
-    text-align: center;
-    padding-top: 10px;
-}
-
-.graph_download_link {
-    position: absolute;
-    margin: auto;
-    bottom: 0;
-    left: 0;
-}
-
-
-.download_menu_container {
-    position:fixed;
-    top: 0;
-    left: 0;
-    width:32px;
-    height:32px;
-            cursor: pointer;
-
-    a {
-        display:block;
-        width:32px;
-        height:32px;
-        position:absolute;
-        left:0;
-        top:0;
-        line-height:32px;
-        text-align:center;
-        text-decoration:none;
-
-        img {
-            border:0;
-        }
-    }
-}
-
-ul.download_menu {
-    padding:0 ;
-    margin-top:-5px;
-    margin-left:10px;
-    list-style:none;
-    width:32px;
-    height:32px;
-    position:absolute;
-    left:-15px;
-    z-index:90;
-    background: url("/assets/icons/download_graph.png") no-repeat center;
-    > li {
-        border: 0px solid transparent;
-        z-index:80;
-        width:32px;
-        height:32px;
-        position:absolute;
-        left:0;
-        top:0;
-        opacity:0;
-        -webkit-transition: all 0.3s linear;
-        -moz-transition: all 0.3s linear;
-        -o-transition: all 0.3s linear;
-        transition: all 0.3s linear;
-        cursor: pointer;
-    }
-
-    &:hover {
-        border-top: 16px solid transparent;
-        border-right: 60px solid transparent;
-        left:-15px;
-        top:-16px;
-        
-        @for $j from 1 through 10 {
-            li.p#{$j}  {
-                -moz-transform: translatey(20px) translatex(25px * ($j - 1));
-                -ms-transform: translatey(20px) translatex(25px * ($j - 1));
-                -o-transform: translatey(20px) translatex(25px * ($j - 1));
-                -webkit-transform: translatey(20px) translatex(25px * ($j - 1));
-                transform: translatey(20px) translatex(25px * ($j - 1));
-                opacity: 1;
-                border: 0px solid transparent;
-                &:hover {
-                    border-top: 3px solid transparent;
-                }
-            }
-        }
-    }
-}
-
-

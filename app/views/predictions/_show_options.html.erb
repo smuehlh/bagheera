@@ -1,17 +1,35 @@
 <%opt_algo, pre_select_algo, opt_config, pre_select_config, opt_species, pre_select_species = fill_selection_tags%>
 <%= 
 	form_tag(predict_genes_path, :remote => true) do
-		content_tag(:p, "Alignment method") +
-		select_tag(:algo, options_for_select(opt_algo, pre_select_algo), 
-			onchange:  
-			"if ($('#algo').val() == 'dialign') {$('#config').attr('disabled', 'disabled');} else {$('#config').removeAttr('disabled');}") +
-		tag(:br) +
-		content_tag(:p, "Alignment configuration") +
-		select_tag(:config, options_for_select(opt_config, pre_select_config)) +
-		tag(:br) +
-		content_tag(:p, "Species (reference species for gene prediction)") +
-		select_tag(:species, options_for_select(opt_species, pre_select_species)) +
-		tag(:br) +
+		content_tag(:table) do
+			content_tag(:tr) do 
+				content_tag(:td, "Alignment method") +
+				content_tag(:td, 		
+					select_tag(:algo, options_for_select(opt_algo, pre_select_algo), 
+					onchange:  
+					"if ($('#algo').val() == 'dialign') {$('#config').attr('disabled', 'disabled');} else {$('#config').removeAttr('disabled');}")
+				)
+			end +
+			content_tag(:tr) do
+				content_tag(:td, "Alignment configuration") +
+				content_tag(:td, 
+					select_tag(:config, options_for_select(opt_config, pre_select_config))
+				)
+			end +
+			content_tag(:tr) do
+				content_tag(:td, "Species (for gene prediction)") +
+				content_tag(:td,
+					select_tag(:species, options_for_select(opt_species, pre_select_species))
+				)
+			end #+
+			# content_tag(:tr) do
+			# 	content_tag(:td, "Predict genes for five best BLAST hits") +
+			# 	content_tag(:td, 
+			# 		check_box_tag('multi')
+			# 	)
+			# end
+		end +
+
 		# uncomment if submit tag should be used
 		# submit_tag("Use options")
 		# comment if submit-tag should be used
