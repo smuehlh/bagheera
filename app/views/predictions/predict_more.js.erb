@@ -1,0 +1,6 @@
+hide_show_waiting('hide');
+<% new_content = escape_javascript(render(partial: "display_results"))%>
+<% basename = @prot.gsub(" ", "-").downcase %>
+$('#pred_more_<%= basename %>').html('<%=new_content%>');
+$('#pred_data_<%= basename %> form.button_to').hide()
+// $('#pred_data_<%= basename %> div.pred_nothing').hide();

@@ -1,5 +1,6 @@
 <% @predicted_prots.sort.map do |key, value| %>
-    <%= content_tag(:h3, key) %>  
+    <% key = $1 if key =~ /(.+)_\d+$/ %>
+    <%= content_tag(:h3, "#{key} (Hit #{value[:hit_shown]}/#{value[:n_hits]})") %>  
     <% seq, seq_pos, aa_pct = "", "", ""%>
     <% tab_seq, tab_aa, tab_ctg = {}, {}, {} %>
     <% tab_seq = {table_class: "predTable", th_left: "Predicted protein sequence", 
@@ -9,7 +10,8 @@
         col_left: "", col_middle: "", col_right: ""} %>
     <% tab_ctg = {table_class: "refTable", th_left: "CTG Position", th_right: "CTG usage in reference data", 
         col_left: "", col_right: ""} %>
-    <div class="pred_data_wrapper" style="clear:both">
+    <% basename = key.gsub(" ", "-").downcase %>
+    <div class="pred_data_wrapper" id="pred_data_<%= basename %>" style="clear:both">
     <%= 
     if value[:has_ctg] then
         if value[:ctg_pos].any? then
@@ -33,9 +35,14 @@
     else
         content_tag(:div, value[:message], :class => "pred_nothing")
     end + 
-    tag(:br) +
-    content_tag(:normal, "Restart gene prediction with the five best BLAST hits" ) +
-    check_box_tag('multi')
+    if value[:n_hits] > 1 && value[:hit_shown] == 1 then
+        content_tag(:div, 
+            content_tag(:p,
+                button_to("Predict more", predict_more_path(prot: key), id: "pred_more_button", 
+                    onclick: "hide_show_waiting('show');", remote: true, method: :get),  
+                    :id => "pred_more_#{basename}", :class => "pred_data_more")
+        )
+    end
     %>
     </div>
 <% end %> 

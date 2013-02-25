@@ -155,6 +155,8 @@ class PredictionsController < ApplicationController
 					File.delete(file_out)
 					next
 				end
+				@predicted_prots[prot][:n_hits] = output.lines.to_a.size
+				@predicted_prots[prot][:hit_shown] = 1
 
 				is_success, pred_seq, pred_dnaseq = perform_gene_pred(prot, output)
 				if ! is_success then
@@ -187,35 +189,58 @@ class PredictionsController < ApplicationController
 		render :predict_genes
 	end
 
-	def todo
-# gene prediction nachliefern:
-				file_out = file.gsub(".fasta", ".blastout") # store blast hits
+	# redo gene prediction for next 10 blast hits (gene prediction for best blast hit already done)
+	def predict_more
+		@prot = params[:prot]
+		@predicted_prots = {}
+		# prepare stuff
+		ref_data, @errors = load_ref_data
+		basename = @prot.gsub(" ", "-").downcase
+		seq_file = BASE_PATH + basename + "_" + session[:file][:id] + ".fasta"
+		blast_file = BASE_PATH + basename + "_" + session[:file][:id] + ".blastout"
+		headers, seqs = fasta2str(File.read(seq_file))
+		ref_prot_key = headers[0]
+		n_hits = File.read(blast_file).lines.to_a.size
 
-				is_success, pred_seq, pred_dnaseq = perform_gene_pred(prot, File.read(file_out))
-				if ! is_success then
-					# an error occured
-					# variable called "pred_seq" actually contains the program whith caused the error
-					@errors << "#{prot}: Gene prediction (#{pred_seq}) failed"
-					@predicted_prots[prot][:message] = "Sorry, an error occured"
-					next
-				end
-				
-				is_success, ref_seq_aligned, pred_seq_aligned = align_pred_ref(file, pred_seq)
-				if ! is_success then
-					# an error occured
-					# variable called "ref_seq_aligned" actually contains the program which caused the error 
-					@error << "#{prot}: Gene prediction (#{ref_seq_aligned}) failed"
-					@predicted_prots[prot][:message] = "Sorry, an error occured"
-					next
-				end
-			
-				is_success, results, message = compare_pred_gene(ref_data, ref_prot_key, prot, ref_seq_aligned, pred_seq_aligned, pred_dnaseq)
-				if ! is_success then
-					@predicted_prots[prot][:message] = message
+		(2..[10, n_hits].min).each do |n_hit|
+			key = @prot + "_" + n_hit.to_s
+			@predicted_prots[key] = { n_hits: n_hits, hit_shown: n_hit}
+
+			is_success, pred_seq, pred_dnaseq = perform_gene_pred(@prot, File.read(blast_file), n_hit)
+
+			if ! is_success then
+				# an error occured
+				# variable called "pred_seq" actually contains the program whith caused the error
+				if pred_seq.nil? then
+					# simply run out of BLAST hits
+					break
 				else
-					@predicted_prots[prot][:message] = ""
+					# an "real" error
+					@errors << "#{@prot}: Gene prediction (#{pred_seq}) failed"
+					@predicted_prots[key][:message] = "Sorry, an error occured"
+					next
 				end
-				@predicted_prots[prot].merge!(results)
+			end
+			
+			is_success, ref_seq_aligned, pred_seq_aligned = align_pred_ref(seq_file, pred_seq)
+			if ! is_success then
+				# an error occured
+				# variable called "ref_seq_aligned" actually contains the program which caused the error 
+				@error << "#{@prot}: Gene prediction (#{ref_seq_aligned}) failed"
+				@predicted_prots[key][:message] = "Sorry, an error occured"
+				next
+			end
+
+			is_success, results, message = compare_pred_gene(ref_data, ref_prot_key, @prot, ref_seq_aligned, pred_seq_aligned, pred_dnaseq)
+			if ! is_success then
+				@predicted_prots[key][:message] = message
+			else
+				@predicted_prots[key][:message] = ""
+			end
+			@predicted_prots[key].merge!(results)
+		end
+
+		render :predict_more
 	end
 
 	def prepare_new_session
@@ -325,7 +350,7 @@ class PredictionsController < ApplicationController
 	# 	sequence contig, sequence start, sequence stop, strand
 	# 	OR false if number exceeds found blast hits
 	def parse_blast_hits(hits, nr)
-		hit = hits.lines.to_a[nr-1] # hit number count starts with 1, ruby starts counting arrays with 0
+		hit = hits.lines.to_a[nr-1] # hit number count starts with 1 (human counting), ruby array count starts with 0
 		if hit.nil? then
 			# requested hit execceds number of hits
 			return false
@@ -370,7 +395,7 @@ class PredictionsController < ApplicationController
 	# 2.2) AUGUSTUS (based on best blast hit number blast_hit_nr)
 	# input:
 	# 	protein to query
-	# 	number of blast hit to use for gene prediction (optional)
+	# 	number of blast hit to use for gene prediction (start with 1; optional)
 	# output: 
 	# 	true if everything went fine, prediced prot and dna sequence
 	# 	OR false and string indicating the failing program otherwise
@@ -379,7 +404,7 @@ class PredictionsController < ApplicationController
 		is_success, seq_id, start, stop, strand = parse_blast_hits(blast_hits, blast_hit_nr) 
 		if ! is_success then
 			# number exceeds blast hits!
-			return false, "BLAST"
+			return false
 		end 
 
 		# 2.2) AUGUSTUS
@@ -410,13 +435,15 @@ class PredictionsController < ApplicationController
 	# 	aligned reference sequence
 	# 	aligned predicted sequence
 	# 	OR false if an error occured
-	def align_pred_ref(file_in, pred_seq)
+	def align_pred_ref(file, pred_seq)
 
 		# prepare input data for alignment program: needs to contain both ref and pred. seq
+		file_in = BASE_PATH + session[:file][:id] + "_" + rand(1000000000).to_s + ".fasta"
+		file_out = file_in.gsub(".fasta", "_aligned.fasta")
+		
+		FileUtils.cp(file, file_in)
 		fasta = str2fasta("Prediction", pred_seq)
 		File.open(file_in, 'a') {|file| file.write("\n" + fasta)}
-
-		file_out = file_in.gsub(".fasta", "_aligned.fasta")
 
 		# use pairalign or dialign
 		if session[:align][:algo] == "dialign" then
@@ -440,8 +467,11 @@ class PredictionsController < ApplicationController
 			end
 		end
 
-		ref_seq_aligned, pred_seq_aligned = parse_seqan(File.read(file_out))
-		return true, ref_seq_aligned, pred_seq_aligned
+		# parse multiple sequence alignment to get aligned reference and aligned predicted sequence
+		# first is reference seq
+		# second is predicted seq (human counting)
+		dummy, seqs = fasta2str(File.read(file_out))
+		return true, seqs[0], seqs[1]
 	end
 
 	# preforming cug-usage prediction 
@@ -493,6 +523,8 @@ class PredictionsController < ApplicationController
 	puts "#{prot}: not significant"
 					return false, results, "No significant position"
 				end # if is_significant
+			else
+				return false, results, "Cannot match CTG position"
 			end # if !(algnmnt_col_aa.nil? && algnmnt_col_pos.nil?)
 		end # ctg_pos.each do |pos|
 		return true, results
@@ -506,9 +538,23 @@ class PredictionsController < ApplicationController
 		return fasta
 	end
 
-	# expects fasta-formatted string (header + seq, containing \n) and returns everything but the header
+
+	# expects fasta-formatted string (possbily multiple fasta)
+	# returning array containing all header and array containing all sequences
 	def fasta2str(fasta)
-		return fasta.split("\n")[1..-1].join("")
+		headers = []
+		seqs = []
+		# get every record: everything between two ">"
+		fasta.scan(/^>([^>]*)/m).flatten.each do |rec|
+			rec.chomp!
+			nl = rec.index("\n") # first match: separating header from seq
+			header = rec[0..nl-1]
+			seq = rec[nl+1..-1]
+			seq.gsub!(/\n/,'') # removing all remaining \n from seq 
+			headers.push(header)
+			seqs.push(seq)
+		end
+		return headers, seqs
 	end
 
 	# extracting gene coding dna from gene entry in reference data
@@ -528,11 +574,6 @@ class PredictionsController < ApplicationController
 		pred_prot.gsub!("\n# ", "").upcase!
 		pred_dna.gsub!("\n# ", "").upcase!
 		return pred_prot, pred_dna
-	end
-
-	def parse_seqan(file)
-		parts = file.split("\n>")
-		return fasta2str(parts[0]), fasta2str(parts[1])
 	end
 
 	def alignment_pos2sequence_pos(apos, aseq)
