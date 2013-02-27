@@ -1,6 +1,8 @@
-hide_show_waiting('hide');
-<% new_content = escape_javascript(render(partial: "display_results"))%>
 <% basename = @prot.gsub(" ", "-").downcase %>
-$('#pred_more_<%= basename %>').html('<%=new_content%>');
-$('#pred_data_<%= basename %> form.button_to').hide()
-// $('#pred_data_<%= basename %> div.pred_nothing').hide();
+hide_show_waiting('hide');
+$('#pred_data_<%= basename %> #pred_more_button').hide(); // hide the "old" button
+<% new_content = escape_javascript(render(partial: "display_results"))%>
+$('#pred_data_<%= basename %>').append('<%=new_content%>');
+var old_stats = $('#results_stats').text();
+<% new_content = escape_javascript(render(partial: "display_stats")) %> 
+$('#results_stats').html('<%=new_content%>');

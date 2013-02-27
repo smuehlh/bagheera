@@ -1,6 +1,10 @@
-<% @predicted_prots.sort.map do |key, value| %>
-    <% key = $1 if key =~ /(.+)_\d+$/ %>
-    <%= content_tag(:h3, "#{key} (Hit #{value[:hit_shown]}/#{value[:n_hits]})") %>  
+<!-- natural sort -->
+<%# @predicted_prots.keys.sort_by{|ele| ele.split("_")[1].to_i }.each do |key| %>
+<% @predicted_prots.keys.sort_by { |key| key.to_s.naturalized }.each do |key| %>
+    <% prot_name = key =~ /(.+)_\d+$/ ? $1 : key # extract protein name %>
+    <% value = @predicted_prots[key] %>
+    <% all_hit_list = @predicted_prots.keys.grep(/_\d+$/) {|v| v.gsub(/[^\d]/, '').to_i} %>
+    <%= content_tag(:h3, "#{prot_name} (Hit #{value[:hit_shown]}/#{value[:n_hits]})") %>  
     <% seq, seq_pos, aa_pct = "", "", ""%>
     <% tab_seq, tab_aa, tab_ctg = {}, {}, {} %>
     <% tab_seq = {table_class: "predTable", th_left: "Predicted protein sequence", 
@@ -10,7 +14,7 @@
         col_left: "", col_middle: "", col_right: ""} %>
     <% tab_ctg = {table_class: "refTable", th_left: "CTG Position", th_right: "CTG usage in reference data", 
         col_left: "", col_right: ""} %>
-    <% basename = key.gsub(" ", "-").downcase %>
+    <% basename = prot_name.gsub(" ", "-").downcase %>
     <div class="pred_data_wrapper" id="pred_data_<%= basename %>" style="clear:both">
     <%= 
     if value[:has_ctg] then
@@ -26,21 +30,23 @@
             tag(:br) +
             draw_table(value[:ctg_pos], format_ctg_stats(value[:ctg_ref]), tab_ctg) +
             tag(:br) +
-            button_to("Show alignment", show_alignment_path(prot: key), id: "show_alignment_button", 
+            button_to("Show alignment", show_alignment_path(prot: prot_name, hit: value[:hit_shown]), 
+                id: "show_alignment_button_#{basename}_#{value[:hit_shown]}", 
                 onclick: "hide_show_waiting('show');", remote: true, method: :get) + 
-            content_tag(:div, "", :id => "alignment_#{key.gsub(" ", "-").downcase}")
+            content_tag(:div, "", :id => "alignment_#{basename}_#{value[:hit_shown]}")
         else
             content_tag(:div, value[:message], :class => "pred_nothing")
         end
     else
         content_tag(:div, value[:message], :class => "pred_nothing")
     end + 
-    if value[:n_hits] > 1 && value[:hit_shown] == 1 then
-        content_tag(:div, 
-            content_tag(:p,
-                button_to("Predict more", predict_more_path(prot: key), id: "pred_more_button", 
-                    onclick: "hide_show_waiting('show');", remote: true, method: :get),  
-                    :id => "pred_more_#{basename}", :class => "pred_data_more")
+    if value[:hit_shown] < value[:n_hits] &&
+       (all_hit_list.blank? || value[:hit_shown] == all_hit_list.max) then
+       # show button if there are more hits than the shown ones and (in case of multiple hits per prot) if its the last shown hit
+        content_tag(:p,
+            button_to("Predict more", predict_more_path(prot: prot_name, hit: value[:hit_shown]), id: "pred_more_button", 
+                onclick: "hide_show_waiting('show');", remote: true, method: :get),
+            :class => "vertical_line"
         )
     end
     %>

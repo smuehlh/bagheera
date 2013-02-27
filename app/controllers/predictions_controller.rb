@@ -1,4 +1,5 @@
 require 'peach'
+require 'Tools'
 
 class PredictionsController < ApplicationController
 
@@ -61,13 +62,15 @@ class PredictionsController < ApplicationController
 
 	# prepare alignment file for view show_alignment
 	def show_alignment
-		@prot = params[:prot].gsub(" ", "-").downcase
+		prot = params[:prot].gsub(" ", "-").downcase
+		hit = params[:hit].to_s
+		@frame_id = prot + "_" + hit
 		# copy file to /tmp/cymo_alignment_
-		@id = "cug" + @prot.gsub("-", "") + session[:file][:id]
+		@file_id = "cug" + session[:file][:id] + rand(1000000000).to_s
 		# set correct file extension for dialign/ seqan files
 		ext = session[:align][:algo] == "dialign" ? "_aligned.fasta.fa" : "_aligned.fasta"
-		file_scr = BASE_PATH + @prot + "_" + session[:file][:id] + ext
-		file_dest = Dir::tmpdir + "/cymobase_alignment_" + @id + ".fasta"
+		file_scr = BASE_PATH + prot + "_" + hit + "_" + session[:file][:id] + ext
+		file_dest = Dir::tmpdir + "/cymobase_alignment_" + @file_id + ".fasta"
 		FileUtils::cp(file_scr, file_dest)
 		# TODO use complete cymoalignment for prot instead of only one ref seq?
 		render :show_alignment
@@ -134,25 +137,25 @@ class PredictionsController < ApplicationController
 				prot_basename = prot.gsub(" ", "-").downcase
 
 				# save reference protein in fasta format in file (needed for blast alignment of reference and predicted protein)
-				file = BASE_PATH + prot_basename + "_" + session[:file][:id] + ".fasta"
+				seq_file = BASE_PATH + prot_basename + "_" + session[:file][:id] + ".fasta"
 				fasta = str2fasta(ref_prot_key, ref_prot_seq)
-				File.open(file, 'w'){|file| file.write(fasta)}
+				File.open(seq_file, 'w'){|file| file.write(fasta)}
 
 				### 2) gene prediction foreach reference protein:
 
 				### 2.1) BLAST
 				# 2.1.1) convert uploaded genome into blast-db
 				# 2.1.2) blast-query
-				file_out = file.gsub(".fasta", ".blastout") # store blast hits
+				blast_file = BASE_PATH + prot_basename + "_" + session[:file][:id] + ".blastout"  # store blast hits
 						# -p [PROGRAM] protein query against nt-db -d [DATABASE] -i [FILE] -m8 [OUTPUT FORMAT] -F [FILTERING] -s [SMITH-WATERMAN ALIGNMENT] T 
 						# use tee to get both output to parse and a file (for later, independent gene prediction)
-				output = `#{BLASTALL} -p tblastn -d #{genome_db} -i #{file} -m8 -F "m S" -s T 2>&1 | tee #{file_out}`
+				output = `#{BLASTALL} -p tblastn -d #{genome_db} -i #{seq_file} -m8 -F "m S" -s T 2>&1 | tee #{blast_file}`
 
 				if ! $?.success? || output.include?("ERROR") then
 					@errors << "#{prot}: Gene prediction (BLAST) failed"
 					@predicted_prots[prot][:message] = "Sorry, an error occured"
 					# delete file with blast hits, its contains only error messages
-					File.delete(file_out)
+					File.delete(blast_file)
 					next
 				end
 				@predicted_prots[prot][:n_hits] = output.lines.to_a.size
@@ -166,8 +169,8 @@ class PredictionsController < ApplicationController
 					@predicted_prots[prot][:message] = "Sorry, an error occured"
 					next
 				end
-				
-				is_success, ref_seq_aligned, pred_seq_aligned = align_pred_ref(file, pred_seq)
+		
+				is_success, ref_seq_aligned, pred_seq_aligned = align_pred_ref(seq_file, pred_seq)
 				if ! is_success then
 					# an error occured
 					# variable called "ref_seq_aligned" actually contains the program which caused the error 
@@ -186,27 +189,33 @@ class PredictionsController < ApplicationController
 
 			end # ref_data.peach do |prot, des|
 		end # if @errors.empty?
+		@stats = calc_stats(@predicted_prots)
+
 		render :predict_genes
 	end
 
 	# redo gene prediction for next 10 blast hits (gene prediction for best blast hit already done)
 	def predict_more
 		@prot = params[:prot]
-		@predicted_prots = {}
+		hit_start = params[:hit].to_i + 1 # use next hit for prediction
+
 		# prepare stuff
+		@predicted_prots = {}
 		ref_data, @errors = load_ref_data
 		basename = @prot.gsub(" ", "-").downcase
 		seq_file = BASE_PATH + basename + "_" + session[:file][:id] + ".fasta"
 		blast_file = BASE_PATH + basename + "_" + session[:file][:id] + ".blastout"
 		headers, seqs = fasta2str(File.read(seq_file))
 		ref_prot_key = headers[0]
-		n_hits = File.read(blast_file).lines.to_a.size
+		blast_all_hits = File.read(blast_file)
+		n_hits = blast_all_hits.lines.to_a.size
+		hit_stop = hit_start == 2 ? [10, n_hits].min : [hit_start+9, n_hits].min # go in steps of 10, or to last hit
 
-		(2..[10, n_hits].min).each do |n_hit|
+		(hit_start..hit_stop).each do |n_hit|
 			key = @prot + "_" + n_hit.to_s
 			@predicted_prots[key] = { n_hits: n_hits, hit_shown: n_hit}
 
-			is_success, pred_seq, pred_dnaseq = perform_gene_pred(@prot, File.read(blast_file), n_hit)
+			is_success, pred_seq, pred_dnaseq = perform_gene_pred(@prot, blast_all_hits, n_hit)
 
 			if ! is_success then
 				# an error occured
@@ -222,7 +231,7 @@ class PredictionsController < ApplicationController
 				end
 			end
 			
-			is_success, ref_seq_aligned, pred_seq_aligned = align_pred_ref(seq_file, pred_seq)
+			is_success, ref_seq_aligned, pred_seq_aligned = align_pred_ref(seq_file, n_hit, pred_seq)
 			if ! is_success then
 				# an error occured
 				# variable called "ref_seq_aligned" actually contains the program which caused the error 
@@ -239,6 +248,7 @@ class PredictionsController < ApplicationController
 			end
 			@predicted_prots[key].merge!(results)
 		end
+		@stats = calc_stats(@predicted_prots, prev_stats=true) # stats needs to be combined with old data!
 
 		render :predict_more
 	end
@@ -266,6 +276,31 @@ class PredictionsController < ApplicationController
 			return false, errors
 		end
 		return JSON.load(File.read(path)), []
+	end
+
+	def calc_stats(data, combine=false)
+		stats = Hash.new(0)
+		file = BASE_PATH + session[:file][:id]
+
+		if combine then
+			# for this dataset, statistics already exist
+			old_stats = File.read(file)
+			stats = Hash[old_stats.scan(/([\w_]+):(\d+)/)] # parse data and put them right into the hash
+			stats.each{ |key,val| stats[key] = val.to_i } # convert all numbers (string representation) to integers
+		end
+
+		# updata statistics (or create new ones)
+		stats["sig_pos"] += data.values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_pos].length : res + 0}
+		stats["n_prots"] += data.keys.length
+		stats["ser"] += data.values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_transl].count("S") : res + 0}
+		stats["leu"] += data.values.inject(0) {|res, val| val[:has_ctg]? res + val[:ctg_transl].count("L") : res + 0}
+		stats["ref_ctgpos"] += data.values.inject(0) {|res, val| 
+			val[:has_ctg] ? res + val[:ctg_ref].collect {|hash| hash.values}.flatten.count{|x| x >= 0.5} : res + 0}
+
+		# save updated data statistics to file 
+		str = stats.map {|obj| obj.join(":") }.join("\n")
+		File.open(file, 'w'){|f| f.write(str)}
+		return stats
 	end
 
 	def check_filesize(size)
@@ -435,12 +470,14 @@ class PredictionsController < ApplicationController
 	# 	aligned reference sequence
 	# 	aligned predicted sequence
 	# 	OR false if an error occured
-	def align_pred_ref(file, pred_seq)
+	def align_pred_ref(file, hit=1, pred_seq)
 
-		# prepare input data for alignment program: needs to contain both ref and pred. seq
-		file_in = BASE_PATH + session[:file][:id] + "_" + rand(1000000000).to_s + ".fasta"
+		# # prepare input data for alignment program: needs to contain both ref and pred. seq
+		# file_in = BASE_PATH + session[:file][:id] + "_" + rand(1000000000).to_s + ".fasta"
+		# file_out = file_in.gsub(".fasta", "_aligned.fasta")
+		file_in = file.gsub("_", "_#{hit}_")
 		file_out = file_in.gsub(".fasta", "_aligned.fasta")
-		
+
 		FileUtils.cp(file, file_in)
 		fasta = str2fasta("Prediction", pred_seq)
 		File.open(file_in, 'a') {|file| file.write("\n" + fasta)}
@@ -490,7 +527,6 @@ class PredictionsController < ApplicationController
 		if !codons.include?("CTG")
 			# nope, no CTG => nothing to predict
 			results[:has_ctg] = false
-	puts "#{prot}: no CTG"
 			return false, results, "No CTG in prediced gene"
 		else
 			results[:pred_prot] = pred_seq_aligned.gsub("-", "")
@@ -518,9 +554,7 @@ class PredictionsController < ApplicationController
 					results[:ctg_transl] << prob_transl
 					results[:aa_comp] << [aa_freq, aa_num, seq_num]
 					results[:ctg_ref] << {ser: pct_ctg_ser, leu: pct_ctg_leu}
-	puts "#{prot}: is significant!!!"
 				else
-	puts "#{prot}: not significant"
 					return false, results, "No significant position"
 				end # if is_significant
 			else

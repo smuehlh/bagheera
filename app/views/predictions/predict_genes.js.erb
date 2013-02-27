@@ -7,6 +7,4 @@
 	<% new_content = escape_javascript(render(partial: "display_stats"))%>
 	$('#results_stats').html('<%=new_content%>');
 <% end %>
-// nur einen Teil der Variablen uebergeben geht so:
-// escape_javascript(render(partial: "bin_jung", locals: {dsa: @asd}))
 hide_show_waiting('hide');

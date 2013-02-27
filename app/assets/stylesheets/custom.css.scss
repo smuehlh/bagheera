@@ -386,9 +386,14 @@ input.defaulttext, textarea.defaulttext {
     color: white;
 }
 
-.pred_data_more {
-    padding-left: 0px;
-    background-color: $h1_color;
+// div.pred_data_more {
+//     padding-left: 0px;
+//     background-color: $h1_color;
+// }
+
+.vertical_line {
+    border: 1px solid #aaa;
+    border-width: 0px 0px 1px 0px;
 }
 
 .format_ctg_stats {
