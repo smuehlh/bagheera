@@ -1,8 +1,12 @@
-<% basename = @prot.gsub(" ", "-").downcase %>
-hide_show_waiting('hide');
-$('#pred_data_<%= basename %> #pred_more_button').hide(); // hide the "old" button
-<% new_content = escape_javascript(render(partial: "display_results"))%>
-$('#pred_data_<%= basename %>').append('<%=new_content%>');
-var old_stats = $('#results_stats').text();
-<% new_content = escape_javascript(render(partial: "display_stats")) %> 
-$('#results_stats').html('<%=new_content%>');
+<% if @errors.any? then%>
+	show_error('<%=raw(@errors.join("<br />"))%>');
+<% else %>
+	<% basename = @prot.gsub(" ", "-").downcase %>
+	hide_show_waiting('hide');
+	$('#pred_data_<%= basename %> #pred_more_button').hide(); // hide the "old" button
+	<% new_content = escape_javascript(render(partial: "display_results"))%>
+	$('#pred_data_<%= basename %>').append('<%=new_content%>');
+	var old_stats = $('#results_stats').text();
+	<% new_content = escape_javascript(render(partial: "display_stats")) %> 
+	$('#results_stats').html('<%=new_content%>');
+<% end %>

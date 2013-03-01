@@ -1,7 +1,7 @@
 <% if @content_error.blank? then %>
 	hide_show_waiting('hide');
 	$('#uploaded_files').html('<%=session[:file][:name]%>');
-	$('#predict_button').hide();
+	// $('#predict_button').hide(); 
 	$('#options_section').show();
 	<% new_content = escape_javascript(render(partial: "show_options"))%>
 	$('#set_options').html('<%=new_content%>');

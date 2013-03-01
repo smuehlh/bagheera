@@ -53,7 +53,8 @@ function load_fileupload() {
         submit: function() {
             // first hide the predict button and results in case a subsequent submit contains false data
             $('#predict_button').hide();
-            $('#results').hide();
+            $('#options_section').hide();
+            $('#results_section').hide();
             // show loading anim
             hide_show_waiting('show');
         }
@@ -69,13 +70,15 @@ function load_fileupload_old() {
             }
             else {
                $('#predict_button').show();
-               $('#results').show();
+               $('#options_section').hide();
+               $('#results_section').show();
             }
         },
         submit: function() {
             // first hide the predict button in case a subsequent submit contains false data
             $('#predict_button').hide();
-            $('#results').hide();
+            $('#options_section').hide();
+            $('#results_section').hide();
             // show loading anim
             hide_show_waiting('show');
         },

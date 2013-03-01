@@ -39,5 +39,15 @@ describe "StaticPages" do
     page.should have_selector 'title', text: full_title('Team')
     click_link "Prediction"
     page.should have_selector 'title', text: full_title('Prediction')
+    click_link "Bagheera Team #{Time.now.year}"
+    page.should have_selector 'title', text: full_title('Team')
+    # test for links only the presence, not if they work correctly
+    page.should have_link 'Impressum'
+    page.should have_link 'Disney'
+    page.should have_link 'link to diark'
+    page.should have_link 'link to cymobase'
+    page.should have_link 'link to motorprotein'
+    page.should have_link 'link to MPG'
+    page.should have_link 'MPI for biophysical chemistry'
   end
 end

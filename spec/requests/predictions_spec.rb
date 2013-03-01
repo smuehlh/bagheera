@@ -1,6 +1,10 @@
 require 'spec_helper'
 
-describe "Predictions" do
+def load_json
+
+end
+
+describe PredictionsController do
 
 	describe "Prediction page" do
 
@@ -8,9 +12,10 @@ describe "Predictions" do
 		before {visit root_path}
 		it {should have_selector('title', text: full_title('Prediction'))}
 		it {should have_selector('h1', text: 'Prediction')}
+		it {should have_selector('h2', text: 'Genome file upload')}
+		it {should have_selector('input', :class => 'ajax_upload_field')}
 
 		it "should have the right links on the layout" do
-		    visit root_path
 		    click_link "Help"
 		    page.should have_selector 'title', text: full_title('Help')
 		    click_link "Contact"
@@ -20,32 +25,36 @@ describe "Predictions" do
 		    click_link "Prediction"
 		    page.should have_selector 'title', text: full_title('Prediction')
 		end
+
+		it "has no file uploaded" do
+			page.should have_content('No file uploaded')
+			page.should have_selector('input', :id => 'predict_button')
+			page.should have_selector('h1', text: 'Results', :visible => false)
+			page.should have_selector('h2', text: 'Gene prediction and alignment options', :visible => false)
+		end
+
+		it "should upload file" do
+			post upload_file_path, :uploaded_file => Rack::Test::UploadedFile.new(Rails.root.join('spec', 'fixtures', 'files', 'Candida_albicans_WO_1.fasta'), 'text/plain')
+			response.should be_success
+			response.should render_template('upload_file_ajax')
+		end	
 	end
 
-	describe "file upload" do
-		before {visit root_path}
-		describe "when no file uploaded" do
-			it {should_not have_selector('h1', text: 'Results')}
-			it {should_not have_button("Predict")}
+
+	describe "Prediction workflow" do
+		subject { page }
+
+		it "has file uploaded" do
+			get root_path
+			get load_example_path # use get to keep one session
+			render_template('upload_file_ajax')
+			response.body.should have_content('Candida_albicans_WO_1.fasta')
+			response.body.should have_selector('input', :id => "predict_button")
+			response.body.should have_content("Alignment method")
+			post predict_genes_path, algo: "gotoh", config: "tttt", species: "candida_albicans"
+			render_template('predict_genes')
+
 		end
 
-		def genome_file_upload 
-			genome_file = "#{Rails.root}/spec/fixtures/files/candida.fasta"
-			Rack::Test::UploadedFile.new(genome_file, "text/plain")
-		end
-		describe "when POST to #upload_file" do
-			before(:each) do
-				xhr :post, upload_file: genome_file
-				response.should be_success
-			end
-			it {should have_button("Predict")}
-			it {should_not have_selector("h1", text: "Results")}
-			it {should have_content("candida.fasta")}
-		end
-
-
-		# test for rendering partial
-# it { should render_template(:partial => '_partialname') }
-# xhr for xhttprequest
 	end
 end

@@ -2,7 +2,13 @@ module PredictionsHelper
 	Line_width = 80
 	Space = "&nbsp;"
 
-	# fill in alignment options from pairAlign. dialign and Augustus - species into selection_tag
+	# fill in alignment options from pairAlign, dialign and Augustus (species) into selection_tag
+	# @return [Array] Available algorithms (for alignment) methods in selection_tag format
+	# @return [String] Preselected algorithm
+	# @return [Array] Available algorithm options (for alignment) in selection_tag format
+	# @return [String] Preselected configuration
+	# @return [Array] Available species (for gene prediction) in selection_tag format
+	# @return [String] Preselected species
 	def fill_selection_tags()
 		arr_algo = [['Needleman-Wunsch', 'nw'], ['Gotoh', 'gotoh'], ['Smith-Waterman', 'sw'], ['Longest Common Subsequence', 'lcs'], ['DIALIGN2', 'dialign']]
 		pre_select_algo = 'gotoh'
@@ -65,16 +71,13 @@ module PredictionsHelper
 		return arr_algo, pre_select_algo, arr_conf, pre_select_conf, arr_species, pre_select_species
 	end
 
-	# return pretty formatted ctg-usage
-	# input:
-		# predictd protein sequence,
-		# CTG positions
-		# [hash listing counts for each amino acid, total number of amino acids]
-	# output:
-		# array with each element containing one sequence part of Line_width, with siginifcant positions highlighted
-		# array containing positions (as occuring in respecitive part of the sequence-array)
-		# array containing amino acid statistics for each significant position
-
+	# Format data for view
+	# @param prot [String] predicted protein sequence
+	# @param ctgpos [Array] Found CTG positions in the predicted sequence
+	# @param aa_stats [Array] Array of array; amino acids stats (from reference data) for each CTG position
+	# @return [Array] Formatted protein sequence (including tags to highlight significant positions); 80 chars per element
+	# @return [Array] Formatted CTG positions; elements correspond to the formatted seq
+	# @return [Array] Formatted amino acid statistics for each significant position
 	def format_seq(prot, ctgpos, aa_stats)
 		str, aa_pct, side_str = [], [], []
 
@@ -100,14 +103,11 @@ module PredictionsHelper
 		return str, side_str, aa_pct
 	end
 
-	# puts data into a html-table
-	# input: 
-		# array with data for column 1 (e.g. position)
-		# array with data for column 2 (e.g. sequence data)
-		# OPTIONAL: array with data for column 3 (e.g. additional data)
-		# hash specifing classes for the table
-	# output:
-		# html-formatted tab
+	# Puts data into a html-table
+	# @param col1 [Array] Data for column 1 (e.g. position)
+	# @param col2 [Array] Data for column 2 (e.g. sequence data)
+	# @param col3 [Array] Data for column 3; optional
+	# @return [String] html-formatted table
 	def draw_table(col1, col2, *col3, table_spec)
 		content_tag(:table, :class => table_spec[:table_class]) do
 			content_tag(:tr) do
@@ -140,12 +140,9 @@ module PredictionsHelper
 		end
 	end
 
-	# return pretty formatted amino acid statistics
-	# input: 
-		# statistics for one ctg position
-	# output: 
-		# string, sorted by occurence of amino acids
-		# and sort amino acids by percent
+	# formatting amino acid statistics
+	# @param [Array] Amino acid statistics for one CTG-pos
+	# @return [String] Format: "L: 100%", sorted by percent; only > 5%
 	def format_aa_stats(stats)
 		str = []
 		stats.sort_by {|k, v|v}.reverse.each do |aa, freq|
@@ -156,11 +153,9 @@ module PredictionsHelper
 		return str.join(", ")
 	end
 
-	# return formatted ctg usage in reference data -statistics
-	# input:
-		# array of hashes with percentage of CTGs encoding Ser and Leu for each position
-	# output:
-		# array of strings
+	# format statistics over CTG usage in reference data
+	# @param [Array] Array of Hashes; percent Ser and Leu encoded by CTG per position (reference data)
+	# @return [Array] Formatted statistics
 	def format_ctg_stats(data)
 		data.map do |ele| 
 			sum = (ele.values.sum * 100).round
@@ -174,31 +169,4 @@ module PredictionsHelper
 		end
 	end
 
-
 end
-
-	# def format_output_bkp(prot, ctgpos, aa_stats)
-	# 	str, aa_pos, aa_pct, side_str = [], [], [], []
-
-	# 	# mark all significant positions by "!" to find them unambigously
-	# 	seq = String.new(prot)
-	# 	ctgpos.each {|pos| seq[pos] = "!"}
-	# 	ind = 0 # index of ctgpos, aa_stats
-
-	# 	seq.scan(/.{1,#{Line_width}}/).each do |part|
-	# 		# indices = part.enum_for(:scan,/!/).map { Regexp.last_match.begin(0) }
-	# 		# indices.each do |i|
-	# 		side = []
-	# 		part.count("!").times do |i|
-	# 			pos = ctgpos[ind]
-	# 			part.sub!("!", "<span title=\"Position: #{pos}\" class=highlight_aa>#{prot[ctgpos[ind]]}</span>")
-	# 			aa_pos << ("Position: " + pos.to_s)
-	# 			aa_pct << format_aa_stats(aa_stats[ind])
-	# 			side << pos
-	# 			ind = ind + 1
-	# 		end
-	# 		str << part
-	# 		side_str << side.join(", ")
-	# 	end
-	# 	return str.join("<br />"), aa_pos.join("<br />"), aa_pct.join("<br />"), side_str.join("<br />")
-	# end

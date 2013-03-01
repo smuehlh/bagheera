@@ -45,6 +45,8 @@ Dir[Rails.root.join("spec/support/**/*.rb")].each {|f| require f}
     # the seed, which is printed after each run.
     #     --seed 1234
     config.order = "random"
+
+    config.render_views
   end
 end
 

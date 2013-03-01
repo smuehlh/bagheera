@@ -3,7 +3,7 @@ require 'Tools'
 
 class PredictionsController < ApplicationController
 
-	MAX_SIZE = 52428800
+	MAX_SIZE = 52428800 # 50 MB
 	BASE_PATH = Dir::tmpdir + "/cug/" # all data files are stored in /tmp
 	REF_DATA = "alignment_gene_structure.json"
 	SORT = "/usr/bin/sort"
@@ -16,11 +16,16 @@ class PredictionsController < ApplicationController
 	HYDORPHOBIC_AAS = ["V", "I", "L"]
 	POLAR_AAS = ["S", "T"]
 
+	# Render start page for prediction
 	def search
 		delete_old_data # delete old uploaded genome files
 		prepare_new_session # a fresh session
 	end
 
+	# Handel uploaded genome file: 
+	# store it in /tmp/cug and add its id(new file name), original filename and path to the session
+	# render partial showing the uploaded file
+	# accessible params: @content_error [Array] Errors occured during file load
 	def upload_file
 		`fromdos #{params[:uploaded_file].path}` # remove \r, if uploaded from windows
 		# is the file too big? maybe jquery-check did not work, so better check again
@@ -36,9 +41,13 @@ class PredictionsController < ApplicationController
 			File.open(file_path, 'wb') {|file| file.write(params[:uploaded_file].read)}
 			session[:file] = { id: file_id, name: file_name, path: file_path }
 		end
-		render :upload_file_ajax
+		render :upload_file_ajax, formats: [:js]
 	end
 
+	# Handel loading the example genome:
+	# store it in /tmp/cug and add its id(new file name), original filename and path to the session
+	# render partial showing the uploaded file
+	# accessible params: @content_error [Array] Errors occured during file load
 	def load_example
 		# do not check content, but check file size, just to be sure
 		example_file = "Candida_albicans_WO_1.fasta"
@@ -51,7 +60,7 @@ class PredictionsController < ApplicationController
 			@file = example_file
 			session[:file] = { id: file_id, name: example_file, path: file_path }
 		end
-		render :upload_file_ajax
+		render :upload_file_ajax, formats: [:js]
 	end
 
 # uncomment if alignment options should get an own submit-button instead of the big "Predict button"
@@ -60,7 +69,13 @@ class PredictionsController < ApplicationController
 	# 	render :set_options
 	# end
 
-	# prepare alignment file for view show_alignment
+
+
+	# Prepare alignment file for view show_alignment
+	# store it in /tmp/cymobase_alignment_ ... for lucullus
+	# render partial show_alignment
+	# accessible params in view: @frame_id [Array] Identify the right div
+	# accessible params in view: @file_id [Array] Part of file path, for lucullus
 	def show_alignment
 		prot = params[:prot].gsub(" ", "-").downcase
 		hit = params[:hit].to_s
@@ -76,6 +91,18 @@ class PredictionsController < ApplicationController
 		render :show_alignment
 	end
 
+	# Predict CUG usage for uploaded data
+	# 1) extract reference proteins
+	# 2) gene prediction foreach reference protein:
+	# 2.1) BLAST
+	# 2.2) AUGUSTUS
+	# 3) Compare with reference data
+	# 3.1) Compare with reference alignment
+	# 3.2) Compare with reference genes
+	# render partial predict_genes
+	# accessible params in view: @predicted_prots [Hash] Prediction data for each reference protein
+	# accessible params in view: @stats [Hash] Statistics over prediction data
+	# accessible params in view: @errors[Array] Errors occured during prediction
 	def predict_genes
 		# general workflow
 
@@ -92,7 +119,6 @@ class PredictionsController < ApplicationController
 		# add options to session
 		session[:align] = { algo: params[:algo], config: params[:config] }
 		session[:augustus] = { species: params[:species] }
-		session[:multi_hits] = params.has_key?(:multi) ? true : false
 
 		ref_data, @errors = load_ref_data
 		@predicted_prots = {} # containing final results ...
@@ -161,7 +187,7 @@ class PredictionsController < ApplicationController
 				@predicted_prots[prot][:n_hits] = output.lines.to_a.size
 				@predicted_prots[prot][:hit_shown] = 1
 
-				is_success, pred_seq, pred_dnaseq = perform_gene_pred(prot, output)
+				is_success, pred_seq, pred_dnaseq = perform_gene_pred(output)
 				if ! is_success then
 					# an error occured
 					# variable called "pred_seq" actually contains the program whith caused the error
@@ -191,10 +217,16 @@ class PredictionsController < ApplicationController
 		end # if @errors.empty?
 		@stats = calc_stats(@predicted_prots)
 
-		render :predict_genes
+		render :predict_genes, formats: [:js]
 	end
 
-	# redo gene prediction for next 10 blast hits (gene prediction for best blast hit already done)
+	# redo gene prediction for next 10 blast hits (gene prediction for best blast hit is already done) for one specific protein
+	# same workflow as predict_genes
+	# renders predict_more
+	# accessible params in view: @predicted_prots [Hash] Prediction data for reference protein @prot
+	# accessible params in view: @stats [Hash] Up-to-date statistics over prediction data
+	# accessible params in view: @prot [String] Protein for which gene prediction was restarted
+	# accessible params in view: @errors[Array] Errors occured during prediction
 	def predict_more
 		@prot = params[:prot]
 		hit_start = params[:hit].to_i + 1 # use next hit for prediction
@@ -215,7 +247,7 @@ class PredictionsController < ApplicationController
 			key = @prot + "_" + n_hit.to_s
 			@predicted_prots[key] = { n_hits: n_hits, hit_shown: n_hit}
 
-			is_success, pred_seq, pred_dnaseq = perform_gene_pred(@prot, blast_all_hits, n_hit)
+			is_success, pred_seq, pred_dnaseq = perform_gene_pred(blast_all_hits, n_hit)
 
 			if ! is_success then
 				# an error occured
@@ -235,7 +267,7 @@ class PredictionsController < ApplicationController
 			if ! is_success then
 				# an error occured
 				# variable called "ref_seq_aligned" actually contains the program which caused the error 
-				@error << "#{@prot}: Gene prediction (#{ref_seq_aligned}) failed"
+				@errors << "#{@prot}: Gene prediction (#{ref_seq_aligned}) failed"
 				@predicted_prots[key][:message] = "Sorry, an error occured"
 				next
 			end
@@ -250,18 +282,19 @@ class PredictionsController < ApplicationController
 		end
 		@stats = calc_stats(@predicted_prots, prev_stats=true) # stats needs to be combined with old data!
 
-		render :predict_more
+		render :predict_more, formats: [:js]
 	end
 
+	# prepare a new session 
 	def prepare_new_session
 		reset_session
 	    session[:file] = {} 		# uploaded genome described by keys: :name, :id, :path
 	    session[:align] = {}		# alignment options for seqan: pair_align or DIALIGN
 	    session[:augustus] = {}		# options for augustus gene prediction
-	    session[:multi_hits] = ""	# predict genes based on single best hit or many best hits
-	    return true
 	end
 
+	# delete old data in /tmp/cug/ and /tmp/cymobase_alignment_cug*
+	# data from old predictions and show_alignment requests
 	def delete_old_data(days = 1)
 		# delete all files older than one day but file "alignment_gene_structure.json"
 		system("find #{BASE_PATH} -type f \\! -name '#{REF_DATA}' -mtime +#{days} -delete 2> /dev/null")
@@ -269,6 +302,10 @@ class PredictionsController < ApplicationController
 		FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
 	end
 
+	# load reference data from file alignment_gene_structure.json
+	# @return [FalseClass] If an error occured
+	# @return [TrueClass] If no error occured -> Array will be empty
+	# @return [Array] Errors occured during file load
 	def load_ref_data
 		path = BASE_PATH + REF_DATA
 		if ! FileTest.file?(path) then
@@ -278,6 +315,11 @@ class PredictionsController < ApplicationController
 		return JSON.load(File.read(path)), []
 	end
 
+	# parse predicted data to get statistics, store them in a file
+	# and combine stored ones with the ones from additionally predicted if neccessary
+	# @param data [Hash] Prediction data 
+	# @param combine [Boolean] Optional; Indicates if existing stats needs to be combined with additional predicted ones
+	# @return [Hash] Up-to-date statistics
 	def calc_stats(data, combine=false)
 		stats = Hash.new(0)
 		file = BASE_PATH + session[:file][:id]
@@ -303,6 +345,9 @@ class PredictionsController < ApplicationController
 		return stats
 	end
 
+	# compare uploadedfile-size with maximal size (50MB)
+	# @param size [Fixnum] File size 
+	# @return [Array] Error message if size exceeds MAX_SIZE
 	def check_filesize(size)
 		errors = []
 		if size > MAX_SIZE then
@@ -312,6 +357,9 @@ class PredictionsController < ApplicationController
 		return errors
 	end
 
+	# Read fasta and test if it is fasta-formatted genome file and contains an CTG codon
+	# @param file [String] File handle
+	# @return [Array] Error messages if invalid file
 	def check_fasta(file)
 		errors = []
 		is_fasta = true
@@ -366,8 +414,8 @@ class PredictionsController < ApplicationController
 
 	# creating blast db from uploaded genome file with formatdb
 	# for the blast search performed later
-	# input: genome database name (full path)
-	# return an error if formatdb failed
+	# @param genome_db [String] Path for genome database
+	# @return [String] Error if formatdb failed
 	def create_blast_db(genome_db)
 		error = ""
 			# -i [INPUT: GENOME FILE] -p [PROTEIN] FALSE -n [DB NAME] -o [CREATE INDEX OVER SEQID] TRUE
@@ -379,11 +427,14 @@ class PredictionsController < ApplicationController
 	end
 
 	# parse blast output 
-	# input: blast output (including all hits)
-	# 		number of the blast hit of interest
-	# output:
-	# 	sequence contig, sequence start, sequence stop, strand
-	# 	OR false if number exceeds found blast hits
+	# @param hits [String] Complete blast output (Hit list)
+	# @param nr [Fixnum] Number of blast hit of interest (human counting -> starts with 1)
+	# @return [TrueClass] If the requested hit exists
+	# @return [String] Contig containing hit
+	# @return [Fixnum] Sequence start
+	# @return [Fixnum] Sequence stop
+	# @return [Fixnum] Strand (1 for plusstrand, 2 for minusstrand)
+	# @return [FalseClass] AND NO OTHER VALUES If the requested hit does not exist
 	def parse_blast_hits(hits, nr)
 		hit = hits.lines.to_a[nr-1] # hit number count starts with 1 (human counting), ruby array count starts with 0
 		if hit.nil? then
@@ -406,12 +457,13 @@ class PredictionsController < ApplicationController
 		return true, seq_id, start, stop, strand
 	end
 
-	# perform gene prediction with augustus
+	# perform gene prediction with augustus: run augustus and parse output
 	# input: 
-	# 	seq_file: nucleotide sequence identified by blast
-	# output: 
-	# 	predicted protein, and coding sequence
-	# 	OR false if an error occured
+	# @param seq_file [String] Path to file containing coding region 
+	# @return [TrueClass] If no error occured
+	# @return [String] Predicted protein sequence
+	# @return [String] Predicted coding sequence (DNA)
+	# @return [FalseClass] AND NO OTHER VALUES If an error occured
 	def run_augustus(seq_file)
 			# --species [REFERENCE SPEC] QUERY --genemodel=exactlyone [predict exactly one complete gene] --codingseq=on [output also coding sequence]
 			# redirection: add stderr to stdout (screen)
@@ -426,15 +478,15 @@ class PredictionsController < ApplicationController
 	end
 
 
-	# performing gene prediction for given protein:
-	# 2.2) AUGUSTUS (based on best blast hit number blast_hit_nr)
-	# input:
-	# 	protein to query
-	# 	number of blast hit to use for gene prediction (start with 1; optional)
-	# output: 
-	# 	true if everything went fine, prediced prot and dna sequence
-	# 	OR false and string indicating the failing program otherwise
-	def perform_gene_pred(prot, blast_hits, blast_hit_nr=1)
+	# performing gene prediction for given protein (step 2.2)
+	# calling augustus based on best blast hit 
+	# @param blast_hits [String] Complete blast output (Hit list)
+	# @param nr [Fixnum] Number of blast hit of interest (human counting -> starts with 1)
+	# @return [TrueClass] If no error occured
+	# @return [String] Predicted protein sequence
+	# @return [String] Predicted coding sequence (DNA)
+	# @return [FalseClass] AND NO OTHER VALUES If an error occured
+	def perform_gene_pred(blast_hits, blast_hit_nr=1)
 		# parse blast output
 		is_success, seq_id, start, stop, strand = parse_blast_hits(blast_hits, blast_hit_nr) 
 		if ! is_success then
@@ -464,12 +516,14 @@ class PredictionsController < ApplicationController
 	end
 
 	# align reference protein with the predicted protein
-	# input:
-	# 	file containing reference sequence
-	# output:
-	# 	aligned reference sequence
-	# 	aligned predicted sequence
-	# 	OR false if an error occured
+	# @param file [String] file path containing reference sequence
+	# @param hit [Fixnum] Number of blast hit of interest (human counting -> starts with 1)
+	# @param pred_seq [String] Predicted protein sequence
+	# @return [TrueClass] If no error occured
+	# @return [String] Aligned reference sequence
+	# @return [String] Aligned predicted sequence
+	# @return [FalseClass] If an error occured
+	# @return [String] Method which failed ONLY IN CASE OF AN ERROR
 	def align_pred_ref(file, hit=1, pred_seq)
 
 		# # prepare input data for alignment program: needs to contain both ref and pred. seq
@@ -512,13 +566,20 @@ class PredictionsController < ApplicationController
 	end
 
 	# preforming cug-usage prediction 
-	# 3.1) Compare with reference alignment
-	# 3.1.1) map predicted gene onto reference protein
-	# 3.2) Compare with reference genes
-	# input: reference data, key of reference protein, protein name and aligned sequence and predicted protein
-	# output:
-	# 	true and hash containing all data
-	# 	OR false and message describing the problem
+	# step 3.1) Compare with reference alignment
+	# step 3.1.1) map predicted gene onto reference protein
+	# step 3.2) Compare with reference genes
+	# @param ref_data [Hash] Cymobase reference data
+	# @param ref_prot_key [String] Reference protein identifier; key in ref_data
+	# @param prot [String] Protein name; key in ref_data
+	# @param ref_seq_aligned [String] Aligned reference sequence
+	# @param pred_seq_aligned [String] Aligned predicted sequence
+	# @param pred_dnaseq [String] Predicted coding sequence (DNA)
+	# @return [TrueClass] If no error occured
+	# @return [Hash] Prediction data for protein prot
+	# @return [FalseClass] If an error occured
+	# @return [Hash] Prediction data for protein prot ONLY IN CASE OF AN ERROR
+	# @return [String] Error message ONLY IN CASE OF AN ERROR
 	def compare_pred_gene(ref_data, ref_prot_key, prot, ref_seq_aligned, pred_seq_aligned, pred_dnaseq)
 		results = {has_ctg: "", pred_prot: "", ctg_pos: [], ctg_transl: [], aa_comp: [], ctg_ref: []}
 
@@ -564,7 +625,10 @@ class PredictionsController < ApplicationController
 		return true, results
 	end
 
-	# expects header and fasta-sequence as string and converts both in fasta-format
+	# convert header and sequence into fasta-format
+	# @param header [String] fasta header
+	# @param str [String] sequence
+	# @return [String] fasta formatted header and sequence
 	def str2fasta(header, str)
 		fasta = header.include?(">") ? header << "\n" : ">" << header << "\n"
 		# breaking string at every 80th character, joining by newline
@@ -572,9 +636,11 @@ class PredictionsController < ApplicationController
 		return fasta
 	end
 
-
-	# expects fasta-formatted string (possbily multiple fasta)
-	# returning array containing all header and array containing all sequences
+	# extract headers and sequences from a fasta-formatted string
+	# can deal with multiple sequence fasta
+	# @param fasta [String] fasta-formatted sequence (MSA also possible)
+	# @return [Array] All fasta header found
+	# @return [Array] All fasta sequences found
 	def fasta2str(fasta)
 		headers = []
 		seqs = []
@@ -591,16 +657,19 @@ class PredictionsController < ApplicationController
 		return headers, seqs
 	end
 
-	# extracting gene coding dna from gene entry in reference data
+	# extracting coding sequence out of gene entry 
+	# @param gene [String] Gene entry from reference data
+	# @return [String] Coding sequence of this gene
 	def extract_gene_seq(gene)
 		a = gene.scan(/\sseq:\s?(\w+)\n/).flatten
 		# quick & dirty version: every second entry belongs to an exon
 		a.values_at(*a.each_index.select(&:even?)).join("").upcase
 	end
 
-	# input: augustus output
-	# output: predicted protein sequence
-	#         coding sequence of predicted protein
+	# extraction protein and coding sequence from augustus output
+	# @param output [String] Output from augustus
+	# @return [String] Predicted protein sequence
+	# @return [String] Predicted coding sequence (DNA)
 	def parse_augustus(output)
 		pred_prot = output.match(/protein sequence = \[(.*)\]/m)[1]
 		pred_dna = output.match(/coding sequence = \[(.*?)\]/m)[1]
@@ -610,10 +679,18 @@ class PredictionsController < ApplicationController
 		return pred_prot, pred_dna
 	end
 
+	# calculate position of residue in unaligned sequence based on the position in aligned sequence
+	# @param apos [Fixnum] Position in aligned sequence
+	# @param aseq [String] Aligned sequence
+	# @return [Fixnum] Position in unaligned sequence 
 	def alignment_pos2sequence_pos(apos, aseq)
 		aseq[0..apos].gsub("-", "").length - 1
 	end
 
+	# calculate position of residue in aligned sequence based on the position in unaligned sequence
+	# @param spos [Fixnum] Position in unaligned sequence
+	# @param aseq [String] Aligned sequence
+	# @return [Fixnum] Position in aligned sequence 
 	def sequence_pos2alignment_pos(spos, aseq)
 		pats = []
 		aseq.gsub("-", "")[0..spos].split("").each {|chr| pats << ("-*" + chr)}
@@ -621,7 +698,16 @@ class PredictionsController < ApplicationController
 		pat.match(aseq)[0].length - 1
 	end
 
-	# get alignment column corresponding to ctg position in predicted protein
+	# match CTG position to reference alignment
+	# @param algnmnt [Hash] Cymobase alignment
+	# @param pred_spos [Fixnum] Position in unaligned predicted sequence
+	# @param pred_aseq [String] Aligned predicted sequence
+	# @param ref_aseq [String] Aligned reference sequence
+	# @param ref_key [String] Reference protein; key in algnmnt
+	# @return [Array] Residues at matched alignment column
+	# @return [Fixnum] CTG position in reference sequence aligned to cymobase alignment
+	# @return [NilClass] If matching not possible (gap in cymobase alignment) AND
+	# @return [NilClass] If matching not possible (gap in cymobase alignment)
 	def parse_alignment_by_ctgpos(algnmnt, pred_spos, pred_aseq, ref_aseq, ref_key)
 		# 1) ctg pos in unaligned seq -> pos in aligned predicted sequence (aligned with reference seq)
 		pred_apos = sequence_pos2alignment_pos(pred_spos, pred_aseq) # = pos_ref_seq_aligned
@@ -644,9 +730,10 @@ class PredictionsController < ApplicationController
 		return col, ref_cymopos
 	end
 
-	# counting the frequency (relative number) of words (amino acids...) in an array
-	# returning hash of aa1: count; aa2: count
-	# and total number of amino acids
+	# counting word frequencies; doesnot count "-"
+	# @param arr [Arr] Containing words (e.g. amino acids)
+	# @return [Hash] Keys are the words, values their relative frequency
+	# @return [Fixnum] Sum of all occurrences (e.g. total number of amino acids)
 	def word_frequency(arr)
 		res = Hash.new(0)
 		arr.each { |a| res[a] += 1 }
@@ -657,6 +744,10 @@ class PredictionsController < ApplicationController
 		return norm_res, sum.to_i
 	end
 
+	# predict the most probable translation based on amino acids statistics
+	# @param aa_freq [Hash] Amino acid frequencies
+	# @return [Boolean] Are stats discriminative?
+	# @return [String] Most probable CUG-translation ("S" or "L")
 	def predict_translation(aa_freq)
 		num_aas = aa_freq.inject(0) {|sum, (_,val)| sum + val} # total number of amino acids
 		pol_aas = POLAR_AAS.collect{|aa| aa_freq[aa]}.sum # polar amino acids
@@ -677,10 +768,12 @@ class PredictionsController < ApplicationController
 		return is_discrim, transl
 	end
 
-	# check for a position in the cymo alignment, how many "S" and how many "L" are encoded by an CTG
-	# number of other codons = 100 - pct_ctg
-	# input: 
-	#  		cymo alignment, column in cymo alignment, ref_data[prot]["genes"]	 
+	# check for a given position in the cymo alignment, how many "S" and how many "L" are encoded by an CTG
+	# @param algnmnt [Hash] Cymobase alignment
+	# @param apos [Fixnum] CTG position in cymo alignment
+	# @param genes [Hash] Genes from reference data
+	# @return [Fixnum] Percentage of "Ser" encoded by CTGs (rounded to 2 decimal places)
+	# @return [Fixnum] Percentage of "Leu" encoded by CTGs (rounded to 2 decimal places)
 	def ref_ctg_usage(algnmnt, apos, genes)
 		pct_ctg_S, pct_ctg_L = "", "" 
 		# Serine
