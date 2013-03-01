@@ -10,6 +10,13 @@ group :development, :test do
   gem 'guard-rspec', '1.2.1' # listen changes
   gem 'guard-spork', '0.3.2'
   gem 'spork', '0.9.2' # preload rails environment 
+  gem "yard"
+  gem "redcarpet"   # for yard to process .md files
+  gem "rails_best_practices"
+  gem 'simplecov', :require => false
+  gem 'simplecov-rcov', :require => false
+  gem "ci_reporter", require: false
+
 end
 
 # Gems used only for assets and not required
