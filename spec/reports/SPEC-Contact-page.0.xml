@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Contact page" tests="6" time="0.118276663" failures="0" errors="0" skipped="0">
+  <testcase name="Contact page " time="0.045953457">
+  </testcase>
+  <testcase name="Contact page " time="0.006051127">
+  </testcase>
+  <testcase name="Contact page should have the right links on the layout" time="0.047257534">
+  </testcase>
+  <testcase name="Contact page " time="0.00694373">
+  </testcase>
+  <testcase name="Contact page " time="0.005808536">
+  </testcase>
+  <testcase name="Contact page " time="0.005776727">
+  </testcase>
+  <system-out>
+  </system-out>
+  <system-err>
+  </system-err>
+</testsuite>

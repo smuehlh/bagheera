@@ -27,9 +27,11 @@ class PredictionsController < ApplicationController
 	# render partial showing the uploaded file
 	# accessible params: @content_error [Array] Errors occured during file load
 	def upload_file
-		`fromdos #{params[:uploaded_file].path}` # remove \r, if uploaded from windows
+		@content_error = []
+		is_success = system("fromdos", params[:uploaded_file].path)
+		@content_error << "Sorry, cannot load reference data. Please contact us!" if ! is_success
 		# is the file too big? maybe jquery-check did not work, so better check again
-		@content_error = check_filesize(params[:uploaded_file].size)
+		@content_error |= check_filesize(params[:uploaded_file].size)
 		# check content, only if file is not too big
 		@content_error |= check_fasta(params[:uploaded_file]) if @content_error.blank?
 		if @content_error.blank? then
@@ -85,8 +87,11 @@ class PredictionsController < ApplicationController
 		# set correct file extension for dialign/ seqan files
 		ext = session[:align][:algo] == "dialign" ? "_aligned.fasta.fa" : "_aligned.fasta"
 		file_scr = BASE_PATH + prot + "_" + hit + "_" + session[:file][:id] + ext
+		# write data again to file, leave line breaks after 80 chars out (lucullus will be much faster this way)
+		data = File.read(file_scr)
+		headers, seqs = fasta2str(data)
 		file_dest = Dir::tmpdir + "/cymobase_alignment_" + @file_id + ".fasta"
-		FileUtils::cp(file_scr, file_dest)
+		File.open(file_dest, 'w') {|f| f.write(str2fasta(headers[0], seqs[0], true) + "\n" + str2fasta(headers[1], seqs[1], true))}
 		# TODO use complete cymoalignment for prot instead of only one ref seq?
 		render :show_alignment
 	end
@@ -104,15 +109,6 @@ class PredictionsController < ApplicationController
 	# accessible params in view: @stats [Hash] Statistics over prediction data
 	# accessible params in view: @errors[Array] Errors occured during prediction
 	def predict_genes
-		# general workflow:
-		# 1) extract reference proteins
-		# 2) gene prediction foreach reference protein:
-		# 2.1) BLAST
-		# 2.2) AUGUSTUS
-		# 3) Compare with reference data
-		# 3.1) Compare with reference alignment
-		# 3.2) Compare with reference genes
-
 		# add options to session
 		session[:align] = { algo: params[:algo], config: params[:config] }
 		session[:augustus] = { species: params[:species] }
@@ -641,12 +637,16 @@ class PredictionsController < ApplicationController
 
 	# convert header and sequence into fasta-format
 	# @param header [String] fasta header
-	# @param str [String] sequence
+	# @param seq [String] sequence
+	# @param no_split [Boolean] include line break each 80 chars?
 	# @return [String] fasta formatted header and sequence
-	def str2fasta(header, str)
+	def str2fasta(header, seq, no_split=false)
 		fasta = header.include?(">") ? header << "\n" : ">" << header << "\n"
-		# breaking string at every 80th character, joining by newline
-		fasta += str.scan(/.{1,80}/).join("\n")
+		if no_split then
+			fasta += seq
+		else
+			fasta += seq.scan(/.{1,80}/).join("\n")
+		end
 		return fasta
 	end
 

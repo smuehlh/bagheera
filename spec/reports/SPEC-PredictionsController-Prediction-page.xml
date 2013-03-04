@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="PredictionsController Prediction page" tests="7" time="2.722221066" failures="0" errors="0" skipped="0">
-  <testcase name="PredictionsController Prediction page should upload file" time="2.337401054">
+<testsuite name="PredictionsController Prediction page" tests="7" time="2.172099237" failures="0" errors="0" skipped="0">
+  <testcase name="PredictionsController Prediction page " time="0.027299943">
   </testcase>
-  <testcase name="PredictionsController Prediction page should have the right links on the layout" time="0.18155891">
+  <testcase name="PredictionsController Prediction page " time="0.028033183">
   </testcase>
-  <testcase name="PredictionsController Prediction page " time="0.033050167">
+  <testcase name="PredictionsController Prediction page should upload file" time="1.930758917">
   </testcase>
-  <testcase name="PredictionsController Prediction page " time="0.031644513">
+  <testcase name="PredictionsController Prediction page " time="0.032610137">
   </testcase>
-  <testcase name="PredictionsController Prediction page " time="0.031184125">
+  <testcase name="PredictionsController Prediction page has no file uploaded" time="0.031774418">
   </testcase>
-  <testcase name="PredictionsController Prediction page has no file uploaded" time="0.032025514">
+  <testcase name="PredictionsController Prediction page should have the right links on the layout" time="0.08943951">
   </testcase>
-  <testcase name="PredictionsController Prediction page " time="0.074765887">
+  <testcase name="PredictionsController Prediction page " time="0.031414215">
   </testcase>
   <system-out>
   </system-out>

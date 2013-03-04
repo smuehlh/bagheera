@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Help page" tests="4" time="0.065838457" failures="0" errors="0" skipped="0">
+  <testcase name="Help page " time="0.005848786">
+  </testcase>
+  <testcase name="Help page " time="0.005448201">
+  </testcase>
+  <testcase name="Help page " time="0.005431559">
+  </testcase>
+  <testcase name="Help page should have the right links on the layout" time="0.048756562">
+  </testcase>
+  <system-out>
+  </system-out>
+  <system-err>
+  </system-err>
+</testsuite>

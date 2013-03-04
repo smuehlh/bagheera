@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="StaticPages Team page it should behave like all static pages" tests="2" time="0.009826783" failures="0" errors="0" skipped="0">
-  <testcase name="StaticPages Team page it should behave like all static pages " time="0.004817289">
+<testsuite name="StaticPages Team page it should behave like all static pages" tests="2" time="0.051710738" failures="0" errors="0" skipped="0">
+  <testcase name="StaticPages Team page it should behave like all static pages " time="0.045461073">
   </testcase>
-  <testcase name="StaticPages Team page it should behave like all static pages " time="0.00481233">
+  <testcase name="StaticPages Team page it should behave like all static pages " time="0.005984909">
   </testcase>
   <system-out>
   </system-out>

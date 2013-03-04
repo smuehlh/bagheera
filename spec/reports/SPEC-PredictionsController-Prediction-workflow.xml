@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="PredictionsController Prediction workflow" tests="1" time="4.086679896" failures="0" errors="0" skipped="0">
-  <testcase name="PredictionsController Prediction workflow has file uploaded" time="4.086302688">
+<testsuite name="PredictionsController Prediction workflow" tests="1" time="4.394326619" failures="0" errors="0" skipped="0">
+  <testcase name="PredictionsController Prediction workflow has file uploaded" time="4.393089533">
   </testcase>
   <system-out>
   </system-out>
