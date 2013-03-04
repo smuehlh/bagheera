@@ -104,8 +104,7 @@ class PredictionsController < ApplicationController
 	# accessible params in view: @stats [Hash] Statistics over prediction data
 	# accessible params in view: @errors[Array] Errors occured during prediction
 	def predict_genes
-		# general workflow
-
+		# general workflow:
 		# 1) extract reference proteins
 		# 2) gene prediction foreach reference protein:
 		# 2.1) BLAST
@@ -113,8 +112,6 @@ class PredictionsController < ApplicationController
 		# 3) Compare with reference data
 		# 3.1) Compare with reference alignment
 		# 3.2) Compare with reference genes
-
-		# implementation
 
 		# add options to session
 		session[:align] = { algo: params[:algo], config: params[:config] }
@@ -174,12 +171,11 @@ class PredictionsController < ApplicationController
 				# 2.1.2) blast-query
 				blast_file = BASE_PATH + prot_basename + "_" + session[:file][:id] + ".blastout"  # store blast hits
 						# -p [PROGRAM] protein query against nt-db -d [DATABASE] -i [FILE] -m8 [OUTPUT FORMAT] -F [FILTERING] -s [SMITH-WATERMAN ALIGNMENT] T 
-						# OLD VERSION: use tee to get both output to parse and a file (for later, independent gene prediction)
 				stdin, stdout_err, wait_thr = Open3.popen2e(BLASTALL, "-p", "tblastn", "-d", genome_db, "-i", seq_file, "-m8", "-F", "m S", "-s", "T")
 				stdin.close
 				output = stdout_err.read
 				stdout_err.close
-				# write output to file, as no tee with popen2e
+				# write output to also to file to store it for later gene prediction
 				File.open(blast_file, 'w') {|f| f.write(output)}
 
 				if ! wait_thr.value.success? || output.include?("ERROR") then

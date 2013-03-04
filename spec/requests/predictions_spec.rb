@@ -1,9 +1,5 @@
 require 'spec_helper'
 
-def load_json
-
-end
-
 describe PredictionsController do
 
 	describe "Prediction page" do

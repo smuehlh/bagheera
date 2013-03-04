@@ -22962,3 +22962,9 @@ Version 2.2.26 [Sep-21-2011]
 Started database file "/tmp/cug/uploaded_genomefile_159631777.fasta"
 Formatted 11 sequences in volume 0
 SUCCESS: formatted database /tmp/cug/uploaded_genomefile_159631777_db
+
+========================[ Mar 4, 2013 11:19 AM ]========================
+Version 2.2.26 [Sep-21-2011]
+Started database file "/tmp/cug/uploaded_genomefile_789144892.fasta"
+Formatted 11 sequences in volume 0
+SUCCESS: formatted database /tmp/cug/uploaded_genomefile_789144892_db

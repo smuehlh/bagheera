@@ -26329,3 +26329,314 @@ Processing by PredictionsController#predict_genes as HTML
   Rendered predictions/_display_results.html.erb (8.1ms)
   Rendered predictions/_display_stats.html.erb (0.6ms)
 Completed 200 OK in 4491ms (Views: 12.4ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered static_pages/team.html.erb within layouts/application (3.1ms)
+  Rendered layouts/_waiting.html.erb (30.1ms)
+  Rendered layouts/_menu.html.erb (1.5ms)
+Completed 200 OK in 112ms (Views: 111.7ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.1ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.1ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.1ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.7ms)
+Completed 200 OK in 4ms (Views: 3.7ms)
+Started GET "/help" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by StaticPagesController#help as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.7ms)
+Completed 200 OK in 4ms (Views: 3.6ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 3ms (Views: 2.7ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 2.7ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by PredictionsController#search as HTML
+Dalli::Server#connect localhost:11211
+  Rendered predictions/_upload_file.html.erb (1.1ms)
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 63ms (Views: 43.0ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.1ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.0ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.1ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:43 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.6ms)
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 24ms (Views: 4.2ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:44 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.6ms)
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 24ms (Views: 4.4ms)
+Started GET "/help" for 127.0.0.1 at 2013-03-04 11:19:44 +0100
+Processing by StaticPagesController#help as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.0ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:44 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.3ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:44 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.0ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:44 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.5ms)
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 23ms (Views: 3.7ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:44 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.6ms)
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 24ms (Views: 4.2ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:44 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.6ms)
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 64ms (Views: 5.7ms)
+Started POST "/upload_file" for 127.0.0.1 at 2013-03-04 11:19:44 +0100
+Processing by PredictionsController#upload_file as HTML
+  Parameters: {"uploaded_file"=>#<ActionDispatch::Http::UploadedFile:0x0000000499a648 @original_filename="Candida_albicans_WO_1.fasta", @content_type="text/plain", @headers="Content-Disposition: form-data; name=\"uploaded_file\"; filename=\"Candida_albicans_WO_1.fasta\"\r\nContent-Type: text/plain\r\nContent-Length: 14585011\r\n", @tempfile=#<File:/tmp/RackMultipart20130304-8209-1d6c7kj>>}
+  Rendered predictions/_show_options.html.erb (2.1ms)
+Completed 200 OK in 1435ms (Views: 5.0ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:45 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.8ms)
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 24ms (Views: 4.5ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:45 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.7ms)
+  Rendered layouts/_waiting.html.erb (0.2ms)
+  Rendered layouts/_menu.html.erb (0.7ms)
+Completed 200 OK in 24ms (Views: 4.7ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:45 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.6ms)
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.7ms)
+Completed 200 OK in 24ms (Views: 4.6ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:45 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.7ms)
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 23ms (Views: 4.5ms)
+Started GET "/load_example" for 127.0.0.1 at 2013-03-04 11:19:45 +0100
+Processing by PredictionsController#load_example as HTML
+  Rendered predictions/_show_options.html.erb (2.0ms)
+Completed 200 OK in 18ms (Views: 3.5ms)
+Started POST "/predict_genes" for 127.0.0.1 at 2013-03-04 11:19:46 +0100
+Processing by PredictionsController#predict_genes as HTML
+  Parameters: {"algo"=>"gotoh", "config"=>"tttt", "species"=>"candida_albicans"}
+  Rendered predictions/_display_results.html.erb (8.0ms)
+  Rendered predictions/_display_stats.html.erb (0.4ms)
+Completed 200 OK in 3963ms (Views: 12.0ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:49 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.6ms)
+  Rendered layouts/_waiting.html.erb (0.2ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 25ms (Views: 4.5ms)
+Started GET "/help" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#help as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 2.6ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 3ms (Views: 2.5ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 3ms (Views: 2.6ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.6ms)
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 31ms (Views: 4.0ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 3ms (Views: 2.7ms)
+Started GET "/help" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#help as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.1ms)
+Started GET "/help" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#help as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 2.8ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.0ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 3ms (Views: 2.7ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.7ms)
+Completed 200 OK in 3ms (Views: 2.9ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.1ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 2.8ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.7ms)
+Completed 200 OK in 3ms (Views: 2.9ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 3ms (Views: 2.7ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 3ms (Views: 2.5ms)
+Started GET "/help" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#help as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 2.5ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 3ms (Views: 2.5ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 3ms (Views: 2.7ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.8ms)
+  Rendered layouts/_waiting.html.erb (0.2ms)
+  Rendered layouts/_menu.html.erb (0.9ms)
+Completed 200 OK in 33ms (Views: 5.7ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.2ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 2.7ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 2.8ms)
+Started GET "/help" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#help as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 2.7ms)
+Started GET "/help" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#help as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.7ms)
+Completed 200 OK in 33ms (Views: 33.0ms)
+Started GET "/help" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#help as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 2.9ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 2.7ms)
+Started GET "/help" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#help as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 2.7ms)
+Started GET "/contact" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#contact as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.7ms)
+Completed 200 OK in 3ms (Views: 2.8ms)
+Started GET "/team" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#team as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.5ms)
+Completed 200 OK in 3ms (Views: 2.8ms)
+Started GET "/" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by PredictionsController#search as HTML
+  Rendered predictions/_upload_file.html.erb (0.7ms)
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.7ms)
+Completed 200 OK in 25ms (Views: 4.2ms)
+Started GET "/help" for 127.0.0.1 at 2013-03-04 11:19:50 +0100
+Processing by StaticPagesController#help as HTML
+  Rendered layouts/_waiting.html.erb (0.1ms)
+  Rendered layouts/_menu.html.erb (0.6ms)
+Completed 200 OK in 3ms (Views: 3.1ms)
