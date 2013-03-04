@@ -11,7 +11,7 @@ class PredictionsController < ApplicationController
 	BLASTALL = "/usr/bin/blastall"
 	FASTACMD = "/usr/bin/fastacmd"
 	AUGUSTUS = "/usr/local/bin/augustus/src/augustus"
-	PAIR_ALIGN =  Rails.root + "lib/pair_align" #"/usr/local/bin/pair_align"
+	PAIR_ALIGN =  Rails.root.join('lib', 'pair_align').to_s #"/usr/local/bin/pair_align"
 	DIALIGN2 = "/usr/local/bin/dialign_package/src/dialign2-2"
 	HYDORPHOBIC_AAS = ["V", "I", "L"]
 	POLAR_AAS = ["S", "T"]
@@ -174,10 +174,15 @@ class PredictionsController < ApplicationController
 				# 2.1.2) blast-query
 				blast_file = BASE_PATH + prot_basename + "_" + session[:file][:id] + ".blastout"  # store blast hits
 						# -p [PROGRAM] protein query against nt-db -d [DATABASE] -i [FILE] -m8 [OUTPUT FORMAT] -F [FILTERING] -s [SMITH-WATERMAN ALIGNMENT] T 
-						# use tee to get both output to parse and a file (for later, independent gene prediction)
-				output = `#{BLASTALL} -p tblastn -d #{genome_db} -i #{seq_file} -m8 -F "m S" -s T 2>&1 | tee #{blast_file}`
+						# OLD VERSION: use tee to get both output to parse and a file (for later, independent gene prediction)
+				stdin, stdout_err, wait_thr = Open3.popen2e(BLASTALL, "-p", "tblastn", "-d", genome_db, "-i", seq_file, "-m8", "-F", "m S", "-s", "T")
+				stdin.close
+				output = stdout_err.read
+				stdout_err.close
+				# write output to file, as no tee with popen2e
+				File.open(blast_file, 'w') {|f| f.write(output)}
 
-				if ! $?.success? || output.include?("ERROR") then
+				if ! wait_thr.value.success? || output.include?("ERROR") then
 					@errors << "#{prot}: Gene prediction (BLAST) failed"
 					@predicted_prots[prot][:message] = "Sorry, an error occured"
 					# delete file with blast hits, its contains only error messages
@@ -200,7 +205,7 @@ class PredictionsController < ApplicationController
 				if ! is_success then
 					# an error occured
 					# variable called "ref_seq_aligned" actually contains the program which caused the error 
-					@error << "#{prot}: Gene prediction (#{ref_seq_aligned}) failed"
+					@errors << "#{prot}: Gene prediction (#{ref_seq_aligned}) failed"
 					@predicted_prots[prot][:message] = "Sorry, an error occured"
 					next
 				end
@@ -297,7 +302,7 @@ class PredictionsController < ApplicationController
 	# data from old predictions and show_alignment requests
 	def delete_old_data(days = 1)
 		# delete all files older than one day but file "alignment_gene_structure.json"
-		system("find #{BASE_PATH} -type f \\! -name '#{REF_DATA}' -mtime +#{days} -delete 2> /dev/null")
+		system("find", BASE_PATH, "-type", "f", "-not", "-name", REF_DATA, "-mtime", "+#{days}", "-delete")
 		# delete alignment file for show-alignment function
 		FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
 	end
@@ -322,7 +327,7 @@ class PredictionsController < ApplicationController
 	# @return [Hash] Up-to-date statistics
 	def calc_stats(data, combine=false)
 		stats = Hash.new(0)
-		file = BASE_PATH + session[:file][:id]
+		file = BASE_PATH + session[:file][:id] + ".stat"
 
 		if combine then
 			# for this dataset, statistics already exist
@@ -419,8 +424,9 @@ class PredictionsController < ApplicationController
 	def create_blast_db(genome_db)
 		error = ""
 			# -i [INPUT: GENOME FILE] -p [PROTEIN] FALSE -n [DB NAME] -o [CREATE INDEX OVER SEQID] TRUE
-		output = `#{FORMATDB} -i #{session[:file][:path]} -p F -n #{genome_db} -o T 2>&1`
-		if ! $?.success? || output.include?("ERROR") then
+		is_success = system(FORMATDB, "-i", session[:file][:path], "-p", "F", "-n", genome_db, "-o", "T")
+		# no output needed, so system is sufficient
+		if ! is_success then
 			error = "Gene prediction failed: Cannot create BLAST database"
 		end 
 		return error
@@ -467,8 +473,12 @@ class PredictionsController < ApplicationController
 	def run_augustus(seq_file)
 			# --species [REFERENCE SPEC] QUERY --genemodel=exactlyone [predict exactly one complete gene] --codingseq=on [output also coding sequence]
 			# redirection: add stderr to stdout (screen)
-		output = `#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --species=#{session[:augustus][:species]} --genemodel=exactlyone --codingseq=on #{seq_file} 2>&1`
-		if ! $?.success? || output.include?("ERROR") || output.blank? then
+		stdin, stdout_err, wait_thr = Open3.popen2e(AUGUSTUS, "--AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/", 
+			"--species=#{session[:augustus][:species]}", "--genemodel=exactlyone","--codingseq=on", seq_file)
+		stdin.close
+		output = stdout_err.read
+		stdout_err.close
+		if ! wait_thr.value.success? || output.include?("ERROR") || output.blank? then
 			return false
 		end
 
@@ -501,8 +511,12 @@ class PredictionsController < ApplicationController
 				# -d [DB] -p [PROTEIN] false -s [SEARCH STRING] -L [START,STOP]
 				# add 1000 nucleotides to start/stop 
 				# redirection: stderr to stdout (at this moment: sreen), stdout to file file
-		output = `#{FASTACMD} -d #{genome_db} -p F -s \'#{seq_id}\' -L #{start-1000},#{stop+1000} -S #{strand} 2>&1 > #{file}` 
-		if ! $?.success? || output.include?("ERROR") then
+		stdin, stdout_err, wait_thr = Open3.popen2e(FASTACMD, "-d", genome_db, "-p", "F", "-s", seq_id, 
+			"-L", "#{start-1000},#{stop+1000}", "-S", strand.to_s, "-o", file)
+		stdin.close
+		output = stdout_err.read
+		stdout_err.close
+		if ! wait_thr.value.success? || output.include?("ERROR") then
 			return false, "BLAST-FASTACMD"
 		end
 
@@ -538,10 +552,10 @@ class PredictionsController < ApplicationController
 
 		# use pairalign or dialign
 		if session[:align][:algo] == "dialign" then
-			# redirection of stderr: none, as dialign has no easy-parsable error messages (like containing "ERROR")
+			# use system, as dialign has no easy-parsable error messages (like containing "ERROR")
 			# check exit status for success 
-			output = `#{DIALIGN2} -fa -fn #{file_out} #{file_in}`
-			if ! $?.success? || ! output.blank? then
+			is_success = system(DIALIGN2, "-fa", "-fn", file_out, file_in)
+			if ! is_success then
 				return false, "Dialign2"
 			end
 			file_out = file_out << ".fa" # dialign automatically adds ".fa" to basic output filename
@@ -551,9 +565,13 @@ class PredictionsController < ApplicationController
 				# --matrx matrix file
 				# implicit options: gap open penalty: -11, gap extension penalty: -1
 				# 					protein sequences
-				# redirection of stderr: none, as pair_align has no easy-parsalbe error messages but easy parable "success" output (including "Alignment score")
-			output = `#{PAIR_ALIGN} --seq #{file_in} --matrix #{Rails.root+"lib/blosum62"} --config #{session[:align][:config]} --method #{session[:align][:algo]} --outfile #{file_out}`
-			if ! $?.success? || ! output.include?("Alignment score") then
+				# don't use system, as pair_align is quite verbose and has an easy parsable success-output
+			stdin, stdout_err, wait_thr = Open3.popen2e(PAIR_ALIGN, "--seq", file_in, "--matrix", Rails.root.join('lib', 'blosum62').to_s, 
+				"--config", session[:align][:config], "--method", session[:align][:algo], "--outfile", file_out)
+			stdin.close
+			output = stdout_err.read
+			stdout_err.close
+			if ! wait_thr.value.success? || ! output.include?("Alignment score") then
 				return false, "Seqan::pair_align"
 			end
 		end

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="PredictionsController Prediction page" tests="7" time="2.722221066" failures="0" errors="0" skipped="0">
+  <testcase name="PredictionsController Prediction page should upload file" time="2.337401054">
+  </testcase>
+  <testcase name="PredictionsController Prediction page should have the right links on the layout" time="0.18155891">
+  </testcase>
+  <testcase name="PredictionsController Prediction page " time="0.033050167">
+  </testcase>
+  <testcase name="PredictionsController Prediction page " time="0.031644513">
+  </testcase>
+  <testcase name="PredictionsController Prediction page " time="0.031184125">
+  </testcase>
+  <testcase name="PredictionsController Prediction page has no file uploaded" time="0.032025514">
+  </testcase>
+  <testcase name="PredictionsController Prediction page " time="0.074765887">
+  </testcase>
+  <system-out>
+  </system-out>
+  <system-err>
+  </system-err>
+</testsuite>

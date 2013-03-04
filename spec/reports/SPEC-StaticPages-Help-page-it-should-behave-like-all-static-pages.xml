@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="StaticPages Help page it should behave like all static pages" tests="2" time="0.010581895" failures="0" errors="0" skipped="0">
+  <testcase name="StaticPages Help page it should behave like all static pages " time="0.005607993">
+  </testcase>
+  <testcase name="StaticPages Help page it should behave like all static pages " time="0.004752741">
+  </testcase>
+  <system-out>
+  </system-out>
+  <system-err>
+  </system-err>
+</testsuite>

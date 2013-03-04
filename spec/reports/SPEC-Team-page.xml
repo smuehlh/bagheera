@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Team page" tests="7" time="0.130668996" failures="0" errors="0" skipped="0">
+  <testcase name="Team page should have the right links on the layout" time="0.100078897">
+  </testcase>
+  <testcase name="Team page " time="0.005862275">
+  </testcase>
+  <testcase name="Team page " time="0.004792948">
+  </testcase>
+  <testcase name="Team page " time="0.00491538">
+  </testcase>
+  <testcase name="Team page " time="0.004805524">
+  </testcase>
+  <testcase name="Team page " time="0.004956411">
+  </testcase>
+  <testcase name="Team page " time="0.004748699">
+  </testcase>
+  <system-out>
+  </system-out>
+  <system-err>
+  </system-err>
+</testsuite>

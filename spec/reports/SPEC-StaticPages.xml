@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="StaticPages" tests="1" time="0.089288407" failures="0" errors="0" skipped="0">
+  <testcase name="StaticPages should have the right links on the layout" time="0.089044976">
+  </testcase>
+  <system-out>
+  </system-out>
+  <system-err>
+  </system-err>
+</testsuite>
