@@ -24,7 +24,9 @@ end
 group :assets do
   gem 'sass-rails',   '3.2.5'
   gem 'coffee-rails', '3.2.2'
-  gem 'therubyracer', :platforms => :ruby
+  # gem 'therubyracer', :platforms => :ruby
+  gem 'libv8', '~> 3.11.8.11'
+  gem 'therubyracer', '~> 0.11.1', :platforms => :ruby
   gem 'uglifier', '>= 1.0.3'
 end
 
