@@ -7,17 +7,18 @@
 				content_tag(:td, 		
 					select_tag(:algo, options_for_select(opt_algo, pre_select_algo), 
 					onchange:  
-					"if ($('#algo').val() == 'dialign') {$('#config').attr('disabled', 'disabled');} else {$('#config').removeAttr('disabled');}")
+					"if ($('#algo').val() == 'dialign' || $('#algo').val() == 'mafft' ) {$('#config').attr('disabled', 'disabled');} else {$('#config').removeAttr('disabled');}")
 				)
 			end +
 			content_tag(:tr) do
 				content_tag(:td, "Alignment configuration") +
 				content_tag(:td, 
-					select_tag(:config, options_for_select(opt_config, pre_select_config))
+					select_tag(:config, options_for_select(opt_config, pre_select_config), 
+					:disabled => true)
 				)
 			end +
 			content_tag(:tr) do
-				content_tag(:td, "Species (for gene prediction)") +
+				content_tag(:td, "Reference species for gene prediction (Augustus)") +
 				content_tag(:td,
 					select_tag(:species, options_for_select(opt_species, pre_select_species))
 				)

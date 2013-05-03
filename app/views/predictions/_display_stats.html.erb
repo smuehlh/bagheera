@@ -1,7 +1,7 @@
 <%=
 content_tag(:p, 
-	"Found " << @stats["sig_pos"].to_s << " significant positions in " << 
-	@stats["n_prots"].to_s << " predicted proteins.",
+	"Found #{@stats["sig_pos"].to_s} significant CTG codon #{"position".pluralize(@stats["sig_pos"])} in " << 
+	"#{@stats["n_prots"].to_s} predicted #{"protein".pluralize(@stats["n_prots"])}.",
 	:class => "stats") +
 content_tag(:p,
 	@stats["ser"].to_s << " suggest yeast alternative codon usage.",
@@ -10,7 +10,7 @@ content_tag(:p,
 	@stats["leu"].to_s << " suggest usage of the standard code.",
 	:class => "stats") +
 content_tag(:p, 
-	"In " << @stats["ref_ctgpos"].to_s <<
-	" positions, more than 50% of all amino acids in the reference data are encoded by CTG.", 
-	:class => "stats")
+	"In #{@stats["ref_ctg"].to_s}" <<
+	" #{"protein".pluralize(@stats["ref_ctg"])} CTG codon positions are conserved (they occur at least in 5 % of the reference sequences) between query data and Saccharomycetes.", 
+	:class => "stats") 
 %>

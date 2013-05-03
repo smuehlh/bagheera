@@ -1,0 +1,23 @@
+
+
++ kinesin_session_aligned (egal womit aligned!)
+
+welche dateien brauche ich:
+-kinesin ref_data aligned (alle) (var file_refall)
+-kinesin single_refseq (nur eine, mit fasta header! damit wiederfindbar in json) (var file_refseq)
+-session_kinesin.blast (var file_blast)
+-session_kinesin-aligned.fasta
+-session_kinesin-pred.fasta
+
+
+
+"uploaded_genomefile" -> query
+file_refseq = session_kinesin-refseq.fasta
+file_blast = session_kinesin.blast
+
+
+# todo
+rename dialign output file!
+
+
+never write to file_refseq! (should contain only 1 ref seq!!!)

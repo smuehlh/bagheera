@@ -1,6 +1,11 @@
-<% if @errors.any? then%>
-	show_error('<%=raw(@errors.join("<br />"))%>');
+<% if @fatal_error.any? then%>
+	show_error('<%=raw(@fatal_error.join("<br />"))%>');
 <% else %>
+	<% if @minor_error.any? then%>
+		show_error('<%=raw(@minor_error.join("<br />"))%>')
+		<% new_content = escape_javascript(render(partial: "display_minor_error"))%>
+		$('#results_error').append('<%=new_content%>');
+	<% end %>
 	<% basename = @prot.gsub(" ", "-").downcase %>
 	hide_show_waiting('hide');
 	$('#pred_data_<%= basename %> #pred_more_button').hide(); // hide the "old" button
