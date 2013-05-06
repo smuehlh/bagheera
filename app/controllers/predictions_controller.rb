@@ -328,18 +328,18 @@ class PredictionsController < ApplicationController
 	def delete_old_data(days = 1)
 		# delete all files older than one day except file "alignment_gene_structure.json"
 		# system("find", BASE_PATH, "-type", "f", "-not", "-name", REF_DATA, "-mtime", "+#{days}", "-delete")
-		# FileUtils.chmod_R 0666, BASE_PATH
-		# FileUtils.chmod_R 0666, Dir::tmpdir + 'cymobase_alignment_cug*'
-		debugger
-		Dir.glob(BASE_PATH + "*").each do |file|
-			if file == BASE_PATH + REF_DATA then
-				next
-			elsif File.mtime(file) <= days.day.ago
-				FileUtils.rm(file) # FileUtils.rm(file, :noop => true, :verbose => true)
+		begin
+			Dir.glob(BASE_PATH + "*").each do |file|
+				if file == BASE_PATH + REF_DATA then
+					next
+				elsif File.mtime(file) <= days.day.ago
+					FileUtils.rm(file) # FileUtils.rm(file, :noop => true, :verbose => true)
+				end
 			end
+			# delete alignment file for show-alignment function
+			FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
+		rescue
 		end
-		# delete alignment file for show-alignment function
-		FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
 	end
 
 	# load reference data from file alignment_gene_structure.json
