@@ -1,4 +1,6 @@
-/.bundle
+.bundle
+.rspec
 /rails
 .DS_Store
-
+log/*.log
+tmp/
