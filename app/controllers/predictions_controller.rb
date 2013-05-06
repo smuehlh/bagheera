@@ -84,7 +84,7 @@ class PredictionsController < ApplicationController
 		# copy file to /tmp/cymo_alignment_
 		@file_id = "cug" + session[:file][:id] + rand(1000000000).to_s
 		# set correct file extension for dialign/ seqan files
-		file_scr = BASE_PATH + prot + "_" + hit + "_" + session[:file][:id] + ext
+		file_scr = BASE_PATH + session[:file][:id] + "_" + prot + "-" + hit.to_s + "-aligned.fasta"
 		file_dest = Dir::tmpdir + "/cymobase_alignment_" + @file_id + ".fasta"
 
 		# write data again to file, leave line breaks after 80 chars out (lucullus will be much faster this way)
@@ -267,15 +267,15 @@ class PredictionsController < ApplicationController
 		ref_data, @fatal_error = load_ref_data
 
 		if @fatal_error.empty? then
-			prot_basename = prot.gsub(" ", "-").downcase
+			prot_basename = @prot.gsub(" ", "-").downcase
 			file_basename = session[:file][:path].gsub("query.fasta", prot_basename)
-			file_refseq = file_basename + "-refseq.fasta"
+			file_refseq = file_basename.gsub(/\d+_/, "") + "-refseq.fasta"
 			file_blast = file_basename + ".blast"
 			headers, seqs = fasta2str(File.read(file_refseq))
 			ref_prot_key = headers[0]
 			blast_all_hits = File.read(file_blast)
 			if blast_all_hits.blank? then
-				write_minor_error(prot, "No more BLAST hits.")
+				write_minor_error(@prot, "No more BLAST hits.")
 				@predicted_prots[key][:message] = "Sorry, an error occured"
 				return
 			end
@@ -288,16 +288,16 @@ class PredictionsController < ApplicationController
 
 				is_success, pred_seq, pred_dnaseq, err = perform_gene_pred(blast_all_hits, n_hit)
 				if ! is_success || ! err.blank? then
-					write_minor_error(prot, err)
+					write_minor_error(@prot, err)
 					@predicted_prots[key][:message] = "Sorry, an error occured"
 					next
 				end
 
 				# no need to check again if alignment of all reference data exist
-				is_success, aligned_fasta, err = align_pred_ref(file_basename, pred_seq)
+				is_success, aligned_fasta, err = align_pred_ref(file_basename, n_hit, pred_seq)
 				if ! is_success || ! err.blank? then
 					# an error occured
-					write_minor_error(prot, err)
+					write_minor_error(@prot, err)
 					@predicted_prots[key][:message] = "Sorry, an error occured"
 					next
 				end
@@ -410,8 +410,6 @@ class PredictionsController < ApplicationController
 	# @param combine [Boolean] Optional; Indicates if existing stats needs to be combined with additional predicted ones
 	# @return [Hash] Up-to-date statistics
 	def calc_stats(data, combine=false)
-# todo
-# correct statistics ...???
 		stats = Hash.new(0)
 		file = BASE_PATH + session[:file][:id] + ".stat"
 
@@ -433,20 +431,10 @@ class PredictionsController < ApplicationController
 			end
 			if ! val[:ref_ctg].nil? && val[:ref_ctg].any?
 				# number of proteins with CTGs at same position
-				debugger
 				stats["ref_ctg"] += 1 if val[:ref_ctg].values.max >= 0.05
 			end
 		end
 		stats["n_prots"] += data.keys.length
-
-		# updata statistics (or create new ones)
-# ref_chem = data.values.collect {|ele| ele[:ref_chem]}
-# 		stats["sig_pos"] += ref_chem.inject(0) {|res, val| ! val.nil? ? res + val.keys.size : res + 0}
-# 		stats["n_prots"] += data.keys.length
-# 		stats["ser"] += data.values.inject(0) {|res, val| val[:ref_chem].any? ? res + val[:ref_chem][:transl].count("S") : res + 0}
-# 		stats["leu"] += data.values.inject(0) {|res, val| val[:ref_chem].any? ? res + val[:ref_chem][:transl].count("L") : res + 0}
-# 		stats["ref_ctgpos"] += data.values.inject(0) {|res, val| 
-# 			val[:ref_ctg].any? ? res + val[:ref_ctg].collect {|hash| hash.values}.flatten.count{|x| x >= 0.05} : res + 0}
 
 		# save updated data statistics to file 
 		str = stats.map {|obj| obj.join(":") }.join("\n")
@@ -674,7 +662,7 @@ class PredictionsController < ApplicationController
 	# @return [String] Error indication which method failed only set if an error occured
 	def align_pred_ref(file_base, hit=1, pred_seq)
 		file_unaligned = file_base + "-" + rand(1000000).to_s + ".fasta" # input file: unaligned seqs
-		file_aligned = file_base + "-aligned.fasta" # output file: aligned seqs
+		file_aligned = file_base + "-" + hit.to_s + "-aligned.fasta" # output file: aligned seqs
 		fasta = str2fasta("Prediction", pred_seq, true) # true: do not split after 80 chars
 
 		if session[:align][:algo] == "mafft" then
@@ -699,7 +687,11 @@ class PredictionsController < ApplicationController
 			if ! is_success then
 				return false, "", "Dialign2"
 			end
-			File.rename(file_aligned + ".fa", file_aligned) # dialign automatically adds ".fa" to basic output filename
+			begin
+				File.rename(file_aligned + ".fa", file_aligned) # dialign automatically adds ".fa" to basic output filename
+			rescue
+				return false, "", "Dialign2"
+			end
 		# elsif session[:align][:algo] == "clustalw"
 		# 	# use system as no easy parsealbe output
 		# 	is_success = system(CLUSTAW, "-infile=", file_unaligned, "-quiet", "-quicktree", "-outfile=", file_aligned, "-output=fasta")
@@ -738,6 +730,7 @@ class PredictionsController < ApplicationController
 		# parse multiple sequence alignment to get aligned reference and aligned predicted sequence
 		# header, seqs (last seq is predicted seq)
 		if session[:align][:algo] == "mafft" then
+			File.open(file_aligned, 'w') {|f| f.write(output)}
 			fasta = output
 		else
 			fasta = File.read(file_aligned)

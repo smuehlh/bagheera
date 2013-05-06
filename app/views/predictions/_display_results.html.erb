@@ -17,7 +17,6 @@
 
     <% if @minor_error.find{|ele| ele.include?(prot_name)} then %>
         <!-- no gene predicted for this gene, an error occured -->
-        <% # content_tag(:h3, prot_name) %>
     <% else %>
         <%= content_tag(:h3, "#{prot_name} (Hit #{value[:hit_shown]}/#{value[:n_hits]})") %>
         <div class="pred_data_wrapper" id="pred_data_<%= basename %>" style="clear:both">
@@ -27,7 +26,7 @@
                 format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
                 content_tag(:div, draw_table(seq, seq_pos, tab_seq), :class => "wrapper") +
                 if value[:ref_chem].any? then 
-                    content_tag(:h4, "CTG positions aligned with discriminative sites of reference data") +
+                    # content_tag(:h4, "CTG positions aligned with discriminative sites of reference data") +
                     draw_table(value[:ref_chem].keys, aa_pct, value[:ref_chem].collect {|_, v| v[:seq_num]}, tab_aa) +
                     content_tag(:p, pluralize(value[:ref_chem].values[0][:seq_num].to_s, "sequence") << " in reference alignment") 
                 # else
@@ -35,7 +34,7 @@
                 end +
                 tag(:br) +
                 if value[:ref_ctg].any? then
-                    content_tag(:h4, "CTG codons in reference data at same positions") +
+                    # content_tag(:h4, "CTG codons in reference data at same positions") +
                     draw_table(["Serine", "Leucine"], [value[:ref_ctg][:ser], value[:ref_ctg][:leu]], tab_ctg)
                 end +
                 tag(:br) +
@@ -46,41 +45,17 @@
             else
                 content_tag(:p, value[:pred_prot]) +
                 content_tag(:div, value[:message], :class => "pred_nothing")
+            end +
+            if value[:hit_shown] < value[:n_hits] &&
+               (all_hit_list.blank? || value[:hit_shown] == all_hit_list.max) then
+               # show button if there are more hits than the shown ones and (in case of multiple hits per prot) if its the last shown hit
+                content_tag(:p,
+                    button_to("Predict more", predict_more_path(prot: prot_name, hit: value[:hit_shown]), id: "pred_more_button", 
+                        onclick: "hide_show_waiting('show');", remote: true, method: :get),
+                    :class => "vertical_line"
+                )
             end
-
-
         %>    
-
-        <%#= 
-        if value[:has_ctg] && value[:ctg_pos].any? then
-            seq, seq_pos, aa_pct = 
-                        format_seq(value[:pred_prot], value[:ctg_pos], value[:aa_comp])
-            content_tag(:div, draw_table(seq, seq_pos, tab_seq), :class => "wrapper") + 
-            # content_tag(:h4, "Chemical properties of reference data") +
-            tag(:br) +
-            draw_table(value[:ctg_pos], aa_pct, value[:aa_comp].map{|arr| arr[1]}, tab_aa) +
-            content_tag(:p, pluralize(value[:aa_comp][0][2].to_s, "sequence") << " in reference alignment") +
-            # content_tag(:h4, "CTG encoding in reference data") +
-            tag(:br) +
-            draw_table(value[:ctg_pos], format_ctg_stats(value[:ctg_ref]), tab_ctg) +
-            tag(:br) +
-            button_to("Show alignment", show_alignment_path(prot: prot_name, hit: value[:hit_shown]), 
-                id: "show_alignment_button_#{basename}_#{value[:hit_shown]}", 
-                onclick: "hide_show_waiting('show');", remote: true, method: :get) + 
-            content_tag(:div, "", :id => "alignment_#{basename}_#{value[:hit_shown]}")
-        else
-            content_tag(:div, value[:message], :class => "pred_nothing")
-        end +
-        if value[:hit_shown] < value[:n_hits] &&
-           (all_hit_list.blank? || value[:hit_shown] == all_hit_list.max) then
-           # show button if there are more hits than the shown ones and (in case of multiple hits per prot) if its the last shown hit
-            content_tag(:p,
-                button_to("Predict more", predict_more_path(prot: prot_name, hit: value[:hit_shown]), id: "pred_more_button", 
-                    onclick: "hide_show_waiting('show');", remote: true, method: :get),
-                :class => "vertical_line"
-            )
-        end
-        %>
         </div>
     <% end %>
 <% end %> 
