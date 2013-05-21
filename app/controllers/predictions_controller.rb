@@ -736,7 +736,6 @@ class PredictionsController < ApplicationController
 			# file_unaligned contains only predicted sequence
 			File.open(file_unaligned, 'w') {|f| f.write(fasta)}
 			file_refall = file_base.gsub(/\d+\_/, "") + ".fasta"
-puts file_refall
 			if File.zero?(file_refall) then
 				# something went wrong during ref_data generation (cymo-api)
 				return false, "", "reference data"
