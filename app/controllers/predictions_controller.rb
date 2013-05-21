@@ -352,7 +352,70 @@ class PredictionsController < ApplicationController
 			errors = ["Fatal error.", "Cannot load reference data. Please contact us!"]
 			return false, errors
 		end
-		return JSON.load(File.read(path)), []
+		data = JSON.load(File.read(path))
+
+		# separate actin, myosin and kinesin by class
+		myo_data = separate_by_class(data, "Myosin heavy chain")
+		actin_data = separate_by_class(data, "Actin related protein")
+		kinesin_data = separate_by_class(data, "Kinesin")
+		# delete unseparated data 
+		data.delete("Myosin heavy chain")
+		data.delete("Actin related protein")
+		data.delete("Kinesin")
+		# add separated (do this after deletion of unseparated !!! as old key is used as "default class")
+		data.merge!(myo_data)
+		data.merge!(actin_data)
+		data.merge!(kinesin_data)
+
+		return data, []
+	end
+
+	# separate reference data for action, myosin and kinesin by class
+	# @param data [Hash] reference data
+	# @param prot [String] key in data - hash, those data to separate
+	def separate_by_class(data, prot)
+		new_data = {}
+		genes = data[prot]["genes"].keys
+		old_alignment = data[prot]["alignment"]
+		headers, seqs = fasta2str(old_alignment)
+
+		genes.each do |name|
+			if prot.include?("Myosin") then
+				name =~ /[a-zA-Z_]+(Myo)?([0-9]+|Mhc)/
+				klass = $2 if $2
+			elsif prot.include?("Actin") 
+				name =~ /[a-zA-Z_]+(Arp)([0-9]+)/
+				klass = $2 if $2
+			else
+				name =~ /[a-zA-Z_]+(Kinesin)([0-9]+)/
+				klass = $2 if $2
+			end
+			
+			if klass then
+				# could extract class name $2
+				key = prot + " Class " + $2.to_s # convert to key name
+			else
+				# could not extract a class name, simply use protein name as class name
+				key = prot
+			end
+
+			if ! new_data.has_key?(key) then
+				# initialize hash for this class
+				new_data[key] = {}
+				new_data[key]["genes"] = {}
+				new_data[key]["alignment"] = ""
+			end
+
+			# add gene structure and aligned sequence to new data hash
+			new_data[key]["genes"][name] = data[prot]["genes"][name]
+
+			if headers.include?(name) then
+				ind = headers.index(name)
+				new_data[key]["alignment"] += str2fasta(name, seqs[ind], true) << "\n" # true: no line break after 80 chars
+				# no else needed: even if no sequence exists for this key, the other functions can handle missing data
+			end
+		end
+		return new_data
 	end
 
 	# Prepare alignment of reference data using MAFFT
@@ -379,14 +442,15 @@ class PredictionsController < ApplicationController
 		file_in = file.gsub(".", "_in.")
 		File.open(file_in, 'w'){|f| f.write(data)}
 		stdin, stdout_err, wait_thr = Open3.popen2e(MAFFT, "--auto", "--amino", "--anysymbol", "--quiet", file_in)
-		stdin.close
-		output = stdout_err.read
-		stdout_err.close
-		FileUtils.rm(file_in)
 		if ! wait_thr.value.success? then
 			return false
-		end
-		File.open(file, 'w'){|f| f.write(output)}
+		else
+			stdin.close
+			output = stdout_err.read
+			stdout_err.close
+			File.open(file, 'w'){|f| f.write(output)}
+			FileUtils.rm(file_in)
+		end	
 		return true
 	end
 
@@ -672,6 +736,7 @@ class PredictionsController < ApplicationController
 			# file_unaligned contains only predicted sequence
 			File.open(file_unaligned, 'w') {|f| f.write(fasta)}
 			file_refall = file_base.gsub(/\d+\_/, "") + ".fasta"
+puts file_refall
 			if File.zero?(file_refall) then
 				# something went wrong during ref_data generation (cymo-api)
 				return false, "", "reference data"

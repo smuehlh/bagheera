@@ -22,38 +22,80 @@
         <div class="pred_data_wrapper" id="pred_data_<%= basename %>" style="clear:both">
         <%=
             if value[:ctg_pos].any? then   
-                seq, seq_pos, aa_pct =
-                format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
-                content_tag(:div, draw_table(seq, seq_pos, tab_seq), :class => "wrapper") +
+                seq, seq_pos, aa_pct = format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
+
                 if value[:ref_chem].any? then 
                     # content_tag(:h4, "CTG positions aligned with discriminative sites of reference data") +
                     draw_table(value[:ref_chem].keys, aa_pct, value[:ref_chem].collect {|_, v| v[:seq_num]}, tab_aa) +
                     content_tag(:p, pluralize(value[:ref_chem].values[0][:seq_num].to_s, "sequence") << " in reference alignment") 
-                # else
-                #     content_tag(:h4, "No CTG position aligned with discriminative sites of reference data")
+                else
+                    content_tag(:i, "No CTG position aligned with discriminative sites of reference data")
                 end +
-                tag(:br) +
+
                 if value[:ref_ctg].any? then
                     # content_tag(:h4, "CTG codons in reference data at same positions") +
                     draw_table(["Serine", "Leucine"], [value[:ref_ctg][:ser], value[:ref_ctg][:leu]], tab_ctg)
+                else
+                    tag(:br) +
+                    content_tag(:i, "No CTG codons in reference data at same positions")
+                    tag(:br)
                 end +
+
                 tag(:br) +
-                button_to("Show alignment", show_alignment_path(prot: prot_name, hit: value[:hit_shown]), 
-                   id: "show_alignment_button_#{basename}_#{value[:hit_shown]}", 
-                   onclick: "hide_show_waiting('show');", remote: true, method: :get) + 
-                content_tag(:div, "", :id => "alignment_#{basename}_#{value[:hit_shown]}")
+
+                ### this part is for showing the table containing predicted sequence and CTG positions
+                content_tag(:b, "Show predicted sequence ") +
+                image_tag("icons/down.png", 
+                    :id => "#{basename}_#{value[:hit_shown]}_img", 
+                    :title => "Show/hide predicted sequence", 
+                    :onclick => "toggle_icon(this, $('#seq_#{basename}_#{value[:hit_shown]}'))"
+                ) +
+                content_tag(:div, draw_table(seq, seq_pos, tab_seq), 
+                    :class => "wrapper", 
+                    :id => "seq_#{basename}_#{value[:hit_shown]}", 
+                    :style => "display:none;") +
+
+                tag(:br) +
+
+                ### this part is for showing the alignment
+                content_tag(:b, "Show alignment ") +
+                link_to( 
+                    image_tag("icons/down.png",
+                            id: "show_alignment_#{basename}_#{value[:hit_shown]}_img",
+                            :title => "Show/hide alignment",
+                            onclick: "toggle_icon(this, $('#alignment_#{basename}_#{value[:hit_shown]}'))"),
+                    show_alignment_path(prot: prot_name, hit: value[:hit_shown]),
+                    {:remote => true}
+                ) +
+                # button_to("Show alignment", show_alignment_path(prot: prot_name, hit: value[:hit_shown]), 
+                #    id: "show_alignment_button_#{basename}_#{value[:hit_shown]}", 
+                #    onclick: "hide_show_waiting('show');", remote: true, method: :get) + 
+                content_tag(:div, "", :id => "alignment_#{basename}_#{value[:hit_shown]}", :style => "display:none") + 
+                tag(:br)
             else
-                content_tag(:p, value[:pred_prot]) +
                 content_tag(:div, value[:message], :class => "pred_nothing")
             end +
+
             if value[:hit_shown] < value[:n_hits] &&
                (all_hit_list.blank? || value[:hit_shown] == all_hit_list.max) then
                # show button if there are more hits than the shown ones and (in case of multiple hits per prot) if its the last shown hit
-                content_tag(:p,
-                    button_to("Predict more", predict_more_path(prot: prot_name, hit: value[:hit_shown]), id: "pred_more_button", 
-                        onclick: "hide_show_waiting('show');", remote: true, method: :get),
-                    :class => "vertical_line"
+                content_tag(:p, 
+                    content_tag(:b, "Use next BLAST hits for gene prediction ", :class => "line") +
+                    link_to(
+                        image_tag("icons/down.png",
+                            # onclick: "img.src = this.src.replace('/down.png','/up.png');"
+                        ), 
+                        predict_more_path(prot: prot_name, hit: value[:hit_shown]), id: "pred_more_button", 
+                        onclick: "hide_show_waiting('show');", remote: true, method: :get,
+                    ),
+                    id: "pred_more_button",
                 )
+
+                # content_tag(:p,
+                #     button_to("Predict more", predict_more_path(prot: prot_name, hit: value[:hit_shown]), id: "pred_more_button", 
+                #         onclick: "hide_show_waiting('show');", remote: true, method: :get),
+                #     :class => "vertical_line"
+                # )
             end
         %>    
         </div>

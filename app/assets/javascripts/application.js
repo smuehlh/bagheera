@@ -153,4 +153,18 @@ function hide_show_waiting(kind) {
     else {
         $('#waiting').hide();
     }
-};
+}
+
+
+function toggle_icon(img, div, mode) {
+    // if(!mode) mode = 'block';
+    // if (div.clientHeight > 0) {
+    if ( div.css('display') != "none" ) {
+      img.src = img.src.replace('/up.png','/down.png');
+      div.hide();
+    } else {
+      img.src = img.src.replace('/down.png','/up.png');
+      div.show();
+    }
+    return false;
+}

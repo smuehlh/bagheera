@@ -175,7 +175,8 @@ h1, h2, h3, h4, h5 {
     }
     h3 {
         display: block;
-        border: 1px solid #aaa;
+        // border: 1px solid #aaa;
+        border: 1px solid $h1_color;
         border-width: 0px 0px 1px 0px;
         margin: 15px 0px 5px 0px;
         padding: 0px 0px 2px 0px;
@@ -391,9 +392,10 @@ input.defaulttext, textarea.defaulttext {
 //     background-color: $h1_color;
 // }
 
-.vertical_line {
+.line {
     border: 1px solid #aaa;
-    border-width: 0px 0px 1px 0px;
+    border-width: 1px 0px 0px 0px;
+    padding-top: 5px;
 }
 
 .format_ctg_stats {
