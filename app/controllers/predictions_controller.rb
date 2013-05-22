@@ -154,14 +154,15 @@ class PredictionsController < ApplicationController
 					ref_prot_seq = ref_prot_seq[0]
 				else
 					# find best reference sequence and fill variables with these data
-					sc_genes = all_prot_data["genes"].keys.select {|key| key =~ /Sc_/ && all_prot_data["genes"][key]["completeness"] =~ /[complete|partial]/}
-					if sc_genes.any? then
-						# Sc_b and complete gene structure
-						ref_prot_key = sc_genes.find {|key| all_prot_data["genes"][key]["completeness"] == "complete" &&  all_prot_data["genes"][key] =~ /Sc_b/}
-						# ... or ... other Sc and complete gene structure
-						ref_prot_key = sc_genes.find {|key| all_prot_data["genes"][key]["completeness"] == "complete"} if ref_prot_key.blank?
-						# ... or ... Sc_b and partial
-						ref_prot_key = sc_genes.find {|key| key =~ /Sc_b/} if ref_prot_key.blank?
+					# Ca_b: Candida albicans WO-1
+					ca_genes = all_prot_data["genes"].keys.select {|key| key =~ /Ca_/ && all_prot_data["genes"][key]["completeness"] =~ /[complete|partial]/}
+					if ca_genes.any? then
+						# Ca_b and complete gene structure
+						ref_prot_key = ca_genes.find {|key| all_prot_data["genes"][key]["completeness"] == "complete" &&  all_prot_data["genes"][key] =~ /Ca_b/}
+						# ... or ... other Ca and complete gene structure
+						ref_prot_key = ca_genes.find {|key| all_prot_data["genes"][key]["completeness"] == "complete"} if ref_prot_key.blank?
+						# ... or ... Ca_b and partial
+						ref_prot_key = ca_genes.find {|key| key =~ /Ca_b/} if ref_prot_key.blank?
 					end
 					# ... or ... use first gene with complete gene structure
 					ref_prot_key = all_prot_data["genes"].keys.find {|key| all_prot_data["genes"][key]["completeness"] =~ /complete/} if ref_prot_key.blank?
@@ -176,7 +177,8 @@ class PredictionsController < ApplicationController
 				end
 					
 #				currently, no more information about the reference protein is needed
-#				ref_prot_species = all_prot_data["genes"][ref_prot_key]["species"]
+				@predicted_prots[prot][:ref_species] = all_prot_data["genes"][ref_prot_key]["species"]
+				@predicted_prots[prot][:ref_prot] = ref_prot_seq
 #				ref_prot_stat = all_prot_data["genes"][ref_prot_key]["completeness"]
 #				ref_prot_geneseq = extract_gene_seq(all_prot_data["genes"][ref_prot_key]["gene"])
 
@@ -355,18 +357,25 @@ class PredictionsController < ApplicationController
 		data = JSON.load(File.read(path))
 
 		# separate actin, myosin and kinesin by class
-		myo_data = separate_by_class(data, "Myosin heavy chain")
-		actin_data = separate_by_class(data, "Actin related protein")
-		kinesin_data = separate_by_class(data, "Kinesin")
-		# delete unseparated data 
-		data.delete("Myosin heavy chain")
-		data.delete("Actin related protein")
-		data.delete("Kinesin")
-		# add separated (do this after deletion of unseparated !!! as old key is used as "default class")
-		data.merge!(myo_data)
-		data.merge!(actin_data)
-		data.merge!(kinesin_data)
+		if data.keys.find_all {|key| key.include?("Class")}.empty? then
+			myo_data = separate_by_class(data, "Myosin heavy chain")
+			actin_data = separate_by_class(data, "Actin related protein")
+			kinesin_data = separate_by_class(data, "Kinesin")
+			# delete unseparated data 
+			data.delete("Myosin heavy chain")
+			data.delete("Actin related protein")
+			data.delete("Kinesin")
+			# add separated (do this after deletion of unseparated !!! as old key is used as "default class")
+			data.merge!(myo_data)
+			data.merge!(actin_data)
+			data.merge!(kinesin_data)
 
+			# # save to file
+			# TODO
+			# result_file = File.new(path, "w")
+		 #    result_file.puts data.to_json
+		 #    result_file.close
+		end
 		return data, []
 	end
 
@@ -493,8 +502,8 @@ class PredictionsController < ApplicationController
 				stats["sig_pos"] += val[:ref_chem].keys.size
 				# kind of preferential chemical properity leads to predited codon usage
 				all = val[:ref_chem].collect{|_,v| v[:transl]}
-				stats["ser"] += all.count("S")
-				stats["leu"] += all.count("L")
+				stats["ser"] += all.count("S") # predicted transl is Serine
+				stats["leu"] += all.count("L") # predicted transl is Leucine
 			end
 			if ! val[:ref_ctg].nil? && val[:ref_ctg].any?
 				# number of proteins with CTGs at same position
@@ -692,7 +701,7 @@ class PredictionsController < ApplicationController
 		genome_db = session[:file][:path].gsub(".fasta", "_db")
 		# enlarge range of sequence to extract: add 1000 nucleodides to start/stop
 		if start-1000 < 0 then
-			# check is start is valid
+			# check if start is valid
 			start = 0
 		else
 			start = start-1000
@@ -832,6 +841,8 @@ class PredictionsController < ApplicationController
 		codons = pred_dnaseq.scan(/.{1,3}/)
 		ctg_pos = codons.each_with_index.map{ |ele, ind| (ele == "CTG") ? ind : nil }.compact
 		results[:ctg_pos] = ctg_pos
+		results[:pred_prot] = pred_seq_aligned.gsub("-", "")
+		# results[:ref_prot] = seqs[headers.index(ref_prot_key)].gsub("-", "")
 
 		# has predicted protein CTG codon(s)?
 		if ctg_pos.empty? then
@@ -841,7 +852,6 @@ class PredictionsController < ApplicationController
 		else
 			# yes, compare CTG positions with reference data
 			# results[:has_ctg] = true
-			results[:pred_prot] = pred_seq_aligned.gsub("-", "")
 		end
 
 		# Compare with reference alignment
@@ -856,6 +866,7 @@ class PredictionsController < ApplicationController
 			is_mafft = true
 		else
 			is_mafft = false
+
 			begin
 			ref_alignment = Hash[*ref_data[prot]["alignment"].split("\n")]
 			ref_alignment.keys.each {|k| ref_alignment[ k.sub(">", "") ] = ref_alignment.delete(k)}
@@ -869,7 +880,11 @@ class PredictionsController < ApplicationController
 		end
 
 		# CTG positions in ref_alignment and amino acids at respective positions
-		ctg_pos_mapped, ref_alignment_cols = map_ctg_pos(ref_alignment, ctg_pos, aligned_fasta, is_mafft)
+		ref_aligned_fasta = str2fasta(ref_prot_key, seqs[headers.index(ref_prot_key)], true) # true: no split after 80 chars
+		pred_aligned_fasta = str2fasta("Prediction", pred_seq_aligned, true) # true: no split after 80 chars
+
+		ctg_pos_mapped, ref_alignment_cols = map_ctg_pos(ref_alignment, ctg_pos, ref_aligned_fasta, pred_aligned_fasta)
+
 
 		if ctg_pos_mapped.any? then
 			# mapping was possible, compare!
@@ -882,7 +897,6 @@ class PredictionsController < ApplicationController
 					# less than half of all seqs have an gap at the CTG position 
 					# => check the preference makes sence
 					aa_freq, aa_num = word_frequency(col)
-# todo delete all freqs < 5 % ???
 					is_significant, prob_transl = predict_translation(aa_freq)
 				else
 					# half or more seqs have an gap => its not significant
@@ -1038,11 +1052,51 @@ class PredictionsController < ApplicationController
 	# handels alignment method (in case of mafft only cymobase alignment at CTG pos needs to be collected!)
 	# @param ref_alignment [Hash] cymobase alignment
 	# @param ctg_pos [Array] CTG-Positions in unaligned predicted sequence
-	# @param aligned_fasta [String] Alignment between reference and predicted seq
-	# @param is_mafft [Boolean] Indicates if alignment method was mafft - influences aligned_fasta etc
+	# @param ref_fasta [String] fasta formatted reference sequence
+	# @param pred_fasta [String] fasta formatted predicted sequence
 	# @return [Array] CTG-Positions in the cymobase - alignment
 	# @return [Array of Arrays] Cymobase - Alignment columns at CTG positions
-	def map_ctg_pos(ref_alignment, ctg_pos, aligned_fasta, is_mafft)
+	def map_ctg_pos(ref_alignment, ctg_pos, ref_fasta, pred_fasta)
+
+		ref_pos = []
+		ref_cols = []
+
+		header, seq = fasta2str(ref_fasta)
+		ref_key = header[0]
+		ref_seq = seq[0] # aligned with pred_seq, but not with ref_alignment
+		header, seq = fasta2str(pred_fasta)
+		pred_seq = seq[0]
+
+		ctg_pos.each do |pos|
+			# map CTG position in unaligned onto aligned predicted seq
+			pred_apos = sequence_pos2alignment_pos(pos, pred_seq)
+
+			# matching only possible if
+				# 1) no gap in reference sequence at this position 
+			if (ref_seq[pred_apos] == "-" || 
+				# 2) this position is not aligned (only relevant in case of DIALIGN)
+				ref_seq[pred_apos].match(/\p{Lower}/) || pred_seq[pred_apos].match(/\p{Lower}/)) then
+				next
+			end
+
+			# continue matching: map aligend predicted seq onto reference alignment
+			ref_spos = alignment_pos2sequence_pos(pred_apos, ref_seq)
+			if ref_spos.nil? || ref_alignment[ref_key].nil? then
+				next
+			end
+			ref_cymopos = sequence_pos2alignment_pos(ref_spos, ref_alignment[ref_key])
+
+			# collect cymo column at CTG position
+			col = ref_alignment.collect {|cymo_header, cymo_prot| cymo_prot[ref_cymopos]}
+			
+			# store results
+			ref_pos << ref_cymopos
+			ref_cols << col
+		end
+		return ref_pos, ref_cols
+	end
+
+	def map_ctg_pos_Old(ref_alignment, ctg_pos, aligned_fasta, is_mafft)
 		ref_pos = []
 		ref_cols = []
 

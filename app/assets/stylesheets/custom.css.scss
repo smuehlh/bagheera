@@ -387,6 +387,12 @@ input.defaulttext, textarea.defaulttext {
     color: white;
 }
 
+.highlight_res {
+    border: 1px solid $grau;
+    background-color: $grau;
+    -moz-opacity:0.8; -webkit-opacity:0.8;
+}
+
 // div.pred_data_more {
 //     padding-left: 0px;
 //     background-color: $h1_color;

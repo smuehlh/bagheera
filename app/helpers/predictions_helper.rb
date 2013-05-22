@@ -10,7 +10,7 @@ module PredictionsHelper
 	# @return [Array] Available species (for gene prediction) in selection_tag format
 	# @return [String] Preselected species
 	def fill_selection_tags()
-		arr_algo = [['MAFFT', 'mafft'],['Needleman-Wunsch', 'nw'], ['Gotoh', 'gotoh'], ['Smith-Waterman', 'sw'], ['Longest Common Subsequence', 'lcs']]
+		arr_algo = [['MAFFT (recommended)', 'mafft'],['Needleman-Wunsch', 'nw'], ['Gotoh', 'gotoh'], ['Smith-Waterman', 'sw'], ['Longest Common Subsequence', 'lcs']]
 		pre_select_algo = 'mafft'
 		arr_conf = [['End gap free', 'tttt'], ['Standard global alignment', 'ffff']]
 		pre_select_conf = 'tttt'
@@ -106,9 +106,9 @@ module PredictionsHelper
 			side = []
 			part.count("!").times do |i|
 				pos = ctgpos[ind]
-				part.sub!("!", content_tag(:span, prot[ctgpos[ind]], :class => "highlight_aa", :title => "Position #{pos}"))
+				part.sub!("!", content_tag(:span, prot[ctgpos[ind]], :class => "highlight_aa", :title => "Position " + ruby2human_counting(pos).to_s ))
 				aa_pct << format_aa_stats(chem_props[pos][:aa_comp]) if chem_props.has_key?(pos) # format_aa_stats(aa_stats[ind][0])
-				side << pos
+				side << ruby2human_counting(pos)
 				ind = ind + 1
 			end
 			str << part
@@ -160,9 +160,9 @@ module PredictionsHelper
 	def format_aa_stats(stats)
 		str = []
 		stats.sort_by {|k, v|v}.reverse.each do |aa, freq|
-			# if freq >= 0.05 then
+			if freq >= 0.05 then
 				str << (aa + ": " + (freq*100).round.to_s + "%")
-			# end
+			end
 		end
 		return str.join(", ")
 	end
@@ -186,6 +186,38 @@ module PredictionsHelper
 		# 		sum.to_s << "%"
 		# 	end
 		# end
+	end
+
+	# converts ruby counting to human counting: add 1 to each value
+	# can handle both Arrays and Fixnums
+	# @param lnum [Array or Fixnum] Ruby counted numbers
+	# @return [Array or Fixnum] Human counted numbers
+	def ruby2human_counting(num)
+		if num.kind_of?(Array) then
+			numplus = num.collect do |n|
+				next if n.blank? || n.nil?
+				n += 1
+			end
+			return numplus
+		elsif num.kind_of?(Fixnum) 
+			return num + 1
+		end
+	end
+
+	def parse_prob_tranl(data)
+		str = ""
+		all_transl = data.collect{|_,v| v[:transl]}
+	    n_ser = all_transl.count("S") 
+	    n_leu = all_transl.count("L")
+
+	    if n_ser > 0 then
+	    	str += "Reference data suggest yeast alternative codon usage (" + n_ser.to_s + " CTG positions in predicted protein)."
+	    end
+	    if n_leu > 0 then
+	    	str += "Reference data suggest standard codon usage (" + n_leu.to_s + " CTG positions in predicted protein)." 
+	    end
+
+	    return str
 	end
 
 end
