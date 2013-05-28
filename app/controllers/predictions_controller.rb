@@ -214,7 +214,6 @@ class PredictionsController < ApplicationController
 				@predicted_prots[prot][:hit_shown] = 1 # in this method, only blast best hit is analyzed
 
 				### 2.2) AUGUSTUS
-puts "#{@predicted_prots[prot][:ref_species]}: #{prot}"
 				is_success, pred_seq, pred_dnaseq, err = perform_gene_pred(output)
 				if ! is_success || ! err.blank? then
 					# an error occured
