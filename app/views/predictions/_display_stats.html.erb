@@ -11,6 +11,6 @@ content_tag(:p,
 	:class => "stats") +
 content_tag(:p, 
 	"In #{@stats["ref_ctg"].to_s}" <<
-	" #{"protein".pluralize(@stats["ref_ctg"])} CTG codon positions are conserved between query data and Saccharomycetes. They occur at least in 5% of the reference sequences.", 
-	:class => "stats") 
+	" #{"protein".pluralize(@stats["ref_ctg"])} at least one CTG codon position is conserved between query data and Saccharomycetes. The position(s) occur at least in 5% of the reference sequences.", 
+	:class => "stats")
 %>

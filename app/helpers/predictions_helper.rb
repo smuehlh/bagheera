@@ -107,7 +107,7 @@ module PredictionsHelper
 			part.count("!").times do |i|
 				pos = ctgpos[ind]
 				part.sub!("!", content_tag(:span, prot[ctgpos[ind]], :class => "highlight_aa", :title => "Position " + ruby2human_counting(pos).to_s ))
-				aa_pct << format_aa_stats(chem_props[pos][:aa_comp]) if chem_props.has_key?(pos) # format_aa_stats(aa_stats[ind][0])
+				aa_pct << format_aa_stats(chem_props[pos][:aa_comp]) if chem_props.has_key?(pos) 
 				side << ruby2human_counting(pos)
 				ind = ind + 1
 			end
@@ -136,7 +136,7 @@ module PredictionsHelper
 				if col3.any? then
 					content_tag(:col, "", :class => table_spec[:col_middle]) 
 				end +
-				content_tag(:col, "", :class => table_spec[:th_right])
+				content_tag(:col, "", :class => table_spec[:col_right])
 			end +
 			col1.each_with_index.collect do |data, ind|
 				content_tag(:tr) do
@@ -158,34 +158,28 @@ module PredictionsHelper
 	# @param [Array] Amino acid statistics for one CTG-pos
 	# @return [String] Format: "L: 100%", sorted by percent; only > 5%
 	def format_aa_stats(stats)
-		str = []
+		res = []
 		stats.sort_by {|k, v|v}.reverse.each do |aa, freq|
 			if freq >= 0.05 then
-				str << (aa + ": " + (freq*100).round.to_s + "%")
+				res << (aa + ": " + (freq*100).round.to_s + "%")
 			end
 		end
-		return str.join(", ")
+		return res.join(", ")
 	end
 
-# not needed any more
 	# format statistics over CTG usage in reference data
 	# @param [Array] Hash; CTG usage in reference data in percentages
 	# @return [Array] Formatted statistics
 	def format_ctg_stats(data)
-		data.map do |k, v|
-			k.to_s.capitalize + ": " + (v*100).round.to_s + "%"
+		res = []
+		data.each do |_, val|
+			str = "S: " << 
+				(val[:ctg_usage]["S"]*100).round.to_s << 
+				"% , L: " << 
+				(val[:ctg_usage]["L"]*100).round.to_s << "%"
+			res << str
 		end
-		# for old data format
-		# data.map do |ele| 
-		# 	sum = (ele.values.sum * 100).round
-		# 	if sum > 0 then
-		# 		sum.to_s << "% total (" <<
-		# 		(ele[:ser]*100).round.to_s << "% encoding Ser, " <<
-		# 		(ele[:leu]*100).round.to_s << "% encoding Leu)"
-		# 	else
-		# 		sum.to_s << "%"
-		# 	end
-		# end
+		return res
 	end
 
 	# converts ruby counting to human counting: add 1 to each value
@@ -204,20 +198,37 @@ module PredictionsHelper
 		end
 	end
 
-	def parse_prob_tranl(data)
-		str = ""
-		all_transl = data.collect{|_,v| v[:transl]}
-	    n_ser = all_transl.count("S") 
-	    n_leu = all_transl.count("L")
 
-	    if n_ser > 0 then
-	    	str += "Reference data suggest yeast alternative codon usage (" + n_ser.to_s + " CTG positions in predicted protein)."
-	    end
-	    if n_leu > 0 then
-	    	str += "Reference data suggest standard codon usage (" + n_leu.to_s + " CTG positions in predicted protein)." 
-	    end
+	def suggested_transl(ref_chem, ref_ctg)
+		res = []
 
-	    return str
+		# counts for aa distribution in reference data
+		pos_ser = ref_chem.collect{|k,v| k if v[:transl] == "S"}
+		pos_leu = ref_chem.collect{|k,v| k if v[:transl] == "L"}
+		# add counts for ctg usage in reference data
+		pos_ser |= pos_ser + ref_ctg.collect{|k,v| k if v[:transl] == "S"} # set union
+		pos_leu |= ref_ctg.collect{|k,v| k if v[:transl] == "L"} # set union
+
+		pos_ser.compact!
+		pos_leu.compact!
+
+		alt_usage = (pos_ser - pos_leu).size # set difference
+		std_usage = (pos_leu - pos_ser).size # set difference
+		strange = (pos_ser & pos_leu).size # set intersect
+
+		# only add to results if values are not zero
+		if alt_usage > 0 then
+			res << pluralize(alt_usage, ' CTG position', ' CTG positions') + " suggest alternative codon usage."
+		end
+		if std_usage > 0 then
+			res << pluralize(std_usage, ' CTG position', ' CTG positions') + " suggest standard codon usage."
+		end
+		if strange > 0 then
+			res << pluralize(strange, ' CTG position', ' CTG positions') + 
+				" suggest contrary codon usage based on distribution of amino acids and CTG usage in reference data."
+		end
+
+		return res.join("</br>").html_safe
 	end
 
 end

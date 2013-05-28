@@ -1,6 +1,7 @@
 source 'https://rubygems.org'
 
 gem 'rails', '3.2.12'
+gem 'rake', '~> 10.0.4'
 
 # Bundle edge Rails instead:
 # gem 'rails', :git => 'git://github.com/rails/rails.git'
@@ -15,7 +16,7 @@ group :development, :test do
   gem "rails_best_practices"
   gem 'simplecov', :require => false
   gem 'simplecov-rcov', :require => false
-  gem "ci_reporter", require: false
+  # gem "ci_reporter", require: false, :git => 'git://github.com/nicksieger/ci_reporter.git'
 
 end
 
@@ -58,3 +59,4 @@ gem 'debugger'
 gem "dalli"
 gem 'fancybox-rails'
 gem "peach"
+gem 'whenever', :require => false

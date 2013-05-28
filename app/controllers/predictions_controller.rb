@@ -4,8 +4,6 @@ require 'Tools'
 class PredictionsController < ApplicationController
 
 	MAX_SIZE = 52428800 # 50 MB
-	BASE_PATH = Dir::tmpdir + "/cug/" # all data files are stored in /tmp
-	REF_DATA = "alignment_gene_structure.json"
 	SORT = "/usr/bin/sort"
 	FORMATDB = "/usr/bin/formatdb"
 	BLASTALL = "/usr/bin/blastall"
@@ -22,7 +20,6 @@ class PredictionsController < ApplicationController
 	def search
 		delete_old_data # delete old uploaded genome files
 		prepare_new_session # a fresh session
-		bg_dataprocessing # align reference data, background job
 	end
 
 	# Handel uploaded genome file: 
@@ -41,8 +38,13 @@ class PredictionsController < ApplicationController
 			# rename and save file
 			file_id = rand(1000000000).to_s
 			file_name = File.basename(params[:uploaded_file].original_filename)
-			file_path = BASE_PATH + file_id + "_query.fasta"
-			File.rename(params[:uploaded_file].path, file_path)
+			file_path = BASE_PATH + file_id + "/query.fasta"
+			begin
+				FileUtils.mkdir(BASE_PATH + file_id, :mode => 0775)
+				FileUtils.mv(params[:uploaded_file].path, file_path)
+			rescue
+				@fatal_error << "Cannot upload file."
+			end
 			session[:file] = { id: file_id, name: file_name, path: file_path }
 		end
 		render :upload_file_ajax, formats: [:js]
@@ -59,8 +61,13 @@ class PredictionsController < ApplicationController
 		@fatal_error = check_filesize(File.size(example_path))
 		if @fatal_error.blank? then
 			file_id = rand(1000000000).to_s
-			file_path = BASE_PATH + file_id + "_query.fasta"
-			File.copy_stream(example_path, file_path)
+			file_path = BASE_PATH + file_id + "/query.fasta"
+			begin
+				FileUtils.mkdir(BASE_PATH + file_id, :mode => 0775)
+				FileUtils.cp(example_path, file_path)
+			rescue
+				@fatal_error = "Cannot upload file."
+			end
 			session[:file] = { id: file_id, name: example_file, path: file_path }
 		end
 		render :upload_file_ajax, formats: [:js]
@@ -84,7 +91,7 @@ class PredictionsController < ApplicationController
 		# copy file to /tmp/cymo_alignment_
 		@file_id = "cug" + session[:file][:id] + rand(1000000000).to_s
 		# set correct file extension for dialign/ seqan files
-		file_scr = BASE_PATH + session[:file][:id] + "_" + prot + "-" + hit.to_s + "-aligned.fasta"
+		file_scr = BASE_PATH + session[:file][:id] + "/" + prot + "-" + hit.to_s + "-aligned.fasta"
 		file_dest = Dir::tmpdir + "/cymobase_alignment_" + @file_id + ".fasta"
 
 		# write data again to file, leave line breaks after 80 chars out (lucullus will be much faster this way)
@@ -144,18 +151,18 @@ class PredictionsController < ApplicationController
 				file_basename = session[:file][:path].gsub("query.fasta", prot_basename)
 
 				### 1) extract reference proteins if they do not already exist
-				file_refseq = file_basename.gsub(/\d+_/, "") + "-refseq.fasta"
+				file_refseq = BASE_PATH + prot_basename + "-refseq.fasta"
 				# ref_prot_species, ref_prot_stat, ref_prot_seq, ref_prot_key = "", "", "", ""
 				ref_prot_seq, ref_prot_key = "", ""
 
-				if File.exists?(file_refseq) then
-					ref_prot_key, ref_prot_seq = fasta2str(File.read(file_refseq))
-					ref_prot_key = ref_prot_key[0]
+				if File.exists?(file_refseq) && ! File.zero?(file_refseq) then
+					header, ref_prot_seq = fasta2str(File.read(file_refseq))
+					ref_prot_key = header[0].split("@")[1]
 					ref_prot_seq = ref_prot_seq[0]
 				else
 					# find best reference sequence and fill variables with these data
 					# Ca_b: Candida albicans WO-1
-					ca_genes = all_prot_data["genes"].keys.select {|key| key =~ /Ca_/ && all_prot_data["genes"][key]["completeness"] =~ /[complete|partial]/}
+					ca_genes = all_prot_data["genes"].keys.select {|key| key =~ /Ct_a/ && all_prot_data["genes"][key]["completeness"] =~ /[complete|partial]/}
 					if ca_genes.any? then
 						# Ca_b and complete gene structure
 						ref_prot_key = ca_genes.find {|key| all_prot_data["genes"][key]["completeness"] == "complete" &&  all_prot_data["genes"][key] =~ /Ca_b/}
@@ -171,12 +178,14 @@ class PredictionsController < ApplicationController
 
 
 					# not necessary if file already exists ...
-					ref_prot_seq = all_prot_data["genes"][ref_prot_key]["gene"].match(/prot_seq: (.*?)\n/)[1]
+					ref_prot_seq = extract_prot_seq(all_prot_data["genes"][ref_prot_key]["gene"])
+
 					# save reference protein in fasta format to file
-					File.open(file_refseq, 'w'){|f| f.write(str2fasta(ref_prot_key, ref_prot_seq))}
+					header = all_prot_data["genes"][ref_prot_key]["species"] + "@" + ref_prot_key
+					File.open(file_refseq, 'w'){|f| f.write(str2fasta(header, ref_prot_seq))}
 				end
 					
-#				currently, no more information about the reference protein is needed
+#				currently, some more information about the reference protein is needed
 				@predicted_prots[prot][:ref_species] = all_prot_data["genes"][ref_prot_key]["species"]
 				@predicted_prots[prot][:ref_prot] = ref_prot_seq
 #				ref_prot_stat = all_prot_data["genes"][ref_prot_key]["completeness"]
@@ -205,6 +214,7 @@ class PredictionsController < ApplicationController
 				@predicted_prots[prot][:hit_shown] = 1 # in this method, only blast best hit is analyzed
 
 				### 2.2) AUGUSTUS
+puts "#{@predicted_prots[prot][:ref_species]}: #{prot}"
 				is_success, pred_seq, pred_dnaseq, err = perform_gene_pred(output)
 				if ! is_success || ! err.blank? then
 					# an error occured
@@ -219,7 +229,8 @@ class PredictionsController < ApplicationController
 					file_refall = BASE_PATH + prot_basename + ".fasta"
 					if ! FileTest.file?(file_refall) then
 						# no, so calculate alignment
-						is_success = prepare_ref_data(prot_data["alignment"], file_refall)
+						puts "Need to calculate reference alignment with MAFFT first!"
+						is_success = prepare_mafft_ref_alignment(prot_data["alignment"], file_refall)
 						if ! is_success then
 							write_minor_error(prot, "MAFFT")
 							@predicted_prots[prot][:message] = "Sorry, an error occured"
@@ -271,10 +282,11 @@ class PredictionsController < ApplicationController
 		if @fatal_error.empty? then
 			prot_basename = @prot.gsub(" ", "-").downcase
 			file_basename = session[:file][:path].gsub("query.fasta", prot_basename)
-			file_refseq = file_basename.gsub(/\d+_/, "") + "-refseq.fasta"
+			file_refseq = BASE_PATH + prot_basename + "-refseq.fasta"
 			file_blast = file_basename + ".blast"
 			headers, seqs = fasta2str(File.read(file_refseq))
-			ref_prot_key = headers[0]
+			ref_species, ref_prot_key = headers[0].split("@")
+
 			blast_all_hits = File.read(file_blast)
 			if blast_all_hits.blank? then
 				write_minor_error(@prot, "No more BLAST hits.")
@@ -287,6 +299,8 @@ class PredictionsController < ApplicationController
 			(hit_start..hit_stop).peach(10) do |n_hit|
 				key = @prot + "_" + n_hit.to_s
 				@predicted_prots[key] = { n_hits: n_hits, hit_shown: n_hit}
+				@predicted_prots[key][:ref_species] = ref_species
+				@predicted_prots[key][:ref_prot] = seqs[0]
 
 				is_success, pred_seq, pred_dnaseq, err = perform_gene_pred(blast_all_hits, n_hit)
 				if ! is_success || ! err.blank? then
@@ -328,25 +342,36 @@ class PredictionsController < ApplicationController
 	# delete old data in /tmp/cug/ and /tmp/cymobase_alignment_cug*
 	# data from old predictions and show_alignment requests
 	def delete_old_data(days = 1)
-		# delete all files older than one day except file "alignment_gene_structure.json"
+		# delete all files older than one day except file "alignment_gene_structure.json" and logfile
 		# system("find", BASE_PATH, "-type", "f", "-not", "-name", REF_DATA, "-mtime", "+#{days}", "-delete")
 		begin
-			Dir.glob(BASE_PATH + "*").each do |file|
-				if file == BASE_PATH + REF_DATA then
+			puts "---------------------------------------------------------"
+			puts "Dirs to delete: "
+			Dir.glob(BASE_PATH + "**/") do |dir|
+				if dir == BASE_PATH then
 					next
-				elsif File.mtime(file) <= days.day.ago
-					FileUtils.rm(file) # FileUtils.rm(file, :noop => true, :verbose => true)
+				elsif File.mtime(dir) <= days.day.ago
+					FileUtils.rm_rf(dir, :secure=>true, :noop => true, :verbose => true)
 				end
 			end
 			# delete alignment file for show-alignment function
 			FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
+
+			# Dir.glob(BASE_PATH + "*").each do |file|
+			# 	if file == BASE_PATH + REF_DATA || file == BASE_PATH + "cron.log" then
+			# 		next
+			# 	elsif File.mtime(file) <= days.day.ago
+			# 		FileUtils.rm(file, :noop => true, :verbose => true)
+			# 	end
+			# end
+			# # delete alignment file for show-alignment function
+			# FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
 		rescue
 		end
 	end
 
 	# load reference data from file alignment_gene_structure.json
-	# @return [FalseClass] If an error occured
-	# @return [TrueClass] If no error occured -> Array will be empty
+	# @return [Hash] reference data
 	# @return [Array] Errors occured during file load
 	def load_ref_data
 		path = BASE_PATH + REF_DATA
@@ -356,110 +381,19 @@ class PredictionsController < ApplicationController
 		end
 		data = JSON.load(File.read(path))
 
-		# separate actin, myosin and kinesin by class
-		if data.keys.find_all {|key| key.include?("Class")}.empty? then
-			myo_data = separate_by_class(data, "Myosin heavy chain")
-			actin_data = separate_by_class(data, "Actin related protein")
-			kinesin_data = separate_by_class(data, "Kinesin")
-			# delete unseparated data 
-			data.delete("Myosin heavy chain")
-			data.delete("Actin related protein")
-			data.delete("Kinesin")
-			# add separated (do this after deletion of unseparated !!! as old key is used as "default class")
-			data.merge!(myo_data)
-			data.merge!(actin_data)
-			data.merge!(kinesin_data)
-
-			# # save to file
-			# TODO
-			# result_file = File.new(path, "w")
-		 #    result_file.puts data.to_json
-		 #    result_file.close
-		end
 		return data, []
 	end
 
-	# separate reference data for action, myosin and kinesin by class
-	# @param data [Hash] reference data
-	# @param prot [String] key in data - hash, those data to separate
-	def separate_by_class(data, prot)
-		new_data = {}
-		genes = data[prot]["genes"].keys
-		old_alignment = data[prot]["alignment"]
-		headers, seqs = fasta2str(old_alignment)
-
-		genes.each do |name|
-			if prot.include?("Myosin") then
-				name =~ /[a-zA-Z_]+(Myo)?([0-9]+|Mhc)/
-				klass = $2 if $2
-			elsif prot.include?("Actin") 
-				name =~ /[a-zA-Z_]+(Arp)([0-9]+)/
-				klass = $2 if $2
-			else
-				name =~ /[a-zA-Z_]+(Kinesin)([0-9]+)/
-				klass = $2 if $2
-			end
-			
-			if klass then
-				# could extract class name $2
-				key = prot + " Class " + $2.to_s # convert to key name
-			else
-				# could not extract a class name, simply use protein name as class name
-				key = prot
-			end
-
-			if ! new_data.has_key?(key) then
-				# initialize hash for this class
-				new_data[key] = {}
-				new_data[key]["genes"] = {}
-				new_data[key]["alignment"] = ""
-			end
-
-			# add gene structure and aligned sequence to new data hash
-			new_data[key]["genes"][name] = data[prot]["genes"][name]
-
-			if headers.include?(name) then
-				ind = headers.index(name)
-				new_data[key]["alignment"] += str2fasta(name, seqs[ind], true) << "\n" # true: no line break after 80 chars
-				# no else needed: even if no sequence exists for this key, the other functions can handle missing data
-			end
-		end
-		return new_data
-	end
-
-	# Prepare alignment of reference data using MAFFT
-	# calls prepare_ref_data in a subprocess and detaches them
-	def bg_dataprocessing
-		ref_data, error = load_ref_data
-		if error.empty? then
-			ref_data.each do |prot, prot_data|
-				data_file = BASE_PATH + prot.gsub(" ", "-").downcase + ".fasta"
-				if ! File.exists?(data_file) then
-					job = fork { prepare_ref_data(prot_data["alignment"], data_file) }
-					Process.detach(job)
-				end
-			end
-		end
-	end
-
-	# prepare alignment of reference data
-	# necessary if ref_data[prot]["alignment"] is not aligned, e.g. sequences have not same length
-	# @param data [Array] ref_data[prot]["alignment"]
-	# @param file [String] path for MAFFT - alignment file
-	# @return [Boolean] indicates if an error occured
-	def prepare_ref_data(data, file)
-		file_in = file.gsub(".", "_in.")
-		File.open(file_in, 'w'){|f| f.write(data)}
-		stdin, stdout_err, wait_thr = Open3.popen2e(MAFFT, "--auto", "--amino", "--anysymbol", "--quiet", file_in)
+	def prepare_mafft_ref_alignment(data, file)
+		File.open(file, 'w') {|f| f.write(data)}
+		stdin, stdout_err, wait_thr = Open3.popen2e("/usr/local/bin/mafft", "--auto", "--amino", "--anysymbol", "--quiet", file)
 		if ! wait_thr.value.success? then
 			return false
-		else
-			stdin.close
-			output = stdout_err.read
-			stdout_err.close
-			File.open(file, 'w'){|f| f.write(output)}
-			FileUtils.rm(file_in)
-		end	
+		end
+		stdin.close
+		output = stdout_err.read
+		stdout_err.close
+		File.open(file, 'w') {|f| f.write(output)}
 		return true
 	end
 
@@ -487,7 +421,7 @@ class PredictionsController < ApplicationController
 	# @return [Hash] Up-to-date statistics
 	def calc_stats(data, combine=false)
 		stats = Hash.new(0)
-		file = BASE_PATH + session[:file][:id] + ".stat"
+		file = BASE_PATH + session[:file][:id] + "/stat"
 
 		if combine then
 			# for this dataset, statistics already exist
@@ -506,8 +440,7 @@ class PredictionsController < ApplicationController
 				stats["leu"] += all.count("L") # predicted transl is Leucine
 			end
 			if ! val[:ref_ctg].nil? && val[:ref_ctg].any?
-				# number of proteins with CTGs at same position
-				stats["ref_ctg"] += 1 if val[:ref_ctg].values.max >= 0.05
+				stats["ref_ctg"] += 1 if val[:ref_ctg].values.collect{|k, _| k[:ctg_num].to_f/val[:ref_seq_num] }.max >= 0.05
 			end
 		end
 		stats["n_prots"] += data.keys.length
@@ -661,6 +594,8 @@ class PredictionsController < ApplicationController
 	def run_augustus(file)
 			# --species [REFERENCE SPEC] QUERY --genemodel=exactlyone [predict exactly one complete gene] --codingseq=on [output also coding sequence]
 			# redirection: add stderr to stdout (screen)
+
+puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --species=#{session[:augustus][:species]} --genemodel=exactlyone --codingseq=on #{file}"
 		stdin, stdout_err, wait_thr = Open3.popen2e(AUGUSTUS, "--AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/", 
 			"--species=#{session[:augustus][:species]}", "--genemodel=exactlyone","--codingseq=on", file)
 		stdin.close
@@ -697,7 +632,7 @@ class PredictionsController < ApplicationController
 
 		# 2.2) gene prediction
 		# 2.2.1) get matching search sequence 
-		file = BASE_PATH + session[:file][:id] + "_" + rand(1000000).to_s + ".fasta"
+		file = BASE_PATH + session[:file][:id] + "/" + rand(1000000).to_s + ".fasta"
 		genome_db = session[:file][:path].gsub(".fasta", "_db")
 		# enlarge range of sequence to extract: add 1000 nucleodides to start/stop
 		if start-1000 < 0 then
@@ -744,14 +679,14 @@ class PredictionsController < ApplicationController
 		if session[:align][:algo] == "mafft" then
 			# file_unaligned contains only predicted sequence
 			File.open(file_unaligned, 'w') {|f| f.write(fasta)}
-			file_refall = file_base.gsub(/\d+\_/, "") + ".fasta"
+			file_refall = file_base.sub(session[:file][:id]+"/", "") + ".fasta"
 			if File.zero?(file_refall) then
 				# something went wrong during ref_data generation (cymo-api)
 				return false, "", "reference data"
 			end
 		else
 			# file_unaligned contains both reference and predicted sequence
-			file_refseq = file_base.gsub(/\d+\_/, "") + "-refseq.fasta"
+			file_refseq = file_base.sub(session[:file][:id]+"/", "") + "-refseq.fasta"
 			FileUtils.cp(file_refseq, file_unaligned)
 			File.open(file_unaligned, 'a') {|f| f.write("\n" + fasta)}
 		end
@@ -862,11 +797,8 @@ class PredictionsController < ApplicationController
 		if session[:align][:algo] == "mafft" then
 			# aligned_fasta is a MSA containing all reference data and the predicted sequence
 			ref_alignment = Hash[headers.zip(seqs)]
-			ref_alignment.delete("Prediction") # todo really delete it? but only without predictiion its an real ref_alignment
-			is_mafft = true
+			ref_alignment.delete("Prediction") # otherwise prediced seq and its CTGs counts twice! (and its not a real reference alignment)
 		else
-			is_mafft = false
-
 			begin
 			ref_alignment = Hash[*ref_data[prot]["alignment"].split("\n")]
 			ref_alignment.keys.each {|k| ref_alignment[ k.sub(">", "") ] = ref_alignment.delete(k)}
@@ -883,36 +815,31 @@ class PredictionsController < ApplicationController
 		ref_aligned_fasta = str2fasta(ref_prot_key, seqs[headers.index(ref_prot_key)], true) # true: no split after 80 chars
 		pred_aligned_fasta = str2fasta("Prediction", pred_seq_aligned, true) # true: no split after 80 chars
 
-		ctg_pos_mapped, ref_alignment_cols = map_ctg_pos(ref_alignment, ctg_pos, ref_aligned_fasta, pred_aligned_fasta)
+		ctg_pos_mapped, ref_alignment_cols, ref_codons = map_ctg_pos(ref_alignment, ctg_pos, ref_aligned_fasta, pred_aligned_fasta, ref_data[prot]["genes"])
 
-
-		if ctg_pos_mapped.any? then
-			# mapping was possible, compare!
-
+		if ctg_pos_mapped.compact.any? then
+			# mapping of at least one position was possible, compare!
+			results[:ref_seq_num] = ref_alignment.keys.size # total number of reference sequences
 			# 1) preference for hydrophob/ polar residues?
 			ref_alignment_cols.each_with_index do |col, ind|
-				seq_num = ref_alignment.keys.size # total number of sequences
 
-				if col.count("-") < seq_num / 2 then
+				# if col.count("-") < seq_num / 2 then
 					# less than half of all seqs have an gap at the CTG position 
 					# => check the preference makes sence
 					aa_freq, aa_num = word_frequency(col)
 					is_significant, prob_transl = predict_translation(aa_freq)
-				else
+				# else
 					# half or more seqs have an gap => its not significant
-					is_significant = false
-				end
+					# is_significant = false
+				# end
 
 				if is_significant then
-					results[:ref_chem][ctg_pos[ind]] = {transl: prob_transl, aa_comp: aa_freq, aa_num: aa_num, seq_num: seq_num}
+					results[:ref_chem][ctg_pos[ind]] = {transl: prob_transl, aa_comp: aa_freq, aa_num: aa_num}
 				end
 			end
 
 			# 2) CTGs in reference data at CTG positions in predicted sequence?
-			pct_ser, pct_leu = ref_ctg_usage(ref_alignment, ctg_pos_mapped, ref_data[prot]["genes"])
-			if pct_ser > 0 || pct_leu > 0 then
-				results[:ref_ctg] = {ser: pct_ser, leu: pct_leu}
-			end
+			results[:ref_ctg] = ref_ctg_usage(ref_codons, ref_alignment_cols, ctg_pos)
 
 		else 
 			# mapping was not possible
@@ -920,54 +847,6 @@ class PredictionsController < ApplicationController
 		end
 		return true, results
 	end
-
-# alter kram
-	def tmp_oldcompare_pred_gene
-		ctg_pos.each do |pos|
-			# map CTG positions, only neccessary if not all seqs were aligned
-			if session[:align][:algo] == "mafft" then
-				algnmnt_col_pos = pos 
-				algnmnt_col_aa = seqs.collect{|seq| seq[pos]} 
-				cymo_algnmnt = Hash[headers.zip(seqs)]
-			else
-				ref_seq_aligned = seqs[0]
-				begin
-					cymo_algnmnt = Hash[*ref_data[prot]["alignment"].split("\n")]
-				rescue => e
-					puts "---"
-					puts "ERROR (#{prot}):"
-					puts e
-					puts "---"
-					return false, results, "Internal error"
-				end
-				algnmnt_col_aa, algnmnt_col_pos = parse_alignment_by_ctgpos(cymo_algnmnt, pos, pred_seq_aligned, ref_seq_aligned, ref_prot_key)
-			end
-			if !(algnmnt_col_aa.nil? && algnmnt_col_pos.nil?) then
-				# mapping was possible, compare with chemical properties
-				aa_freq, aa_num = word_frequency(algnmnt_col_aa)
-				seq_num = cymo_algnmnt.keys.length
-				if aa_num <= seq_num/2 then
-					# half or more of all seqs have an gap at position pos -> its not significant
-					is_significant = false
-				end
-				is_significant, prob_transl = predict_translation(aa_freq)
-				# compare with reference genes
-				pct_ctg_ser, pct_ctg_leu = ref_ctg_usage(cymo_algnmnt, algnmnt_col_pos, ref_data[prot]["genes"])
-				if is_significant then
-					results[:ctg_pos] << pos
-					results[:ctg_transl] << prob_transl
-					results[:aa_comp] << [aa_freq, aa_num, seq_num]
-					results[:ctg_ref] << {ser: pct_ctg_ser, leu: pct_ctg_leu}
-				else
-					return false, results, "No significant position"
-				end # if is_significant
-			else
-				return false, results, "Cannot match CTG position"
-			end # if !(algnmnt_col_aa.nil? && algnmnt_col_pos.nil?)
-		end # ctg_pos.each do |pos|
-		return true, results
-	end
-
 
 	# convert header and sequence into fasta-format
 	# @param header [String] fasta header
@@ -1005,7 +884,7 @@ class PredictionsController < ApplicationController
 		return headers, seqs
 	end
 
-	# extracting coding sequence out of gene entry 
+	# extracting coding sequence from gene entry 
 	# @param gene [String] Gene entry from reference data
 	# @return [String] Coding sequence of this gene
 	def extract_gene_seq(gene)
@@ -1013,6 +892,24 @@ class PredictionsController < ApplicationController
 		# quick & dirty version: every second entry belongs to an exon
 		a.values_at(*a.each_index.select(&:even?)).join("").upcase
 	end
+
+	# extracting protein sequence from gene entry
+	# @param gene [String] Gene entry from reference data
+	# @return [String] Protein sequence of this gene
+	def extract_prot_seq(gene)
+		gene.match(/prot_seq: (.*?)\n/)[1].upcase
+	end
+
+	# extract a certain codon from gene entry
+	# @param gene [String] Gene entry from reference data
+	# @param pos [String] Position of the codon of interest
+	# @return [String] codon of interest
+	def get_codon(gene, pos)
+		dna_seq = extract_gene_seq(gene) # dna sequence
+		codons = dna_seq.scan(/.{1,3}/)
+		return codons[pos]
+	end
+
 
 	# extraction protein and coding sequence from augustus output
 	# @param output [String] Output from augustus
@@ -1049,17 +946,20 @@ class PredictionsController < ApplicationController
 
 	# map CTG positions in predicted sequence (unaligned) onto the cymobase - alignment
 	# mapping is done via the alignment between reference and predicted sequence
-	# handels alignment method (in case of mafft only cymobase alignment at CTG pos needs to be collected!)
+	# also collects codons used in reference seq
+	# placeholder are added to output for each unmapped CTG position
 	# @param ref_alignment [Hash] cymobase alignment
 	# @param ctg_pos [Array] CTG-Positions in unaligned predicted sequence
 	# @param ref_fasta [String] fasta formatted reference sequence
 	# @param pred_fasta [String] fasta formatted predicted sequence
 	# @return [Array] CTG-Positions in the cymobase - alignment
 	# @return [Array of Arrays] Cymobase - Alignment columns at CTG positions
-	def map_ctg_pos(ref_alignment, ctg_pos, ref_fasta, pred_fasta)
+	# @return [Array of Arrays] Cymobase - Codons at CTG positions
+	def map_ctg_pos(ref_alignment, ctg_pos, ref_fasta, pred_fasta, genes)
 
 		ref_pos = []
 		ref_cols = []
+		ref_codons = []
 
 		header, seq = fasta2str(ref_fasta)
 		ref_key = header[0]
@@ -1076,69 +976,48 @@ class PredictionsController < ApplicationController
 			if (ref_seq[pred_apos] == "-" || 
 				# 2) this position is not aligned (only relevant in case of DIALIGN)
 				ref_seq[pred_apos].match(/\p{Lower}/) || pred_seq[pred_apos].match(/\p{Lower}/)) then
+				# add placeholder to results
+				ref_pos << nil
+				ref_cols << []
+				ref_codons << []
 				next
 			end
 
 			# continue matching: map aligend predicted seq onto reference alignment
 			ref_spos = alignment_pos2sequence_pos(pred_apos, ref_seq)
 			if ref_spos.nil? || ref_alignment[ref_key].nil? then
+				# add placeholder to results
+				ref_pos << nil
+				ref_cols << []
+				ref_codons << []
 				next
 			end
 			ref_cymopos = sequence_pos2alignment_pos(ref_spos, ref_alignment[ref_key])
 
-			# collect cymo column at CTG position
-			col = ref_alignment.collect {|cymo_header, cymo_prot| cymo_prot[ref_cymopos]}
-			
+			col = []
+			codons = []
+			ref_alignment.each do |cymo_header, cymo_prot|
+
+				# collect cymo column at CTG position
+				col << cymo_prot[ref_cymopos]
+
+				# collect codons at CTG position
+				if cymo_prot[ref_cymopos] == "-" then
+					# add nil as placeholder if its a gap
+					codons << nil
+				else
+					# actually collect codon
+					spos = alignment_pos2sequence_pos(ref_cymopos, cymo_prot) # position in sequece without gaps
+					codons << get_codon(genes[cymo_header]["gene"], spos)
+				end
+			end
+
 			# store results
 			ref_pos << ref_cymopos
 			ref_cols << col
+			ref_codons << codons.compact # if only nil- placeholders, it will be an empty array
 		end
-		return ref_pos, ref_cols
-	end
-
-	def map_ctg_pos_Old(ref_alignment, ctg_pos, aligned_fasta, is_mafft)
-		ref_pos = []
-		ref_cols = []
-
-		if is_mafft then
-			# reference alignment covers all seqs from cymobase!
-			ref_pos = ctg_pos # same position as in reference alignment
-			ctg_pos.each do |pos|
-				ref_cols << ref_alignment.collect {|cymo_header, cymo_prot| cymo_prot[pos]}
-			end
-		else
-			header, seqs = fasta2str(aligned_fasta)
-			ref_key = header[0]
-			ref_seq = seqs[0] # aligned with pred_seq, but not with ref_alignment
-			pred_seq = seqs[1]
-			ctg_pos.each do |pos|
-				# map CTG position in unaligned onto aligned predicted seq
-				pred_apos = sequence_pos2alignment_pos(pos, pred_seq)
-
-				# matching only possible if
-					# 1) no gap in reference sequence at this position 
-				if (ref_seq[pred_apos] == "-" || 
-					# 2) this position is not aligned (only relevant in case of DIALIGN)
-					ref_seq[pred_apos].match(/\p{Lower}/) || pred_seq[pred_apos].match(/\p{Lower}/)) then
-					next
-				end
-
-				# continue matching: map aligend predicted seq onto reference alignment
-				ref_spos = alignment_pos2sequence_pos(pred_apos, ref_seq)
-				if ref_spos.nil? || ref_alignment[ref_key].nil? then
-					next
-				end
-				ref_cymopos = sequence_pos2alignment_pos(ref_spos, ref_alignment[ref_key])
-
-				# collect cymo column at CTG position
-				col = ref_alignment.collect {|cymo_header, cymo_prot| cymo_prot[ref_cymopos]}
-				
-				# store results
-				ref_pos << ref_cymopos
-				ref_cols << col
-			end
-		end
-		return ref_pos, ref_cols
+		return ref_pos, ref_cols, ref_codons
 	end
 
 	# counting word frequencies; #doesnot count "-"
@@ -1174,8 +1053,8 @@ class PredictionsController < ApplicationController
 		pct_hyd = hyd_aas/num_aas.to_f
 		# requirements for a discriminative position:
 			# 1) occurence in more than half of sequences
-			# 2) the other usage should occure in less than quater or sequences
-		is_discrim = ([pct_hyd, pct_pol].max > 0.5 && [pct_hyd, pct_pol].min < 0.25) ? true : false 
+			# 2) the other usage should occure in less than half or sequences
+		is_discrim = ([pct_hyd, pct_pol].max > 0.5 && [pct_hyd, pct_pol].min < 0.45) ? true : false 
 
 		# default translation = ""
 			# discriminative AND more hydrophobic aas: "L"
@@ -1188,43 +1067,76 @@ class PredictionsController < ApplicationController
 	end
 
 
+	# parse reference codons 
+	# @param codons [Array of Arrays] Codons for each ctg positions
+	# @param aas [Array of Arrays] Alignment columns at ctg positions
+	# @param ctg_pos [Array] List of CTG positions
+	# @return [Hash] keys: ctg pos, value: {:ctg_usage => {"S" => xx, "L", xx}, ctg_num => xx, :seq_num => xx}
+	def ref_ctg_usage(codons, aas, ctg_pos)
+		counts = {}
+		codons.each_with_index do |codons_thiscol, ind|
+			# check codons at this alignment column (identical with iteration over CTG position)
+			indices = codons_thiscol.find_each_index("CTG")
+			ctg_num = indices.size
+			if ctg_num > 0 then
+				# seq_num: all seqs, also those with a gap at this pos
+				counts[ctg_pos[ind]] = {ctg_usage: Hash.new(0), ctg_num: ctg_num} 
+				counts[ctg_pos[ind]][:ctg_usage]["S"] = 0
+				counts[ctg_pos[ind]][:ctg_usage]["L"] = 0
+				aa_thiscol = aas[ind].reject{|ele| ele == "-"} # now amino acids match codons
+				indices.each do |i| 
+					if aa_thiscol[i] == "S" then
+						counts[ctg_pos[ind]][:ctg_usage]["S"] += 1
+					elsif aa_thiscol[i] == "L"
+						counts[ctg_pos[ind]][:ctg_usage]["L"] += 1
+					end # ser/leu count
+				end # indices.each
 
-	# check the CTG usage in reference sequences
-	# @param alignment [Hash] Cymobase alignment
-	# @param pos_list [Array] CTG positions in cymo alignment
-	# @param genes [Hash] Gene structrues for cymo alignment
-	# @return [Fixnum] Percentage of Serine (at CTG position in predicted seq) encoded by CTG (rounded)
-	# @return [Fixnum] Percentage of Leucine (at CTG position in predicted seq) encoded by CTG (rounded)
-	def ref_ctg_usage(alignment, pos_list, genes)
-		# counts for Serine, Leucine encoded by CTG and in general (regardless codon)
-		ser, leu, total = 0, 0, 0
-		genes.each do |key, gene|
-			dna_seq = extract_gene_seq(gene["gene"])
-			ref_codons = dna_seq.scan(/.{1,3}/)
-			pos_list.each do |pos|
-				ref_seq = alignment[key]
-				ref_aa = ref_seq[pos]
-				spos = alignment_pos2sequence_pos(pos, ref_seq) # position in unaligned sequence
-				if ref_aa == "S" && ref_codons[spos] == "CTG" then
-					ser += 1
-					total += 1
-				elsif ref_aa == "L" && ref_codons[spos] == "CTG"
-					leu += 1
-					total += 1
-				elsif ref_aa == "S" || ref_aa == "L"
-					# any other codon 
-					total += 1
-				end # ser/leu count
-			end # pos_list.each
-		end # genes.each
+				# normalize counts and save them to results
+				pct_ser = counts[ctg_pos[ind]][:ctg_usage]["S"] / counts[ctg_pos[ind]][:ctg_num].to_f
+				pct_leu = counts[ctg_pos[ind]][:ctg_usage]["L"] / counts[ctg_pos[ind]][:ctg_num].to_f
+				counts[ctg_pos[ind]][:ctg_usage]["S"] = pct_ser
+				counts[ctg_pos[ind]][:ctg_usage]["L"] = pct_leu
 
-		# convert to relative frequencies
-		pct_ser = ser.to_f / total
-		pct_ser = 0.to_f if pct_ser.nan?
-		pct_leu = leu.to_f / total
-		pct_leu = 0.to_f if pct_leu.nan?
-		return pct_ser.round(2), pct_leu.round(2)
+				# find most probable translation
+				is_discrim, counts[ctg_pos[ind]][:transl] = predict_translation(counts[ctg_pos[ind]][:ctg_usage])
+
+			end # if ctg_num
+		end # codons.each_with_index
+		return counts
 	end
+
+
+	# def ref_ctg_usage(alignment, pos_list, genes)
+	# 	# counts for Serine, Leucine encoded by CTG and in general (regardless codon)
+	# 	ser, leu, total = 0, 0, 0
+	# 	genes.each do |key, gene|
+	# 		dna_seq = extract_gene_seq(gene["gene"])
+	# 		ref_codons = dna_seq.scan(/.{1,3}/)
+	# 		pos_list.each do |pos|
+	# 			ref_seq = alignment[key]
+	# 			ref_aa = ref_seq[pos]
+	# 			spos = alignment_pos2sequence_pos(pos, ref_seq) # position in unaligned sequence
+	# 			if ref_aa == "S" && ref_codons[spos] == "CTG" then
+	# 				ser += 1
+	# 				total += 1
+	# 			elsif ref_aa == "L" && ref_codons[spos] == "CTG"
+	# 				leu += 1
+	# 				total += 1
+	# 			elsif ref_aa == "S" || ref_aa == "L"
+	# 				# any other codon 
+	# 				total += 1
+	# 			end # ser/leu count
+	# 		end # pos_list.each
+	# 	end # genes.each
+
+	# 	# convert to relative frequencies
+	# 	pct_ser = ser.to_f / total
+	# 	pct_ser = 0.to_f if pct_ser.nan?
+	# 	pct_leu = leu.to_f / total
+	# 	pct_leu = 0.to_f if pct_leu.nan?
+	# 	return pct_ser.round(2), pct_leu.round(2)
+	# end
 
 
 	# # check for a given position in the cymo alignment, how many "S" and how many "L" are encoded by an CTG
