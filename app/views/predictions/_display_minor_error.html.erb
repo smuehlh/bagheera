@@ -1,2 +1,29 @@
-<%= content_tag(:h2, "Errors")%>
-<%= content_tag(:p, raw(@minor_error.join("<br />")) << ".")%>
+<%
+# quick and dirty test for any problems occured during gene prediction
+# minor_error: external program error
+# @predicted_prots[][:message]: CTG usage prediction not successful, but no program crashed
+if @minor_error.any? || @predicted_prots.values.collect{|k,v| k[:message].join(" ")}.max.length > 0 then %>
+	
+	<%= content_tag(:h2, "Codon usage predictions without result") %>
+	<table>
+	<% @predicted_prots.keys.sort_by { |key| key.to_s.naturalized }.each do |key| %>
+	    <% prot_name = key =~ /(.+)_\d+$/ ? $1 : key # extract protein name %>
+	    <% value = @predicted_prots[key] %>
+	    <% if @minor_error.include?(key) then %>
+	    <%debugger%>
+	    	<% minor_err = @minor_error.find(key).split(": ")[1] %>
+    	<% else %>
+    		<% minor_err = "" %>
+	    <% end %>
+
+	    <% if value[:message].any? then %>
+	    	<%= content_tag(:tr,
+	    		content_tag(:td, prot_name) +
+	    		content_tag(:td, value[:message].join(" ") + minor_err)
+	    	) %>
+
+	    <% end %>
+    <% end %>
+	</table>
+<% end %>
+

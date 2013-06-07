@@ -336,7 +336,7 @@ input.defaulttext, textarea.defaulttext {
 #file_upload_field {
     position: relative;
     float: left;
-    width: 220px;
+    // width: 220px; /* do not use this in order to avoid display mess in firefox*/
 }
 
 #uploaded_files {
@@ -372,12 +372,30 @@ input.defaulttext, textarea.defaulttext {
     font-size: 13px;
 }
 
+.predTable tr.grey {
+    color: $dunkelgrau;
+}
+
+tr.grey:hover td {
+    color: black;
+}
+
+/*.predTable td .normal_text {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    margin-bottom: 10px;
+}*/
+
+
+/* style of sequence/ CTG position table, not needed if seq. is splited after 80 chars*/
+/*
 .leftcol {
     width: 650px;
 }
 
 .rightcol {
 }
+*/
 
 .highlight_aa {
     border: 1px solid $h1_color;
@@ -393,25 +411,26 @@ input.defaulttext, textarea.defaulttext {
     -moz-opacity:0.8; -webkit-opacity:0.8;
 }
 
-// div.pred_data_more {
+/*// div.pred_data_more {
 //     padding-left: 0px;
 //     background-color: $h1_color;
-// }
+// }*/
 
 .line {
     border: 1px solid #aaa;
     border-width: 1px 0px 0px 0px;
-    padding-top: 5px;
+    padding-top: 5px; // distance between line and text underneath
 }
 
-.format_ctg_stats {
-    width: 720px;
-    table-layout: auto;
-    overflow: visible;
-}
+// .format_ctg_stats {
+//     width: 720px;
+//     table-layout: auto;
+//     overflow: visible;
+// }
 
-.stats {
-}
+/*.stats {
+}*/
+
 /* end display results */
 
 

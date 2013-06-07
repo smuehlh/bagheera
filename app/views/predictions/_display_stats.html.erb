@@ -1,4 +1,40 @@
 <%=
+	content_tag(:table,
+		content_tag(:tr, 
+			content_tag(:td, "Predicted " + "protein".pluralize(@stats["n_prots"])) +
+			content_tag(:td, @stats["n_prots"].to_s)
+		) +
+		# thers are all predicted CTG positions, independent of aligned CTG pos in ref data
+		content_tag(:tr, 
+			content_tag(:td, "Predicted CTG " + "position".pluralize(@stats["pred_ctg"])) +
+			content_tag(:td, @stats["pred_ctg"].to_s )
+		) +
+		# these are predicted CTG positions which occur also in reference data (they are conserved)
+		content_tag(:tr, 
+			content_tag(:td, "Conserved CTG " + "position".pluralize(@stats["conserved_pos"])) +
+			content_tag(:td, 
+				@stats["conserved_pos"].to_s + 
+				# these are the proteins which contain a predicted, conserved CTG position
+				", in " + @stats["prot_conserved_pos"].to_s + " protein".pluralize(@stats["prot_conserved_pos"])
+			)
+		) +
+		# # these are the proteins which contain a predicted, conserved CTG position
+		# content_tag(:tr, 
+		# 	content_tag(:td, "Protein".pluralize(@stats["prot_conserved_pos"]) + " with conserved CTG positions") +
+		# 	content_tag(:td, @stats["prot_conserved_pos"])
+		# ) +
+		content_tag(:tr, 
+			content_tag(:td, "Alternative codon usage") +
+			content_tag(:td, @stats["ser"].to_s)
+		) +
+		content_tag(:tr, 
+			content_tag(:td, "Standard codon usage") +
+			content_tag(:td, @stats["leu"].to_s)
+		)
+	)
+%>
+
+<%#=
 content_tag(:p, 
 	"Found #{@stats["sig_pos"].to_s} significant CTG codon #{"position".pluralize(@stats["sig_pos"])} in " << 
 	"#{@stats["n_prots"].to_s} predicted #{"protein".pluralize(@stats["n_prots"])}.",

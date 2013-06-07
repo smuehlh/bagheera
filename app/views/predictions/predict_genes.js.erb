@@ -1,16 +1,16 @@
+hide_show_waiting('hide');
 <% if @fatal_error.any? then%>
 	show_error('<%=raw(@fatal_error.join("<br />"))%>');
 <% else %>
 	$('#results_section').show();
 	<% new_content = escape_javascript(render(partial: "display_results"))%>
 	$('#results_pred').html('<%=new_content%>');
+
 	<% new_content = escape_javascript(render(partial: "display_stats"))%>
 	$('#results_stats').html('<%=new_content%>');
-	<% if @minor_error.any? then%>
-		show_error('<%=raw(@minor_error.join("<br />"))%>')
-		<% new_content = escape_javascript(render(partial: "display_minor_error"))%>
-		$('#results_error').html('<%=new_content%>');
-		$('#results_error').show();
-	<% end %>
+
+	<% new_content = escape_javascript(render(partial: "display_minor_error"))%>
+	$('#results_error').html('<%=new_content%>');
+	$('#results_error').show();
 <% end %>
-hide_show_waiting('hide');
+

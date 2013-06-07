@@ -3,7 +3,7 @@ require 'Tools'
 
 class PredictionsController < ApplicationController
 
-	MAX_SIZE = 52428800 # 50 MB
+	MAX_SIZE = 15728640 # 15 MB
 	SORT = "/usr/bin/sort"
 	FORMATDB = "/usr/bin/formatdb"
 	BLASTALL = "/usr/bin/blastall"
@@ -31,9 +31,11 @@ class PredictionsController < ApplicationController
 		is_success = system("fromdos", params[:uploaded_file].path)
 		@fatal_error << "Fatal error." << "Cannot load genome data. Please contact us!" if ! is_success
 		# is the file too big? maybe jquery-check did not work, so better check again
-		@fatal_error |= check_filesize(params[:uploaded_file].size)
+		filesize = params[:uploaded_file].size
+		@fatal_error |= check_filesize(filesize)
 		# check content, only if file is not too big
-		@fatal_error |= check_fasta(params[:uploaded_file]) if @fatal_error.blank?
+		check_cug = (filesize < 5120 ) ? true : false  # 5 KB
+		@fatal_error |= check_fasta(params[:uploaded_file], check_cug) if @fatal_error.blank?
 		if @fatal_error.blank? then
 			# rename and save file
 			file_id = rand(1000000000).to_s
@@ -89,6 +91,7 @@ class PredictionsController < ApplicationController
 		hit = params[:hit].to_s
 		@frame_id = prot + "_" + hit
 		# copy file to /tmp/cymo_alignment_
+
 		@file_id = "cug" + session[:file][:id] + rand(1000000000).to_s
 		# set correct file extension for dialign/ seqan files
 		file_scr = BASE_PATH + session[:file][:id] + "/" + prot + "-" + hit.to_s + "-aligned.fasta"
@@ -131,7 +134,7 @@ class PredictionsController < ApplicationController
 		ref_data, @fatal_error = load_ref_data
 
 		@predicted_prots = {} # containing final results ...
-		@minor_error = []
+		@minor_error = [] # containing external program errors
 		if @fatal_error.empty? then
 			# sucessfully loaded reference data file
 			# setup blast database
@@ -191,6 +194,8 @@ class PredictionsController < ApplicationController
 #				ref_prot_stat = all_prot_data["genes"][ref_prot_key]["completeness"]
 #				ref_prot_geneseq = extract_gene_seq(all_prot_data["genes"][ref_prot_key]["gene"])
 
+				@predicted_prots[prot][:message] = []
+
 				### 2) gene prediction foreach reference protein:
 
 				### 2.1) BLAST
@@ -204,24 +209,32 @@ class PredictionsController < ApplicationController
 				File.open(file_blast, 'w') {|f| f.write(output)}
 
 				if ! wait_thr.value.success? || output.include?("ERROR") || output.blank? then
-					write_minor_error(prot, "BLASTALL")
-					@predicted_prots[prot][:message] = "Sorry, an error occured"
+					write_minor_error(prot, "BLAST failed.")
+					@predicted_prots[prot][:message] |= ["Sorry, an error occured"]
 					# delete file with blast hits, its contains only error messages
 					File.delete(file_blast)
 					next
 				end
+
 				@predicted_prots[prot][:n_hits] = output.lines.to_a.size # number of all blast hits
 				@predicted_prots[prot][:hit_shown] = 1 # in this method, only blast best hit is analyzed
+				
 
 				### 2.2) AUGUSTUS
-				is_success, pred_seq, pred_dnaseq, err = perform_gene_pred(output)
-				if ! is_success || ! err.blank? then
-					# an error occured
+				is_success, pred_seq, pred_dnaseq, err, no_prot_profile = perform_gene_pred(output, prot_basename)
+				if ! is_success then
+					# some big error occured
 					write_minor_error(prot, err)
-					@predicted_prots[prot][:message] = "Sorry, an error occured"
+					@predicted_prots[prot][:message] |= ["Sorry, an error occured"]
 					next
 				end
-		
+				if ! no_prot_profile.blank? then
+					# special case: augustus could not use profiles, but still could predict something
+					# keep error message but continue with CTG usage prediction
+
+					@predicted_prots[prot][:message] |= [no_prot_profile]
+				end
+
 				# next comes alignment, so the alignment of all reference sequences is needed
 				if session[:algo] == "mafft" then
 					# check if reference data are already aligned
@@ -231,8 +244,8 @@ class PredictionsController < ApplicationController
 						puts "Need to calculate reference alignment with MAFFT first!"
 						is_success = prepare_mafft_ref_alignment(prot_data["alignment"], file_refall)
 						if ! is_success then
-							write_minor_error(prot, "MAFFT")
-							@predicted_prots[prot][:message] = "Sorry, an error occured"
+							write_minor_error(prot, "Aligning sequences with MAFFT failed.")
+							@predicted_prots[prot][:message] |= ["Sorry, an error occured"]
 							next
 						end
 					end
@@ -241,21 +254,20 @@ class PredictionsController < ApplicationController
 				if ! is_success || ! err.blank? then
 					# an error occured
 					write_minor_error(prot, err)
-					@predicted_prots[prot][:message] = "Sorry, an error occured"
+					@predicted_prots[prot][:message] |= ["Sorry, an error occured"]
 					next
 				end
 
 				### 3) compare with reference data
 				is_success, results, message = compare_pred_gene(ref_data, ref_prot_key, prot, aligned_fasta, pred_dnaseq)
 				if ! is_success then
-					@predicted_prots[prot][:message] = message
-				else
-					@predicted_prots[prot][:message] = ""
+					@predicted_prots[prot][:message] |= [message]
 				end
 				@predicted_prots[prot].merge!(results)
 
 			end # ref_data.peach do |prot, des|
 		end # if @fatal_error.empty?
+
 		@stats = calc_stats(@predicted_prots)
 
 		render :predict_genes, formats: [:js]
@@ -275,7 +287,7 @@ class PredictionsController < ApplicationController
 
 		# prepare stuff
 		@predicted_prots = {}
-		@minor_error = []
+		@minor_error = [] # external program errors
 		ref_data, @fatal_error = load_ref_data
 
 		if @fatal_error.empty? then
@@ -289,7 +301,6 @@ class PredictionsController < ApplicationController
 			blast_all_hits = File.read(file_blast)
 			if blast_all_hits.blank? then
 				write_minor_error(@prot, "No more BLAST hits.")
-				@predicted_prots[key][:message] = "Sorry, an error occured"
 				return
 			end
 			n_hits = blast_all_hits.lines.to_a.size
@@ -300,28 +311,33 @@ class PredictionsController < ApplicationController
 				@predicted_prots[key] = { n_hits: n_hits, hit_shown: n_hit}
 				@predicted_prots[key][:ref_species] = ref_species
 				@predicted_prots[key][:ref_prot] = seqs[0]
+				@predicted_prots[key][:message] = []
 
-				is_success, pred_seq, pred_dnaseq, err = perform_gene_pred(blast_all_hits, n_hit)
-				if ! is_success || ! err.blank? then
-					write_minor_error(@prot, err)
-					@predicted_prots[key][:message] = "Sorry, an error occured"
+				is_success, pred_seq, pred_dnaseq, err, no_prot_profile = perform_gene_pred(blast_all_hits, n_hit, prot_basename)
+				if ! is_success && ! err.blank? then
+					# some big error occured
+					write_minor_error(key, err)
+					@predicted_prots[key][:message] |= ["Sorry, an error occured"]
 					next
+				end
+				if ! no_prot_profile then
+					# special case: augustus could not use profiles, but still could predict something
+					# keep error message but continue with CTG usage prediction
+					@predicted_prots[key][:message] |= [no_prot_profile]
 				end
 
 				# no need to check again if alignment of all reference data exist
 				is_success, aligned_fasta, err = align_pred_ref(file_basename, n_hit, pred_seq)
 				if ! is_success || ! err.blank? then
 					# an error occured
-					write_minor_error(@prot, err)
-					@predicted_prots[key][:message] = "Sorry, an error occured"
+					write_minor_error(key, err)
+					@predicted_prots[key][:message] |= ["Sorry, an error occured"]
 					next
 				end
 
 				is_success, results, message = compare_pred_gene(ref_data, ref_prot_key, @prot, aligned_fasta, pred_dnaseq)
 				if ! is_success then
-					@predicted_prots[key][:message] = message
-				else
-					@predicted_prots[key][:message] = ""
+					@predicted_prots[key][:message] |= [message]
 				end
 				@predicted_prots[key].merge!(results)
 			end
@@ -344,27 +360,15 @@ class PredictionsController < ApplicationController
 		# delete all files older than one day except file "alignment_gene_structure.json" and logfile
 		# system("find", BASE_PATH, "-type", "f", "-not", "-name", REF_DATA, "-mtime", "+#{days}", "-delete")
 		begin
-			puts "---------------------------------------------------------"
-			puts "Dirs to delete: "
 			Dir.glob(BASE_PATH + "**/") do |dir|
 				if dir == BASE_PATH then
 					next
 				elsif File.mtime(dir) <= days.day.ago
-					FileUtils.rm_rf(dir, :secure=>true, :noop => true, :verbose => true)
+					FileUtils.rm_rf(dir, :secure=>true)
 				end
 			end
 			# delete alignment file for show-alignment function
 			FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
-
-			# Dir.glob(BASE_PATH + "*").each do |file|
-			# 	if file == BASE_PATH + REF_DATA || file == BASE_PATH + "cron.log" then
-			# 		next
-			# 	elsif File.mtime(file) <= days.day.ago
-			# 		FileUtils.rm(file, :noop => true, :verbose => true)
-			# 	end
-			# end
-			# # delete alignment file for show-alignment function
-			# FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
 		rescue
 		end
 	end
@@ -396,22 +400,26 @@ class PredictionsController < ApplicationController
 		return true
 	end
 
-	def extract_ref_data_alignment(data, nogaps=true)
-		alignment = ""
-		if nogaps then
-			data["genes"].each do |k, v|
-				seq = v["gene"].match(/prot_seq: (.*?)\n/)[1]
-				if seq.nil? then 
-					next
-				end
-				alignment << str2fasta(k, seq, true) # true: no linebreak after 80 chars
-				alignment << "\n"
-			end
-			return alignment
-		else
-			return data["alignment"]
-		end
-	end
+
+# unsafe - better use one of the methods based on models/scipio_result.rb to extract protein translation 
+	# def extract_ref_data_alignment(data, nogaps=true)
+	# 	alignment = ""
+	# 	if nogaps then
+	# 		data["genes"].each do |k, v|
+	# 			seq = v["gene"].match(/prot_seq: (.*?)\n/)[1]
+	# 			if seq.nil? then 
+	# 				next
+	# 			end
+	# 			alignment << str2fasta(k, seq, true) # true: no linebreak after 80 chars
+	# 			alignment << "\n"
+	# 		end
+	# 		return alignment
+	# 	else
+	# 		return data["alignment"]
+	# 	end
+	# end
+
+
 
 	# parse predicted data to get statistics, store them in a file
 	# and combine stored ones with the ones from additionally predicted if neccessary
@@ -431,16 +439,23 @@ class PredictionsController < ApplicationController
 
 		data.each do |prot, val|
 			if ! val[:ref_chem].nil? && val[:ref_chem].any? then
-				# number of positions with preferential chemical properties
-				stats["sig_pos"] += val[:ref_chem].keys.size
+				# number of CTG positions mapped to a CTG position in reference data -> is already conserved!
+				stats["conserved_pos"] += val[:ref_ctg].keys.size
+
+				# number of proteins which contain conserved CTG positions
+				stats["prot_conserved_pos"] += 1 if val[:ref_ctg].keys.size > 0
+
+				# number of CTGs in predicted prot
+				stats["pred_ctg"] += val[:ctg_pos].size
+
 				# kind of preferential chemical properity leads to predited codon usage
 				all = val[:ref_chem].collect{|_,v| v[:transl]}
 				stats["ser"] += all.count("S") # predicted transl is Serine
 				stats["leu"] += all.count("L") # predicted transl is Leucine
 			end
-			if ! val[:ref_ctg].nil? && val[:ref_ctg].any?
-				stats["ref_ctg"] += 1 if val[:ref_ctg].values.collect{|k, _| k[:ctg_num].to_f/val[:ref_seq_num] }.max >= 0.05
-			end
+			# if ! val[:ref_ctg].nil? && val[:ref_ctg].any?
+			# 	stats["ref_ctg"] += 1 if val[:ref_ctg].values.collect{|k, _| k[:ctg_num].to_f/val[:ref_seq_num] }.max >= 0.05
+			# end
 		end
 		stats["n_prots"] += data.keys.length
 
@@ -463,18 +478,23 @@ class PredictionsController < ApplicationController
 		return errors
 	end
 
+
 	# Read fasta and test if it is fasta-formatted genome file and contains an CTG codon
 	# @param file [String] File handle
+	# @param check_cug [Boolean] Determine to check for presence of CUG codons too (only for really small files)
 	# @return [Array] Error messages if invalid file
-	def check_fasta(file)
+	def check_fasta(file, check_cug)
 		errors = []
 		is_fasta = true
 		contains_ctg = false
 		is_first_line = true
 		last_nucleotides = "" # need to store 2 last nts of each line to check for ctg!
+		counter = 0 # if a simple check for fasta needs, read only first 100 lines
 		# read file line by line, since it might be large
 		IO.foreach(file.path) do |line|
 			line.chomp!
+			counter += 1
+			break if counter > 100 && ! check_cug # simple check is done
 			if is_first_line then
 				# expect very first line to be fasta header
 				if ! line.starts_with?('>') then
@@ -486,9 +506,11 @@ class PredictionsController < ApplicationController
 			else
 				# it's not the very first line, might be header, comment or sequence
 				if line.starts_with?('>') then
-					# a new header: clear last_nucleotides-buffer
+					# a new header
+					# the quick check for fasta format is done
+					break unless check_cug
+					# continue only if check for cug - codon also needed: clear last_nucleotides-buffer
 					last_nucleotides = ""
-					next
 				elsif line.starts_with?(';')
 					# comment line, simply skip
 					next
@@ -546,11 +568,7 @@ class PredictionsController < ApplicationController
 	# @param prot [String] Protein for which gene prediction failed
 	# @param message [String] More detailed information about the error
 	def write_minor_error (prot, message)
-		if @minor_error.empty? then
-			@minor_error << "Cannot prediction genes in"
-		end
-		str = Verbose_error ? "#{prot}: #{message}" : prot
-		@minor_error << "- #{str}"
+		@minor_error << prot + ": " + message
 	end
 
 	# parse blast output 
@@ -590,26 +608,42 @@ class PredictionsController < ApplicationController
 	# @return [Boolean] True if no error occured, false otherwise
 	# @return [String] Predicted protein sequence
 	# @return [String] Predicted coding sequence (DNA)
-	def run_augustus(file)
+	def run_augustus(file, prot_basename)
+
+
 			# --species [REFERENCE SPEC] QUERY --genemodel=exactlyone [predict exactly one complete gene] --codingseq=on [output also coding sequence]
+			# --strand=forward [use only forward strand for gene prediction; this works as fastacmd always translates into forward strand]
+			# --proteinprofile profilefile [use protein profile about alignment as foundation for gene prediciton]
 			# redirection: add stderr to stdout (screen)
 
-puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --species=#{session[:augustus][:species]} --genemodel=exactlyone --codingseq=on #{file}"
-		stdin, stdout_err, wait_thr = Open3.popen2e(AUGUSTUS, "--AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/", 
-			"--species=#{session[:augustus][:species]}", "--genemodel=exactlyone","--codingseq=on", file)
+		prfl_file = BASE_PATH + prot_basename + ".prfl"
+		if File.exists?(prfl_file) && ! File.zero?(prfl_file) then
+			# use protein profile for prediction
+			stdin, stdout_err, wait_thr = Open3.popen2e(AUGUSTUS, "--AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/", 
+				"--species=#{session[:augustus][:species]}", "--genemodel=exactlyone", "--strand=forward", "--codingseq=on", 
+				"--proteinprofile=#{prfl_file}", file)
+		else
+			# profile file does not exist, dont use it
+			stdin, stdout_err, wait_thr = Open3.popen2e(AUGUSTUS, "--AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/", 
+				"--species=#{session[:augustus][:species]}", "--genemodel=exactlyone", "--strand=forward", "--codingseq=on", file)
+			
+			err = "No protein profile available for gene prediction. "
+		end	
+
+
 		stdin.close
 		output = stdout_err.read
 		stdout_err.close
 		if (! wait_thr.value.success?) || output.include?("ERROR") || (! output.include?("coding sequence")) then
-			return false
+			return false, "", "", err
 		end
 
 		# no error, parse augustus
 		pred_seq, pred_dnaseq = parse_augustus(output)
 		if pred_seq.nil? || pred_dnaseq.nil? then
-			return false
+			return false, "", "", err
 		end
-		return true, pred_seq, pred_dnaseq, ""
+		return true, pred_seq, pred_dnaseq, err||=""
 	end
 
 
@@ -621,12 +655,12 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 	# @return [String] Predicted protein sequence
 	# @return [String] Predicted coding sequence (DNA)
 	# @return [String] Error message, only set if an error occured
-	def perform_gene_pred(blast_hits, blast_hit_nr=1)
+	def perform_gene_pred(blast_hits, blast_hit_nr=1, prot_basename)
 		# parse blast output
 		is_success, seq_id, start, stop, strand = parse_blast_hits(blast_hits, blast_hit_nr) 
 		if ! is_success then
 			# number exceeds blast hits!
-			return false, "", "", "Number of BLAST hits exceeded"
+			return false, "", "", "Number of BLAST hits exceeded."
 		end 
 
 		# 2.2) gene prediction
@@ -634,13 +668,13 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 		file = BASE_PATH + session[:file][:id] + "/" + rand(1000000).to_s + ".fasta"
 		genome_db = session[:file][:path].gsub(".fasta", "_db")
 		# enlarge range of sequence to extract: add 1000 nucleodides to start/stop
-		if start-1000 < 0 then
+		if start-500 < 0 then
 			# check if start is valid
 			start = 0
 		else
-			start = start-1000
+			start = start-500
 		end
-		stop = stop+1000
+		stop = stop+500
 				# -d [DB] -p [PROTEIN] false -s [SEARCH STRING] -L [START,STOP]
 				# add 1000 nucleotides to start/stop 
 				# redirection: stderr to stdout (at this moment: screen), stdout to file file
@@ -650,17 +684,17 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 		output = stdout_err.read
 		stdout_err.close
 		if ! wait_thr.value.success? then
-			return false, "", "", "BLAST-FASTACMD"
+			return false, "", "", "Cannot start gene prediction."
 		end
 
 		# 2.2.2) AUGUSTUS
-		is_success, pred_seq, pred_dnaseq = run_augustus(file)
+		is_success, pred_seq, pred_dnaseq, has_prot_profile = run_augustus(file, prot_basename)
 		if ! is_success then
 			# gene prediction failed
-			return false, "", "", "AUGUSTUS"
+			return false, "", "", "Gene prediction failed."
 		end
 
-		return true, pred_seq, pred_dnaseq, ""
+		return true, pred_seq, pred_dnaseq, "", has_prot_profile
 	end
 
 	# align reference protein with the predicted protein
@@ -681,7 +715,7 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 			file_refall = file_base.sub(session[:file][:id]+"/", "") + ".fasta"
 			if File.zero?(file_refall) then
 				# something went wrong during ref_data generation (cymo-api)
-				return false, "", "reference data"
+				return false, "", "Cannot align predicted protein with reference data."
 			end
 		else
 			# file_unaligned contains both reference and predicted sequence
@@ -695,12 +729,12 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 			# check exit status for success 
 			is_success = system(DIALIGN2, "-fa", "-fn", file_aligned, file_unaligned)
 			if ! is_success then
-				return false, "", "Dialign2"
+				return false, "", "Cannot align predicted protein with reference data."
 			end
 			begin
 				File.rename(file_aligned + ".fa", file_aligned) # dialign automatically adds ".fa" to basic output filename
 			rescue
-				return false, "", "Dialign2"
+				return false, "", "Cannot align predicted protein with reference data."
 			end
 		# elsif session[:align][:algo] == "clustalw"
 		# 	# use system as no easy parsealbe output
@@ -718,7 +752,7 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 			output = stdout_err.read
 			stdout_err.close
 			if ! wait_thr.value.success? then
-				return false, "", "MAFFT"
+				return false, "", "Cannot align predicted protein with reference data."
 			end
 		else
 				# -c tttt: initialize first row & column with zeros, search last row & column for maximum
@@ -733,7 +767,7 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 			output = stdout_err.read
 			stdout_err.close
 			if ! wait_thr.value.success? || ! output.include?("Alignment score") then
-				return false, "", "Seqan::pair_align"
+				return false, "", "Cannot align predicted protein with reference data."
 			end
 		end
 
@@ -748,7 +782,7 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 		# ensure that the methods returns an aligned fasta-formatted string!
 		# or ends with "false" otherwise
 		if fasta.blank? then
-			return false, "", "Internal error"
+			return false, "", "Internal error."
 		end
 		return true, fasta
 	end
@@ -806,9 +840,11 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 				puts "ERROR (#{prot}):"
 				puts e
 				puts "---"
-				return false, results, "Internal error"
+				return false, results, "Internal error."
 			end
 		end
+
+		results[:ref_seq_num] = ref_alignment.keys.size # total number of reference sequences
 
 		# CTG positions in ref_alignment and amino acids at respective positions
 		ref_aligned_fasta = str2fasta(ref_prot_key, seqs[headers.index(ref_prot_key)], true) # true: no split after 80 chars
@@ -818,9 +854,11 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 
 		if ctg_pos_mapped.compact.any? then
 			# mapping of at least one position was possible, compare!
-			results[:ref_seq_num] = ref_alignment.keys.size # total number of reference sequences
+
 			# 1) preference for hydrophob/ polar residues?
 			ref_alignment_cols.each_with_index do |col, ind|
+				# handle unmatched CTG positions
+				next if ctg_pos_mapped[ind].nil?
 
 				# if col.count("-") < seq_num / 2 then
 					# less than half of all seqs have an gap at the CTG position 
@@ -832,12 +870,17 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 					# is_significant = false
 				# end
 
+				results[:ref_chem][ctg_pos[ind]] = {transl: prob_transl, aa_comp: aa_freq, aa_num: aa_num}
 				if is_significant then
-					results[:ref_chem][ctg_pos[ind]] = {transl: prob_transl, aa_comp: aa_freq, aa_num: aa_num}
+					results[:ref_chem][ctg_pos[ind]][:is_significant] = true
+				else
+					results[:ref_chem][ctg_pos[ind]][:is_significant] = false
 				end
 			end
 
 			# 2) CTGs in reference data at CTG positions in predicted sequence?
+
+			# this method handels unmatched CTG positions on its own
 			results[:ref_ctg] = ref_ctg_usage(ref_codons, ref_alignment_cols, ctg_pos)
 
 		else 
@@ -887,16 +930,29 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 	# @param gene [String] Gene entry from reference data
 	# @return [String] Coding sequence of this gene
 	def extract_gene_seq(gene)
-		a = gene.scan(/\sseq:\s?(\w+)\n/).flatten
-		# quick & dirty version: every second entry belongs to an exon
-		a.values_at(*a.each_index.select(&:even?)).join("").upcase
+		# # this does not work in case of exons located at different contigs
+		# a = gene.scan(/\sseq:\s?(\w+)\n/).flatten
+		# # quick & dirty version: every second entry belongs to an exon
+		# a.values_at(*a.each_index.select(&:even?)).join("").upcase
+
+		if ! (defined? ScipioResult.new_from_string) then
+			require 'scipio_result'
+		end	
+		sr = ScipioResult.new_from_string(gene)
+		sr.cdna.upcase
 	end
 
 	# extracting protein sequence from gene entry
 	# @param gene [String] Gene entry from reference data
 	# @return [String] Protein sequence of this gene
 	def extract_prot_seq(gene)
-		gene.match(/prot_seq: (.*?)\n/)[1].upcase
+		# gene.match(/prot_seq: (.*?)\n/)[1].upcase
+
+		if ! (defined? ScipioResult.new_from_string) then
+			require 'scipio_result'
+		end	
+		sr = ScipioResult.new_from_string(gene)
+		sr.translation.upcase
 	end
 
 	# extract a certain codon from gene entry
@@ -1078,7 +1134,7 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 			indices = codons_thiscol.find_each_index("CTG")
 			ctg_num = indices.size
 			if ctg_num > 0 then
-				# seq_num: all seqs, also those with a gap at this pos
+				# ctg_num: all seqs, also those with a gap at this pos
 				counts[ctg_pos[ind]] = {ctg_usage: Hash.new(0), ctg_num: ctg_num} 
 				counts[ctg_pos[ind]][:ctg_usage]["S"] = 0
 				counts[ctg_pos[ind]][:ctg_usage]["L"] = 0
@@ -1096,6 +1152,13 @@ puts "#{AUGUSTUS} --AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/ --speci
 				pct_leu = counts[ctg_pos[ind]][:ctg_usage]["L"] / counts[ctg_pos[ind]][:ctg_num].to_f
 				counts[ctg_pos[ind]][:ctg_usage]["S"] = pct_ser
 				counts[ctg_pos[ind]][:ctg_usage]["L"] = pct_leu
+
+				# check if something went wrong
+				if (pct_ser + pct_leu) == 0.0 then
+					# dont delete key from counts to make the mistake accessible
+					counts[ctg_pos[ind]][:transl] = "???"
+					next
+				end
 
 				# find most probable translation
 				is_discrim, counts[ctg_pos[ind]][:transl] = predict_translation(counts[ctg_pos[ind]][:ctg_usage])

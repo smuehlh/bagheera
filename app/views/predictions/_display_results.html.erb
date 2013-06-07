@@ -3,63 +3,131 @@
 <% @predicted_prots.keys.sort_by { |key| key.to_s.naturalized }.each do |key| %>
     <% prot_name = key =~ /(.+)_\d+$/ ? $1 : key # extract protein name %>
     <% value = @predicted_prots[key] %>
-    <% all_hit_list = @predicted_prots.keys.grep(/_\d+$/) {|v| v.gsub(/[^\d]/, '').to_i} %>
+<%# all_hit_list = @predicted_prots.keys.grep(/_\d+$/) {|v| v.gsub(/[^\d]/, '').to_i} %>
+    <% all_hit_list = @predicted_prots.keys.collect{|k| k.split("_")[1].to_i if k.include?("_")}.compact %>
     <% seq, seq_pos, aa_pct = "", "", ""%>
     <% tab_seq, tab_aa, tab_ctg = {}, {}, {} %>
     <% tab_seq = {table_class: "predTable", th_left: "Predicted protein sequence", 
-        th_right: "CTG position", col_left: "leftcol", col_right: "rightcol"} %>
+        th_right: "CTG position", col_left: "", col_right: ""} %>
     <% tab_aa = {table_class: "predTable", 
         th_left: "CTG Position", th_middle: "Distribution of amino acids in reference data", th_right: "Number of amino acids", 
+        col_left: "", col_middle: "", col_right: "", display_grey: []} %>
+    <% tab_ctg = {table_class: "predTable", 
+        th_left: "CTG Position", th_middle: "CTG usage in reference data", th_right: "Number of CTG codons", 
         col_left: "", col_middle: "", col_right: ""} %>
-    <% tab_ctg = {table_class: "predTable", th_left: "CTG Position", th_middle: "CTG usage in reference data",
-        th_right: "Number of CTG codons", 
-        col_left: "", col_middle: "", col_right: ""} %>
+    <%tab_info = {table_class: "", th_left: "", th_right: "", th_middle: "", col_left: "", col_right: "", col_middle: ""}%>
+
     <% basename = prot_name.gsub(" ", "-").downcase %>
 
-    <% if @minor_error.find{|ele| ele.include?(prot_name)} then %>
+    <% if @minor_error.find{|err| err.include?(key)} then %>
         <%# no gene predicted, an error occured %>
+        <%# currently, display nothing in results section%>
     <% else %>
         <%= content_tag(:h3, "#{prot_name} (Hit #{value[:hit_shown]}/#{value[:n_hits]})") %>
+
         <div class="pred_data_wrapper" id="pred_data_<%= basename %>" style="clear:both">
-        <%=
-            seq, seq_pos, aa_pct = format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
+        <%
+
+        ### this part is to prepare data
+             seq, seq_pos, aa_pct, tab_aa[:display_grey] = format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
+            combined_res_table = ""
+
+        # check if protein profile was used for gene prediction
+        i_msg = value[:message].index{|msg| msg.include?("protein profile")}
+        if i_msg.nil? then
+            is_no_prot_profile = false
+        else
+            is_no_prot_profile = true
+            value[:message].delete_at(i_msg)
+        end
+
+        ###  this part is to collect results from amino acid and CTG usage (to show them in one table)
+            if value[:ctg_pos].any? && value[:ref_chem].any? then
+                # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps) 
+                combined_res_table = draw_table2(ruby2human_counting(value[:ref_chem].keys), 
+                        aa_pct, value[:ref_chem].collect {|_, v| v[:aa_num]}, tab_aa)
+
+                # # display informative text in one row, with same font as throughout the page
+                # combined_res_table << content_tag(:tr, 
+                #     content_tag(:td, 
+                #         content_tag(:span, "Only amino acids accounting for more than 5% of the sequences at the respective position are shown.", :class => "normal_text"),
+                #         :colspan => 3)
+                #     ).html_safe
+
+            end 
+            if value[:ctg_pos].any? && value[:ref_ctg].any? then
+                # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps) 
+                combined_res_table += draw_table2(ruby2human_counting(value[:ref_ctg].keys), 
+                        format_ctg_stats(value[:ref_ctg]), 
+                        value[:ref_ctg].collect {|_, v| v[:ctg_num]}, tab_ctg).html_safe 
+            end
+        %>
+        <%=    
 
             if value[:ctg_pos].any? then   
 
-                if value[:ref_chem].any? then 
-                    # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps)
-                    draw_table(ruby2human_counting(value[:ref_chem].keys), aa_pct, value[:ref_chem].collect {|_, v| v[:aa_num]}, tab_aa) +
-                    content_tag(:normal, "Only amino acids accounting for more than 5% of the sequences at the respective position are shown.") +
-                    tag(:br)
-                else
-                    content_tag(:i, "No CTG position aligned with discriminative sites of reference data") +
-                    tag(:br)
+                # -old part begin
+                # if value[:ref_chem].any? then 
+                #     # # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps)
+                #     # draw_table(ruby2human_counting(value[:ref_chem].keys), aa_pct, value[:ref_chem].collect {|_, v| v[:aa_num]}, tab_aa) +
+                #     # content_tag(:normal, "Only amino acids accounting for more than 5% of the sequences at the respective position are shown.")
+
+                # else
+                #     content_tag(:i, "No CTG position aligned with discriminative sites of reference data") +
+                #     tag(:br)
+                # end +
+                # if value[:ref_ctg].any? then
+
+                #     draw_table(ruby2human_counting(value[:ref_ctg].keys), 
+                #         format_ctg_stats(value[:ref_ctg]), 
+                #         value[:ref_ctg].collect {|_, v| v[:ctg_num]}, 
+                #         tab_ctg) 
+
+                # else
+                #     content_tag(:i, "No CTG codons in reference data at same positions") +
+                #     tag(:br)
+                # end +
+
+                # tag(:br) +
+
+                # content_tag(:normal, pluralize(value[:ref_seq_num].to_s, "sequence") << " in reference alignment") +
+
+                # -old part end
+
+                ### this part is to output info about missing data
+                content_tag(:i, "") + # no ouput, but needed to display rest correctly !
+
+                if value[:ref_chem].empty? then 
+                    # do not show results, this will be done elsewhere!
+                    content_tag(:p, 
+                        content_tag(:i, "No CTG position aligned with discriminative sites of reference data")
+                        )
                 end +
 
-                if value[:ref_ctg].any? then
-                    draw_table(ruby2human_counting(value[:ref_ctg].keys), 
-                        format_ctg_stats(value[:ref_ctg]), 
-                        value[:ref_ctg].collect {|_, v| v[:ctg_num]}, 
-                        tab_ctg) +
-                    tag(:br)
-                else
-                    content_tag(:i, "No CTG codons in reference data at same positions")
+                content_tag(:i, "") +
+
+                if value[:ref_ctg].empty? then
+                    # again: do not show results, this will be done elsewhere
+                    content_tag(:p, 
+                        content_tag(:i, "No CTG codons in reference data at same positions")
+                        )
                 end +
 
-                ### this part is only needed if any results (= aa distribution or CTG usage in refernce data) are shown
+                ### this part is only needed if any results (= aa distribution or CTG usage in refernce data) are there
+                ### it prints the table containing results (of both amino acid and CTG usage, if applicable)
+                ### it suggests a CTG usage
                 if value[:ref_chem].any? || value[:ref_ctg].any? then
-                    content_tag(:normal, 
-                        pluralize(value[:ref_seq_num].to_s, "sequence") << " in reference alignment"
-                    ) +
 
-                    ### this part is to suggest a CTG usage
-                    content_tag(:p, suggested_transl(value[:ref_chem], value[:ref_ctg]), :class => "highlight_res" ) 
+                    content_tag(:table, raw(combined_res_table), :class => "predTable") +
+
+                    content_tag(:p, suggested_transl(value[:ref_chem], value[:ref_ctg]), :class => "highlight_res" )
                 end +
 
-                tag(:br) 
-
+                content_tag(:p, pluralize(value[:ref_seq_num].to_s, "sequence") << " in reference alignment")
+                
             else
-                content_tag(:p, value[:message], :class => "pred_nothing")
+                # no CTG positions
+                content_tag(:p, value[:message].join(" "), :class => "pred_nothing") 
             end +
 
             ### this part is for showing the table containing predicted sequence and CTG positions
@@ -71,12 +139,19 @@
             ) +
             content_tag(:div, 
                 draw_table(seq, seq_pos, tab_seq) +
-                content_tag(:p, "Predicted sequence length: " + value[:pred_prot].length.to_s + " (amino acids)") +
-                content_tag(:p, "Reference sequence length: " + value[:ref_prot].length.to_s + " (amino acids)") +
-                content_tag(:p, "Reference species: " + value[:ref_species]),
+                draw_table(["Predicted sequence length", "Reference sequence length", "Reference species"],
+                    [value[:pred_prot].length.to_s + " amino acids", 
+                    value[:ref_prot].length.to_s + " amino acids", 
+                    value[:ref_species]], 
+                    tab_info
+                ) +
+                if is_no_prot_profile then
+                    content_tag(:p, "Sequence was predicted without additional information about the protein family.")
+                end ,
                 :class => "wrapper", 
                 :id => "seq_#{basename}_#{value[:hit_shown]}", 
-                :style => "display:none;") +
+                :style => "display:none;"
+            ) +
 
             tag(:br) +
 
@@ -96,6 +171,7 @@
             content_tag(:div, "", :id => "alignment_#{basename}_#{value[:hit_shown]}", :style => "display:none") + 
             tag(:br) +
 
+            ### this part if for the predict more - button
             if value[:hit_shown] < value[:n_hits] &&
                (all_hit_list.blank? || value[:hit_shown] == all_hit_list.max) then
                # show button if there are more hits than the shown ones and (in case of multiple hits per prot) if its the last shown hit

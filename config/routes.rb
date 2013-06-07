@@ -10,6 +10,7 @@ Bagheera::Application.routes.draw do
   match 'load_example', to: 'predictions#load_example', as: 'load_example', :via => [:get]
   match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
   match 'predict_more', to: 'predictions#predict_more', as: 'predict_more', :via => [:get]
+  # match 'eval', to: 'predictions#eval_ref_data', as: 'eval', :via => [:get]
  
   # The priority is based upon order of creation:
   # first created -> highest priority.

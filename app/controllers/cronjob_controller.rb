@@ -1,10 +1,17 @@
 class CronjobController < ApplicationController
-
+# debug me by calling "script/rails runner 'CronjobController.prepare_ref_data'" on command line and including a "debugger" anywhere
 	def self.prepare_ref_data
+
+		# wait for wget to be finished
+		puts Time.now 
+		begin
+			sleep(30) 
+		end while ! FileTest.file?(BASE_PATH + "new_" + REF_DATA)
+		puts "wget finished:"
+		puts Time.now 
+
 		# create directory for newly created reference data
 		path_new_data = BASE_PATH + "new/"
-		puts path_new_data
-		puts BASE_PATH
 		puts "Saving data to temporaray file #{path_new_data}"
 		if File.exists?(path_new_data) then
 			FileUtils.rm_r(Dir.glob(path_new_data + "*"), :verbose => true)
@@ -38,6 +45,11 @@ class CronjobController < ApplicationController
 			data.merge!(actin_data)
 			data.merge!(kinesin_data)
 
+			# delete kinesin and myosin orphans, and myosin class 17 (extremly unusual for saccharomycetes!)
+			data.delete("Myosin heavy chain")
+			data.delete("Myosin heavy chain Class 17")
+			data.delete("Kinesin")
+
 			# save updated reference data
 			puts "Saving updated reference data to file"
 			fh = File.new(path_new_data + REF_DATA, "w")
@@ -61,7 +73,7 @@ class CronjobController < ApplicationController
 				# check if mafft accepts them as aligned
 				is_true = ensure_mafft_is_fine(data_file)
 				if ! is_true then
-					puts "\t #{prot}: Not aligned. Aligning them with mafft "
+					puts "\t #{prot}: Mafft thinks, there are not aligned. So align them with mafft ... "
 
 					# align them with mafft
 					is_true = run_mafft(data_file)
@@ -70,10 +82,16 @@ class CronjobController < ApplicationController
 					else
 						puts " ... Could not align."
 					end
-				end # if ! is_true
+				end 
+				
+				# calculate profile
+				puts "Generating protein profiles ... "
+				is_true = calc_protein_profiles(data_file)
+
 			end # data.each
 			puts "Finished."
 			# set correct permissions
+
 			begin
 				# puts "Moving new file to place ... "
 				# FileUtils.mv(BASE_PATH + "new_" + REF_DATA, BASE_PATH + REF_DATA)
@@ -81,7 +99,7 @@ class CronjobController < ApplicationController
 				FileUtils.rm Dir.glob(BASE_PATH + "*.fasta")
 				FileUtils.mv Dir.glob(path_new_data + "*"), BASE_PATH, :verbose => true
 				FileUtils.rm_rf path_new_data, :secure => true, :verbose => true
-				FileUtils.rm_rf("/tmp/cug/new_alignment_gene_structure.json")
+				FileUtils.rm_rf "/tmp/cug/new_alignment_gene_structure.json", :verbose => true
 				puts "done."
 			rescue => e
 				puts "Could not move new files to place:"
@@ -111,13 +129,28 @@ class CronjobController < ApplicationController
 		end
 	end
 
+	# calculate protein profiles for reference alignments (needed by augustus to enhance gene prediction)
+	# @param file [String] reference alignment file
+	# @return [Boolean] Status of profile calculation
+	def self.calc_protein_profiles(file)
+		# test if the enviromental variable is set
+		if ! ENV.has_key?("AUGUSTUS_CONFIG_PATH") then
+			# not set, so set it now
+			ENV["AUGUSTUS_CONFIG_PATH"] = "/usr/local/bin/augustus/config/"
+		end
+		prfl_file = file.sub("fasta", "prfl")
+		# calculate profiles
+		output = system "/usr/local/bin/augustus/scripts/msa2prfl.pl", file, :out => prfl_file, :err => '/tmp/cug/err.log'
+		return true
+	end
+
 	# load reference data from file alignment_gene_structure.json
 	# @return [Hash] Reference data
 	# @return [Array] Errors occured during file load
 	def self.load_ref_data
 		path = BASE_PATH + "new_" + REF_DATA
 		if ! FileTest.file?(path) then
-			fh.puts "Fatal error: "
+			puts "Fatal error: "
 			errors = ["Fatal error.", "Cannot load reference data. Please contact us!"]
 			return false, errors
 		end
@@ -173,26 +206,29 @@ class CronjobController < ApplicationController
 	end
 
 	def self.ensure_length(file)
+		ret_value = true
 		lines = IO.readlines(file)#.map(&:chomp) # chomps every line
 		seq_lines = lines.reject{|line| line.match(/^>/)}
 		len = seq_lines.collect {|line| line.size}
 
 		if ! (len.min == len.max) then
+			ret_value = false
 			# add gaps to end of each line shorter than longest line
-			max = len.max
+			max = len.max 
 			lines.map! do |line|
 				if line.match(/^>/) then
 					line
+				elsif line.size == max then
+					line
 				else
 					line.chomp!
-					line = line << "-" * (max - line.size) << "\n"
+					line = line + "-" * (max - 1 - line.size) + "\n" # -1 as in max the "\n" is counted
 				end
-
 			end
 		end
 
 		File.open(file, 'w') {|f| f.write(lines.join(""))}
-		return true
+		return ret_value
 	end
 
 	def self.ensure_mafft_is_fine(file)

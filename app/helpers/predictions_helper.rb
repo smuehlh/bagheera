@@ -91,8 +91,9 @@ module PredictionsHelper
 	# @return [Array] Formatted protein sequence (including tags to highlight significant positions); 80 chars per element
 	# @return [Array] Formatted CTG positions; elements correspond to the formatted seq
 	# @return [Array] Formatted amino acid statistics for each significant position
+	# @return [Array] Positions in other return array of non-significant positions -> display those in gray!
 	def format_seq(prot, ctgpos, chem_props) 
-		str, aa_pct, side_str = [], [], []
+		str, aa_pct, side_str, not_sign = [], [], [], []
 		prot.gsub!("!", "") # it should really not contain any "!", but this may happen with dialign
 
 		# mark all significant positions by "!" to find them unambigously
@@ -107,23 +108,31 @@ module PredictionsHelper
 			part.count("!").times do |i|
 				pos = ctgpos[ind]
 				part.sub!("!", content_tag(:span, prot[ctgpos[ind]], :class => "highlight_aa", :title => "Position " + ruby2human_counting(pos).to_s ))
-				aa_pct << format_aa_stats(chem_props[pos][:aa_comp]) if chem_props.has_key?(pos) 
+				if chem_props.has_key?(pos) then
+					aa_pct << format_aa_stats(chem_props[pos][:aa_comp])
+					not_sign << ind if ! chem_props[pos][:is_significant]
+				end
+
 				side << ruby2human_counting(pos)
 				ind = ind + 1
 			end
 			str << part
 			side_str << side.join(", ")
 		end
-		return str, side_str, aa_pct
+		return str, side_str, aa_pct, not_sign
 	end
 
 	# Puts data into a html-table
 	# @param col1 [Array] Data for column 1 (e.g. position)
 	# @param col2 [Array] Data for column 2 (e.g. sequence data)
 	# @param col3 [Array] Data for column 3; optional
+	# @param table_spec [Hash] Specifies table properties like column headings
+	# @param has_table_tag [Boolean] specifies if table has surrounding <table>-Tags; Default: true
 	# @return [String] html-formatted table
 	def draw_table(col1, col2, *col3, table_spec)
+
 		content_tag(:table, :class => table_spec[:table_class]) do
+
 			content_tag(:tr) do
 				content_tag(:th, table_spec[:th_left]) +
 				if col3.any? then
@@ -131,15 +140,75 @@ module PredictionsHelper
 				end +
 				content_tag(:th, table_spec[:th_right])
 			end +
-			content_tag(:colgroup) do
-				content_tag(:col, "", :class => table_spec[:col_left]) +
-				if col3.any? then
-					content_tag(:col, "", :class => table_spec[:col_middle]) 
-				end +
-				content_tag(:col, "", :class => table_spec[:col_right])
+			if  ! table_spec[:col_left].empty? || 
+				! table_spec[:col_right].empty? || 
+				(col3.any? && ! table_spec[:col_middle].empty?) 
+				then
+				content_tag(:colgroup) do
+					content_tag(:col, "", :class => table_spec[:col_left]) +
+					if col3.any? then
+						content_tag(:col, "", :class => table_spec[:col_middle]) 
+					end +
+					content_tag(:col, "", :class => table_spec[:col_right])
+				end
 			end +
 			col1.each_with_index.collect do |data, ind|
 				content_tag(:tr) do
+					col1_safe = data.html_safe? ? data : data.html_safe
+					col2_safe = col2[ind].html_safe? ? col2[ind] : col2[ind].html_safe
+					content_tag(:td, col1_safe) + 
+					content_tag(:td, col2_safe) +
+					if col3.any? then
+						col3.flatten!
+						col3_safe = col3[ind].html_safe? ? col3[ind] : col3[ind].html_safe
+						content_tag(:td, col3_safe)
+					end
+				end
+			end.join.html_safe
+
+		end
+	end
+
+	# no table-tag is printed, useful to concatenate tables
+	def draw_table2(col1, col2, *col3, table_spec)
+		content_tag(:thead) do
+			content_tag(:tr) do
+				content_tag(:th, table_spec[:th_left]) +
+				if col3.any? then
+					content_tag(:th, table_spec[:th_middle])
+				end +
+				content_tag(:th, table_spec[:th_right])
+			end
+		end +
+
+		content_tag(:tbody) do
+			content_tag(:i, "") + # need this tag for the following if/else!
+			if  ! table_spec[:col_left].empty? || 
+				! table_spec[:col_right].empty? || 
+				(col3.any? && ! table_spec[:col_middle].empty?) 
+				then
+				content_tag(:colgroup) do
+					content_tag(:col, "", :class => table_spec[:col_left]) +
+					if col3.any? then
+						content_tag(:col, "", :class => table_spec[:col_middle]) 
+					end +
+					content_tag(:col, "", :class => table_spec[:col_right])
+				end
+			end +
+
+			col1.each_with_index.collect do |data, ind|
+				# set class for table row -> display not significant data in grey
+				if table_spec.has_key?(:display_grey) then
+					if table_spec[:display_grey].include?(ind) then
+						klass = "grey"
+						change_col = "this.style.color='red';"
+					else
+						klass = ""
+					end
+				else
+					klass = ""
+				end
+				content_tag(:tr, :class => klass) do
 					col1_safe = data.html_safe? ? data : data.html_safe
 					col2_safe = col2[ind].html_safe? ? col2[ind] : col2[ind].html_safe
 					content_tag(:td, col1_safe) + 
@@ -155,15 +224,21 @@ module PredictionsHelper
 	end
 
 	# formatting amino acid statistics
-	# @param [Array] Amino acid statistics for one CTG-pos
+	# @param stats [Array] Amino acid statistics for one CTG-pos
+	# @param is_reject_low [Boolean] show only stats > 5% or all ; not mandatory; default = true
 	# @return [String] Format: "L: 100%", sorted by percent; only > 5%
-	def format_aa_stats(stats)
+	def format_aa_stats(stats, is_reject_low=true)
 		res = []
+		has_rejected = false 
 		stats.sort_by {|k, v|v}.reverse.each do |aa, freq|
-			if freq >= 0.05 then
+			if freq >= 0.05 && is_reject_low then
 				res << (aa + ": " + (freq*100).round.to_s + "%")
+			elsif freq < 0.05 && is_reject_low 
+				has_rejected = true
 			end
 		end
+		res << "Others: < 5%" if has_rejected
+		# check if any freq is < 0.05 than add "Others: , 5%"
 		return res.join(", ")
 	end
 
@@ -175,7 +250,7 @@ module PredictionsHelper
 		data.each do |_, val|
 			str = "S: " << 
 				(val[:ctg_usage]["S"]*100).round.to_s << 
-				"% , L: " << 
+				"%, L: " << 
 				(val[:ctg_usage]["L"]*100).round.to_s << "%"
 			res << str
 		end
@@ -224,8 +299,9 @@ module PredictionsHelper
 			res << pluralize(std_usage, ' CTG position', ' CTG positions') + " suggest standard codon usage."
 		end
 		if strange > 0 then
-			res << pluralize(strange, ' CTG position', ' CTG positions') + 
-				" suggest contrary codon usage based on distribution of amino acids and CTG usage in reference data."
+			res << pluralize(strange, ' CTG position', ' CTG positions') +
+				" leads to contrary results." 
+				# " suggest contrary codon usage based on distribution of amino acids and CTG usage in reference data."
 		end
 
 		return res.join("</br>").html_safe
