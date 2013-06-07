@@ -847,7 +847,14 @@ class PredictionsController < ApplicationController
 		results[:ref_seq_num] = ref_alignment.keys.size # total number of reference sequences
 
 		# CTG positions in ref_alignment and amino acids at respective positions
-		ref_aligned_fasta = str2fasta(ref_prot_key, seqs[headers.index(ref_prot_key)], true) # true: no split after 80 chars
+		ind = headers.find_index{|str| str.include?("@")}
+		if ind then
+			# we used an alignment method other than mafft, so parse the header to extract real key
+			seq = seqs[ind]
+		else
+			seq = seqs[headers.index(ref_prot_key)]
+		end
+		ref_aligned_fasta = str2fasta(ref_prot_key, seq, true) # true: no split after 80 chars
 		pred_aligned_fasta = str2fasta("Prediction", pred_seq_aligned, true) # true: no split after 80 chars
 
 		ctg_pos_mapped, ref_alignment_cols, ref_codons = map_ctg_pos(ref_alignment, ctg_pos, ref_aligned_fasta, pred_aligned_fasta, ref_data[prot]["genes"])
