@@ -870,9 +870,10 @@ class PredictionsController < ApplicationController
 					# is_significant = false
 				# end
 
-				results[:ref_chem][ctg_pos[ind]] = {transl: prob_transl, aa_comp: aa_freq, aa_num: aa_num}
+				results[:ref_chem][ctg_pos[ind]] = {aa_comp: aa_freq, aa_num: aa_num}
 				if is_significant then
 					results[:ref_chem][ctg_pos[ind]][:is_significant] = true
+					results[:ref_chem][ctg_pos[ind]][:transl] = prob_transl
 				else
 					results[:ref_chem][ctg_pos[ind]][:is_significant] = false
 				end
@@ -1109,7 +1110,7 @@ class PredictionsController < ApplicationController
 		# requirements for a discriminative position:
 			# 1) occurence in more than half of sequences
 			# 2) the other usage should occure in less than half or sequences
-		is_discrim = ([pct_hyd, pct_pol].max > 0.5 && [pct_hyd, pct_pol].min < 0.45) ? true : false 
+		is_discrim = ([pct_hyd, pct_pol].max >= 0.5 && [pct_hyd, pct_pol].min < 0.45) ? true : false 
 
 		# default translation = ""
 			# discriminative AND more hydrophobic aas: "L"

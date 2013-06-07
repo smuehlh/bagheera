@@ -91,9 +91,9 @@ module PredictionsHelper
 	# @return [Array] Formatted protein sequence (including tags to highlight significant positions); 80 chars per element
 	# @return [Array] Formatted CTG positions; elements correspond to the formatted seq
 	# @return [Array] Formatted amino acid statistics for each significant position
-	# @return [Array] Positions in other return array of non-significant positions -> display those in gray!
+
 	def format_seq(prot, ctgpos, chem_props) 
-		str, aa_pct, side_str, not_sign = [], [], [], []
+		str, aa_pct, side_str = [], [], []
 		prot.gsub!("!", "") # it should really not contain any "!", but this may happen with dialign
 
 		# mark all significant positions by "!" to find them unambigously
@@ -110,7 +110,6 @@ module PredictionsHelper
 				part.sub!("!", content_tag(:span, prot[ctgpos[ind]], :class => "highlight_aa", :title => "Position " + ruby2human_counting(pos).to_s ))
 				if chem_props.has_key?(pos) then
 					aa_pct << format_aa_stats(chem_props[pos][:aa_comp])
-					not_sign << ind if ! chem_props[pos][:is_significant]
 				end
 
 				side << ruby2human_counting(pos)
@@ -119,7 +118,7 @@ module PredictionsHelper
 			str << part
 			side_str << side.join(", ")
 		end
-		return str, side_str, aa_pct, not_sign
+		return str, side_str, aa_pct
 	end
 
 	# Puts data into a html-table
@@ -170,7 +169,7 @@ module PredictionsHelper
 	end
 
 	# no table-tag is printed, useful to concatenate tables
-	def draw_table2(col1, col2, *col3, table_spec)
+	def draw_table2(col1, col2, *col3, sign_pos, table_spec)
 		content_tag(:thead) do
 			content_tag(:tr) do
 				content_tag(:th, table_spec[:th_left]) +
@@ -198,13 +197,19 @@ module PredictionsHelper
 
 			col1.each_with_index.collect do |data, ind|
 				# set class for table row -> display not significant data in grey
-				if table_spec.has_key?(:display_grey) then
-					if table_spec[:display_grey].include?(ind) then
-						klass = "grey"
-						change_col = "this.style.color='red';"
-					else
-						klass = ""
-					end
+				# if table_spec.has_key?(:display_grey) then
+				# 	if table_spec[:display_grey].include?(ind) then
+				# 		klass = "grey"
+				# 		change_col = "this.style.color='red';"
+				# 	else
+				# 		klass = ""
+				# 	end
+				# else
+				# 	klass = ""
+				# end
+
+				if sign_pos.include?(data) then
+					klass = "grey"
 				else
 					klass = ""
 				end

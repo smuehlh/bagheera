@@ -29,7 +29,9 @@
         <%
 
         ### this part is to prepare data
-             seq, seq_pos, aa_pct, tab_aa[:display_grey] = format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
+            seq, seq_pos, aa_pct = format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
+            not_sign_pos = value[:ref_chem].collect{|k,v| ruby2human_counting(k) if ! v[:is_significant]}
+
             combined_res_table = ""
 
         # check if protein profile was used for gene prediction
@@ -45,7 +47,7 @@
             if value[:ctg_pos].any? && value[:ref_chem].any? then
                 # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps) 
                 combined_res_table = draw_table2(ruby2human_counting(value[:ref_chem].keys), 
-                        aa_pct, value[:ref_chem].collect {|_, v| v[:aa_num]}, tab_aa)
+                        aa_pct, value[:ref_chem].collect {|_, v| v[:aa_num]}, not_sign_pos, tab_aa)
 
                 # # display informative text in one row, with same font as throughout the page
                 # combined_res_table << content_tag(:tr, 
@@ -59,7 +61,7 @@
                 # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps) 
                 combined_res_table += draw_table2(ruby2human_counting(value[:ref_ctg].keys), 
                         format_ctg_stats(value[:ref_ctg]), 
-                        value[:ref_ctg].collect {|_, v| v[:ctg_num]}, tab_ctg).html_safe 
+                        value[:ref_ctg].collect {|_, v| v[:ctg_num]}, [], tab_ctg).html_safe 
             end
         %>
         <%=    
@@ -120,7 +122,9 @@
 
                     content_tag(:table, raw(combined_res_table), :class => "predTable") +
 
-                    content_tag(:p, suggested_transl(value[:ref_chem], value[:ref_ctg]), :class => "highlight_res" )
+                    if ! suggested_transl(value[:ref_chem], value[:ref_ctg]).blank? then
+                        content_tag(:p, suggested_transl(value[:ref_chem], value[:ref_ctg]), :class => "highlight_res" )
+                    end
                 end +
 
                 content_tag(:p, pluralize(value[:ref_seq_num].to_s, "sequence") << " in reference alignment")
