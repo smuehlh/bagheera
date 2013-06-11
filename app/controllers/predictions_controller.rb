@@ -274,7 +274,7 @@ class PredictionsController < ApplicationController
 				@predicted_prots[prot].merge!(results)
 
 				File.open(Progress_file, 'w') { |f| f.fsync; f.write("Processed protein #{this_prot} from #{n_prot}") }
-puts "Processed protein #{this_prot} from #{n_prot}"
+
 				this_prot += 1 # protein counter
 			end # ref_data.peach do |prot, des|
 

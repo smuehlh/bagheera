@@ -60,4 +60,3 @@ gem "dalli"
 gem 'fancybox-rails'
 gem "peach"
 gem 'whenever', :require => false
-# gem 'delayed_job_active_record'
