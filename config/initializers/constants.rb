@@ -1,5 +1,7 @@
 BASE_PATH = Dir::tmpdir + "/cug/" # all data files are stored in /tmp
 REF_DATA = "alignment_gene_structure.json"
+Progress_file = BASE_PATH + "progress.txt"
+
 #host depending settings
 if ENV && ENV["PWD"] && (ENV["PWD"].include?("fab8") || ENV["PWD"].include?("jenkins")) then
 	LUCULLUS_URL = "http://fab8:8080/tpl_os"

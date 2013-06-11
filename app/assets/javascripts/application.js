@@ -145,16 +145,33 @@ function update_file_upload(ajax_upload_field, result) {
         // show_hide_info(result.show_hide_info);
 };
 
+var intervalID;
+function periodically_show_stat() {
+    hide_show_waiting('show');
+    $('#waiting_text').show();
+    intervalID = setInterval(update_stat(), 1000);
+};
+
+function update_stat() {
+    $('#waiting_text').load('read_status');
+};
+
+function stop_periodically_show_stat() {
+    clearInterval(intervalID);
+    hide_show_waiting('hide');
+};
+
 function hide_show_waiting(kind) {
+
     if (kind === 'show') {
+        
         $('#waiting').css({'height' : $(document).height()});
         $('#waiting').show();
     }
     else {
         $('#waiting').hide();
     }
-}
-
+};
 
 function toggle_icon(img, div, mode) {
     // if(!mode) mode = 'block';

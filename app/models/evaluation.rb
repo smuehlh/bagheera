@@ -136,4 +136,37 @@ class Evaluation < PredictionsController
 		end # if fatal_error.empty?
 		fh.close
 	end
+
+	# parsing file containing all statistics into single csv -files for excel
+	def Evaluation.parse_all_stats 
+		file_in = "/tmp/cug/statistics_about_ref_data.txt"
+
+		# out-file 1: Verteilung CTG Positionen pro Protein
+		out_ctg_prot = "/fab8/smuehlh/data/cugusage/ctg_prot.csv"
+		fh_ctg_prot = File.new("/fab8/smuehlh/data/cugusage/ctg_prot.csv", "w")
+		fh_ctg_prot.puts "Protein,# CTGs"
+
+		# # out-file 2: Verteilung CTG Positionen pro Organismus
+		# out_ctg_org = "/fab8/smuehlh/data/cugusage/ctg_org.csv"
+		# fh_ctg_org = File.new("/fab8/smuehlh/data/cugusage/ctg_org.csv", "w")
+		# fh_ctg_org.puts "Organismus,# CTGs"
+
+		prot = ""
+		IO.foreach(file_in) do |line|
+			debugger
+			if ! line.include?(".") && ! line.include?("\t") then
+				# its an protein
+				prot = line.chomp
+			elsif line.include?("CTG positions.") 
+				# its the number of CTG positions
+				n_ctg = line.match(/\d+/)[0]
+				fh_ctg_prot.put
+				s prot + "," + n_ctg
+			end
+		end
+
+		fh_ctg_prot.close
+		# fh_ctg_org.close
+
+	end
 end

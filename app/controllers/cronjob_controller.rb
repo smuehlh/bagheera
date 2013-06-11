@@ -30,8 +30,11 @@ class CronjobController < ApplicationController
 
 			# separate actin, myosin and kinesin by class
 			myo_data = separate_by_class(data, "Myosin heavy chain")
+puts "Myo done"
 			actin_data = separate_by_class(data, "Actin related protein")
+puts "Actin done"
 			kinesin_data = separate_by_class(data, "Kinesin")
+puts "Kin done"
 			# delete unseparated data 
 			puts "Deleting unseparated data"
 
@@ -60,6 +63,7 @@ class CronjobController < ApplicationController
 			puts "Ensure reference data are aligned"
 			puts "Writing alignments ... "
 			data.each do |prot, prot_data|
+
 				data_file = path_new_data + prot.gsub(" ", "-").downcase + ".fasta"
 				fasta = prot_data["alignment"]
 				File.open(data_file, 'w'){|f| f.write(fasta)}

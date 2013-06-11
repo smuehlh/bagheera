@@ -61,6 +61,11 @@ GEM
       debugger-ruby_core_source (~> 1.2.1)
     debugger-linecache (1.2.0)
     debugger-ruby_core_source (1.2.2)
+    delayed_job (3.0.5)
+      activesupport (~> 3.0)
+    delayed_job_active_record (0.4.4)
+      activerecord (>= 2.1.0, < 4)
+      delayed_job (~> 3.0)
     diff-lcs (1.1.3)
     erubis (2.7.0)
     eventmachine (1.0.3)
@@ -223,6 +228,7 @@ DEPENDENCIES
   coffee-rails (= 3.2.2)
   dalli
   debugger
+  delayed_job_active_record
   factory_girl_rails (= 4.1.0)
   fancybox-rails
   growl (= 1.0.3)

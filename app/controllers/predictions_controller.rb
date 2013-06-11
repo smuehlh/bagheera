@@ -113,6 +113,10 @@ class PredictionsController < ApplicationController
 		render :show_alignment
 	end
 
+	def read_status
+		render :text => File.open(Progress_file, "r"){ |f| f.read }, :layout => false
+	end
+
 	# Predict CUG usage for uploaded data
 	# 1) extract reference proteins
 	# 2) gene prediction foreach reference protein:
@@ -145,7 +149,11 @@ class PredictionsController < ApplicationController
 				@fatal_error << error
 				return
 			end
-	
+		
+			# setup up progress file for (nearly) synchronous status messaging
+			n_prot = ref_data.keys.size
+			this_prot = 1
+
 			# all other tasks need to be done for each ref protein
 			# peach for paralell execution, maximum 10 threads
 			ref_data.peach(10) do |prot, all_prot_data|
@@ -265,7 +273,11 @@ class PredictionsController < ApplicationController
 				end
 				@predicted_prots[prot].merge!(results)
 
+				File.open(Progress_file, 'w') { |f| f.fsync; f.write("Processed protein #{this_prot} from #{n_prot}") }
+puts "Processed protein #{this_prot} from #{n_prot}"
+				this_prot += 1 # protein counter
 			end # ref_data.peach do |prot, des|
+
 		end # if @fatal_error.empty?
 
 		@stats = calc_stats(@predicted_prots)
@@ -1280,4 +1292,268 @@ class PredictionsController < ApplicationController
 	# 	end
 	# 	return col, ref_cymopos
 	# end
+
+		# evaluate reference data
+	# get statistics about ALL CTG positions in ref data - takes some time!
+	# for all proteins
+		# for all genes
+			# - CTG positions (per protein and per organism)
+			# - amino acid usage of other genes at this position
+			# - CTGs in other genes at this position
+
+	def eval_ref_data
+
+		fh = File.new("/tmp/cug/statistics_about_ref_data.txt", "w")
+
+		fh_org = File.new("/fab8/smuehlh/data/cugusage/ctg_org.csv", "w")
+		fh_org.puts "Organism,# CTGs"
+
+		ref_data, fatal_error = load_ref_data
+
+		if fatal_error.empty? then
+			results_per_org = {}
+			ref_data.keys.sort_by { |key| key.to_s.naturalized }.each do |prot|
+				puts prot	
+				# statistics about all CTG-Positions in reference data
+				results = {ref_seq_num: "", ctg_pos: [], ref_chem: {}, ref_ctg: {}}
+
+				pos2key = {} # map from ctg position to a sequece containing this ctg
+
+				# get all CTG positions in all reference sequences
+				ref_data[prot]["genes"].keys.each do |k|
+
+					dna_seq = extract_gene_seq(ref_data[prot]["genes"][k]["gene"])
+					codons = dna_seq.scan(/.{1,3}/)
+					ctg_pos = codons.each_with_index.map{ |ele, ind| (ele == "CTG") ? ind : nil }.compact
+
+					# store ctg position
+					results[:ctg_pos] |= ctg_pos # set union
+
+					# store sequence key if it is a "new" ctg position
+					ctg_pos.each {|pos| pos2key[pos] = k if ! pos2key.has_key?(pos)}
+
+					# store ctg pos per organism
+					org = ref_data[prot]["genes"][k]["species"]
+					if ! results_per_org.has_key?(org) then
+						results_per_org[org] = {}
+					end
+					results_per_org[org][prot] = ctg_pos
+
+				end
+
+				# extract ref_alignment 
+				begin
+				ref_alignment = Hash[*ref_data[prot]["alignment"].split("\n")]
+				ref_alignment.keys.each {|k| ref_alignment[ k.sub(">", "") ] = ref_alignment.delete(k)}
+				rescue => e
+					puts "---"
+					puts "ERROR (#{prot}):"
+					puts e
+					puts "---"
+					next
+				end
+
+				results[:ref_seq_num] = ref_alignment.keys.size
+
+				# get list of all amino acids and codons at all CTG -Positions
+				ref_alignment_cols = []
+				ref_codons = []
+
+				results[:ctg_pos].each do |pos|
+					# all amino acids and all codons for a given CTG position
+					col = []
+					codons = []
+					
+	 				# get reference key of a sequence containing this CTG position
+	 				ref_key = pos2key[pos]
+					ref_cymopos = sequence_pos2alignment_pos(pos, ref_alignment[ref_key])
+
+					ref_alignment.each do |cymo_header, cymo_prot|
+
+						# collect cymo column at CTG position
+						col << cymo_prot[ref_cymopos]
+
+						# collect codons at CTG position
+						if cymo_prot[ref_cymopos] == "-" then
+							# add nil as placeholder if its a gap
+							codons << nil
+						else
+							# actually collect codon
+							spos = alignment_pos2sequence_pos(ref_cymopos, cymo_prot) # position in sequece without gaps
+							codons << get_codon(ref_data[prot]["genes"][cymo_header]["gene"], spos)
+						end
+					end
+
+					# store results
+					ref_alignment_cols << col
+					ref_codons << codons.compact # if only nil- placeholders, it will be an empty array
+				end
+
+				# amino acid usage 
+				ref_alignment_cols.each_with_index do |col, ind|
+					# check for each column (= each CTG position) the amino acid distribution in reference data
+					aa_freq, aa_num = word_frequency(col)
+					is_significant, prob_transl = predict_translation(aa_freq)
+
+					# possibly, here the mapping on the CTG position is wrong (results[:ctg_pos][ind])
+					results[:ref_chem][results[:ctg_pos][ind]] = {transl: prob_transl, aa_comp: aa_freq, aa_num: aa_num}
+
+				end
+
+				# CTG usage
+				results[:ref_ctg] = ref_ctg_usage(ref_codons, ref_alignment_cols, results[:ctg_pos])
+
+				fh.puts prot
+				fh.puts "#{results[:ref_seq_num]} sequences."
+				fh.puts "#{results[:ctg_pos].size} CTG positions."
+				fh.puts ""
+				fh.puts "CTG position\tDistribution of amino acids\tNumber of amino acids\tCTG usage\tNumber of CTG codons"
+				results[:ctg_pos].sort.each do |pos|
+					# check if for all ctg positsions info about aa distribution and ctg usage exists
+					if results[:ref_chem].has_key?(pos) then
+						# call method from PredictionsHelper (formerly with: view_context.format_aa_stats, without extend module)
+						aa_stat = view_context.format_aa_stats(results[:ref_chem][pos][:aa_comp])
+						n_aas = results[:ref_chem][pos][:aa_num]
+					else 
+						aa_stat = "Not discriminative."
+						n_aas = "-"
+					end
+					if results[:ref_ctg].has_key?(pos) then
+						ctg_stat = view_context.format_aa_stats(results[:ref_ctg][pos][:ctg_usage])
+						n_ctgs = results[:ref_ctg][pos][:ctg_num]
+					else
+						ctg_stat = "Not discriminative."
+						n_ctgs = "-"
+					end
+
+					# tab separated list of all statistics for this position
+					# pos + 1 to convert between ruby and human counting! 
+					fh.puts "#{view_context.ruby2human_counting(pos)}\t#{aa_stat}\t#{n_aas}\t#{ctg_stat}\t#{n_ctgs}"
+				end
+				fh.puts ""
+
+			end # ref_data.each
+
+			# store results per org to file
+			results_per_org.each do |org, prots|
+				fh_org.puts org + "," + prots.values.flatten.size.to_s
+			end
+
+		end # if fatal_error.empty?
+		fh.close
+		fh_prot.close
+		fh_org.close
+		parse_all_stats
+		render :eval_ref_data, formats:[:js]
+	end
+
+		# parsing file containing all statistics into single csv -files for excel
+	def stats_ctg_prot 
+		file_in = "/fab8/smuehlh/data/cugusage/statistics_about_ref_data.txt"
+
+		# out-file 1: Verteilung CTG Positionen pro Protein
+		out_ctg_prot = "/fab8/smuehlh/data/cugusage/ctg_prot.csv"
+		fh_ctg_prot = File.new(out_ctg_prot, "w")
+		fh_ctg_prot.puts "Protein,# CTGs"
+
+		prot = ""
+		n_ctg_a = 0
+		n_ctg_k = 0
+		n_ctg_m = 0
+		File.open(file_in).each do |line|
+			if ! line.include?(".") && ! line.include?("\t") then
+				# its an protein
+				if line.include?("Actin") then
+					prot = "Actin"
+				elsif line.include?("Kinesin")
+					prot = "Kinesin"
+				elsif line.include?("Myosin heavy chain")
+					prot = "Myosin heavy chain"
+				else
+					prot = line.chomp
+				end
+			elsif line.include?("CTG positions.") 
+				# its the number of CTG positions
+				n_ctg = line.match(/\d+/)[0]
+				if prot == "Actin" then
+					n_ctg_a += n_ctg.to_i
+
+				elsif prot == "Kinesin"
+					n_ctg_k += n_ctg.to_i
+
+				elsif prot == "Myosin heavy chain"
+					n_ctg_m += n_ctg.to_i
+
+				else
+					fh_ctg_prot.puts prot + "," + n_ctg
+				end
+
+			end
+		end
+		fh_ctg_prot.puts "Actin,"+n_ctg_a.to_s
+		fh_ctg_prot.puts "Kinesin,"+n_ctg_k.to_s
+		fh_ctg_prot.puts "Myosin heavy chain,"+n_ctg_m.to_s
+
+		fh_ctg_prot.close
+
+		render :eval_ref_data, formats:[:js]
+	end
+
+	def stat_conserved_pos
+		file_in = "/fab8/smuehlh/data/cugusage/statistics_about_ref_data.txt"
+
+		out_conserved = "/fab8/smuehlh/data/cugusage/prot_conserved_pos.csv"
+		fh_out = File.new(out_conserved, "w")
+		fh_out.puts "Protein,#CTGs,#CTGs in min.2,#CTGs in min.5"
+
+		prot = ""
+		n_ctg = 0
+		n_conserved = 0
+		n_conserved_in5 = 0
+		File.open(file_in).each do |line|
+			line.chomp!
+			parts = line.split("\t")
+			n_ctgs = parts[4]
+
+			if ! line.include?(".") && ! line.include?("\t") && ! line.blank? then
+				# its a protein
+
+				# write data of last protein, if this is not the very first protein
+				fh_out.puts prot + "," + n_ctg + "," + n_conserved.to_s + "," + n_conserved_in5.to_s if ! prot.blank?
+
+				# set up data for this protein
+				prot = line
+				n_ctg = 0
+				n_conserved = 0
+				n_conserved_in5 = 0
+
+			elsif line.include?("CTG positions.") 
+				# its the total number of CTG positions in this protein
+				n_ctg = line.match(/\d+/)[0]
+						
+			elsif ! n_ctgs.nil? 
+				# its a row with ctg usage data
+
+				n_ctgs = n_ctgs.to_i # a string will be converted to zero, which is ok for now
+				if n_ctgs > 1 then
+					# its conserved, as it occurs in at least one prot
+					n_conserved += 1
+				end
+
+				if n_ctgs > 4 
+					# its also high conserved, as it occures in at least 5 prots
+					n_conserved_in5 += 1
+
+				end		
+			end
+		end
+
+		# write data of last protein
+		fh_out.puts prot + "," + n_ctg + "," + n_conserved.to_s + "," + n_conserved_in5.to_s
+
+		fh_out.close
+		render :eval_ref_data, formats:[:js]
+	end
+
+
 end
