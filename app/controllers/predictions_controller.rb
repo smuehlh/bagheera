@@ -4,15 +4,6 @@ require 'Tools'
 class PredictionsController < ApplicationController
 
 	MAX_SIZE = 15728640 # 15 MB
-	SORT = "/usr/bin/sort"
-	FORMATDB = "/usr/bin/formatdb"
-	BLASTALL = "/usr/bin/blastall"
-	FASTACMD = "/usr/bin/fastacmd"
-	AUGUSTUS = "/usr/local/bin/augustus/src/augustus"
-	PAIR_ALIGN =  Rails.root.join('lib', 'pair_align').to_s #"/usr/local/bin/pair_align"
-	DIALIGN2 = "/usr/local/bin/dialign_package/src/dialign2-2"
-	# CLUSTAW = "/usr/bin/clustalw"
-	MAFFT = "/usr/local/bin/mafft"
 	HYDORPHOBIC_AAS = ["V", "I", "L"]
 	POLAR_AAS = ["S", "T"]
 
@@ -57,20 +48,25 @@ class PredictionsController < ApplicationController
 	# render partial showing the uploaded file
 	# accessible params: @fatal_error [Array] Errors occured during file load
 	def load_example
-		# do not check content, but check file size, just to be sure
 		example_file = "Candida_albicans_WO_1.fasta"
 		example_path = Rails.root + "spec/fixtures/files/" + example_file
-		@fatal_error = check_filesize(File.size(example_path))
-		if @fatal_error.blank? then
-			file_id = rand(1000000000).to_s
-			file_path = BASE_PATH + file_id + "/query.fasta"
-			begin
-				FileUtils.mkdir(BASE_PATH + file_id, :mode => 0775)
-				FileUtils.cp(example_path, file_path)
-			rescue
-				@fatal_error = "Cannot upload file."
+		@fatal_error = []
+		if File.exist?(example_path) then
+			# do not check content, but check file size, just to be sure
+			@fatal_error |= check_filesize(File.size(example_path))
+			if @fatal_error.blank? then
+				file_id = rand(1000000000).to_s
+				file_path = BASE_PATH + file_id + "/query.fasta"
+				begin
+					FileUtils.mkdir(BASE_PATH + file_id, :mode => 0775)
+					FileUtils.cp(example_path, file_path)
+				rescue
+					@fatal_error << "Cannot upload file."
+				end
+				session[:file] = { id: file_id, name: example_file, path: file_path }
 			end
-			session[:file] = { id: file_id, name: example_file, path: file_path }
+		else
+			@fatal_error << "Cannot upload file."
 		end
 		render :upload_file_ajax, formats: [:js]
 	end
@@ -98,17 +94,20 @@ class PredictionsController < ApplicationController
 		file_dest = Dir::tmpdir + "/cymobase_alignment_" + @file_id + ".fasta"
 
 		# write data again to file, leave line breaks after 80 chars out (lucullus will be much faster this way)
-		fh_dest = File.new(file_dest, 'w')
-		File.open(file_scr, 'r').each_line do |line|
-			line.chomp!
-			str = ""
-			if line[0] == ">" then
-				str = "\n" << line << "\n"
-			else
-				str = line
-			end
-			fh_dest.write(str)
+		headers, seqs = fasta2str(File.read(file_scr))
+		headers.map!{ |e| ">" << e } # add ">" again to make it a valid header
+		pred_seq_ind = headers.index(">Prediction")
+		if pred_seq_ind.nil? then
+			# ups, the pred seq is not called "Prediction" !!!
+			# add the very last line again, hopefully thats the predicted sequence
+			pred_seq_ind = headers.size - 1
 		end
+
+		fh_dest = File.new(file_dest, 'w')
+		# QUICK-FIX to Lucullus-Bug
+		# write predicted seq at top and the end of alignment, to make sure it is displayed
+		fh_dest.puts( str2fasta("Prediction", seqs[headers.index(">Prediction")], true) )
+		fh_dest.puts( headers.zip(seqs).flatten.join("\n") )
 		fh_dest.close
 		render :show_alignment
 	end
@@ -149,14 +148,15 @@ class PredictionsController < ApplicationController
 				@fatal_error << error
 				return
 			end
-		
-			# setup up progress file for (nearly) synchronous status messaging
-			n_prot = ref_data.keys.size
-			this_prot = 1
+
+			# # setup up progress file for (nearly) synchronous status messaging
+			# n_prot = ref_data.keys.size
+			# this_prot = 1
 
 			# all other tasks need to be done for each ref protein
 			# peach for paralell execution, maximum 10 threads
-			ref_data.peach(10) do |prot, all_prot_data|
+			# ref_data.peach(10) do |prot, all_prot_data|
+			ref_data.each do |prot, all_prot_data|
 				@predicted_prots[prot] = {} # ... final results for each protein!
 				prot_basename = prot.gsub(" ", "-").downcase
 				file_basename = session[:file][:path].gsub("query.fasta", prot_basename)
@@ -218,7 +218,7 @@ class PredictionsController < ApplicationController
 
 				if ! wait_thr.value.success? || output.include?("ERROR") || output.blank? then
 					write_minor_error(prot, "BLAST failed.")
-					@predicted_prots[prot][:message] |= ["Sorry, an error occured"]
+					@predicted_prots[prot][:message] |= ["BLAST failed."] #["Sorry, an error occured"]
 					# delete file with blast hits, its contains only error messages
 					File.delete(file_blast)
 					next
@@ -230,10 +230,11 @@ class PredictionsController < ApplicationController
 
 				### 2.2) AUGUSTUS
 				is_success, pred_seq, pred_dnaseq, err, no_prot_profile = perform_gene_pred(output, prot_basename)
+
 				if ! is_success then
 					# some big error occured
 					write_minor_error(prot, err)
-					@predicted_prots[prot][:message] |= ["Sorry, an error occured"]
+					@predicted_prots[prot][:message] |= [err] #["Sorry, an error occured"]
 					next
 				end
 				if ! no_prot_profile.blank? then
@@ -253,7 +254,7 @@ class PredictionsController < ApplicationController
 						is_success = prepare_mafft_ref_alignment(prot_data["alignment"], file_refall)
 						if ! is_success then
 							write_minor_error(prot, "Aligning sequences with MAFFT failed.")
-							@predicted_prots[prot][:message] |= ["Sorry, an error occured"]
+							@predicted_prots[prot][:message] |= ["Aligning sequences failed."] #["Sorry, an error occured"]
 							next
 						end
 					end
@@ -262,7 +263,7 @@ class PredictionsController < ApplicationController
 				if ! is_success || ! err.blank? then
 					# an error occured
 					write_minor_error(prot, err)
-					@predicted_prots[prot][:message] |= ["Sorry, an error occured"]
+					@predicted_prots[prot][:message] |= [err] #["Sorry, an error occured"]
 					next
 				end
 
@@ -273,9 +274,9 @@ class PredictionsController < ApplicationController
 				end
 				@predicted_prots[prot].merge!(results)
 
-				File.open(Progress_file, 'w') { |f| f.fsync; f.write("Processed protein #{this_prot} from #{n_prot}") }
+				# File.open(Progress_file, 'w') { |f| f.fsync; f.write("Processed protein #{this_prot} from #{n_prot}") }
+				# this_prot += 1 # protein counter
 
-				this_prot += 1 # protein counter
 			end # ref_data.peach do |prot, des|
 
 		end # if @fatal_error.empty?
@@ -584,6 +585,7 @@ class PredictionsController < ApplicationController
 	end
 
 	# parse blast output 
+	# combines hit of interest with the following (!) blast hits, if they overlap
 	# @param hits [String] Complete blast output (Hit list)
 	# @param nr [Fixnum] Number of blast hit of interest (human counting -> starts with 1)
 	# @return [TrueClass] If the requested hit exists
@@ -611,8 +613,43 @@ class PredictionsController < ApplicationController
 			start = stop
 			stop = tmp
 		end
+
+		# test if another hit on same contig exits, which overlaps
+
+		# all indices of hits about same sequence id
+		indices = hits.lines.to_a.each_with_index.map{ |ele, ind| (ele.include?(seq_id)) ? ind : nil }.compact
+		# iterate over hits listed after (!) the hit of interest; 
+		# this saves us from merging hits a second hit (only important for predict_more)!
+		indices -= ( 0..(nr-1) ).to_a
+
+		indices.each do |ind|
+			this_hit = hits.lines.to_a[ind]
+			this_parts = this_hit.split("\t")
+			this_start = this_parts[8].to_i
+			this_stop = this_parts[9].to_i
+			this_strand = 1
+			if this_stop < this_start then
+				# change start/ stop if prediction on minus strand 
+				this_strand = 2 # set strand to minus for fastacmd
+				tmp = this_start
+				this_start = this_stop
+				this_stop = tmp
+			end
+
+			# by extending the hit of interest, it will overlap with this hit, so merge them
+			if this_strand == strand && stop+500 >= this_start && stop <= this_start then
+				# overlap with stop
+				stop = this_stop
+			end
+			if this_strand == strand && start-500 <= this_stop && start >= this_stop then
+				# overlap with start
+				start = this_start
+			end
+
+		end
 		return true, seq_id, start, stop, strand
 	end
+
 
 	# perform gene prediction with augustus: run augustus and parse output
 	# input: 
@@ -620,6 +657,7 @@ class PredictionsController < ApplicationController
 	# @return [Boolean] True if no error occured, false otherwise
 	# @return [String] Predicted protein sequence
 	# @return [String] Predicted coding sequence (DNA)
+	# @return [String] Error message (covers the availability of the protein profile)
 	def run_augustus(file, prot_basename)
 
 
@@ -646,7 +684,7 @@ class PredictionsController < ApplicationController
 		stdin.close
 		output = stdout_err.read
 		stdout_err.close
-		if (! wait_thr.value.success?) || output.include?("ERROR") || (! output.include?("coding sequence")) then
+		if (! wait_thr.value.success?) || output.include?("ERROR") || ! output.include?("coding sequence") then
 			return false, "", "", err
 		end
 
@@ -667,7 +705,9 @@ class PredictionsController < ApplicationController
 	# @return [String] Predicted protein sequence
 	# @return [String] Predicted coding sequence (DNA)
 	# @return [String] Error message, only set if an error occured
+	# @return [String] Error message, only for protein profile (only set if no prot profile used)
 	def perform_gene_pred(blast_hits, blast_hit_nr=1, prot_basename)
+	
 		# parse blast output
 		is_success, seq_id, start, stop, strand = parse_blast_hits(blast_hits, blast_hit_nr) 
 		if ! is_success then
@@ -679,7 +719,7 @@ class PredictionsController < ApplicationController
 		# 2.2.1) get matching search sequence 
 		file = BASE_PATH + session[:file][:id] + "/" + rand(1000000).to_s + ".fasta"
 		genome_db = session[:file][:path].gsub(".fasta", "_db")
-		# enlarge range of sequence to extract: add 1000 nucleodides to start/stop
+		# enlarge range of sequence to extract: add 500 nucleodides to start/stop
 		if start-500 < 0 then
 			# check if start is valid
 			start = 0
@@ -939,7 +979,7 @@ class PredictionsController < ApplicationController
 			nl = rec.index("\n") # first match: separating header from seq
 			header = rec[0..nl-1]
 			seq = rec[nl+1..-1]
-			seq.gsub!(/\n/,'') # removing all remaining \n from seq 
+			seq.gsub!(/\r?\n/,'') # removing all remaining \n from seq 
 			headers.push(header)
 			seqs.push(seq)
 		end
@@ -1293,13 +1333,16 @@ class PredictionsController < ApplicationController
 	# 	return col, ref_cymopos
 	# end
 
-		# evaluate reference data
+
+#### Evaluation methods
+	# evaluate reference data
 	# get statistics about ALL CTG positions in ref data - takes some time!
 	# for all proteins
 		# for all genes
 			# - CTG positions (per protein and per organism)
 			# - amino acid usage of other genes at this position
 			# - CTGs in other genes at this position
+	# also writes: number of CTG codons per organism
 
 	def eval_ref_data
 
@@ -1447,7 +1490,7 @@ class PredictionsController < ApplicationController
 		render :eval_ref_data, formats:[:js]
 	end
 
-		# parsing file containing all statistics into single csv -files for excel
+	# number of CTG codons per protein
 	def stats_ctg_prot 
 		file_in = "/fab8/smuehlh/data/cugusage/statistics_about_ref_data.txt"
 
@@ -1499,6 +1542,8 @@ class PredictionsController < ApplicationController
 		render :eval_ref_data, formats:[:js]
 	end
 
+	# number of CTG codons per protein and number of conserved CTG codons (occuring in min. 2 and min. 5 genes) per protein
+	# number of CTG codons broken down: number of genes vs. number of ctgs occuring in that many genes  
 	def stat_conserved_pos
 		file_in = "/fab8/smuehlh/data/cugusage/statistics_about_ref_data.txt"
 
@@ -1506,10 +1551,17 @@ class PredictionsController < ApplicationController
 		fh_out = File.new(out_conserved, "w")
 		fh_out.puts "Protein,#CTGs,#CTGs in min.2,#CTGs in min.5"
 
+		out_broken_down = "/fab8/smuehlh/data/cugusage/prot_conserved_pos_detail.csv"
+		fh_out_detailed = File.new(out_broken_down, "w")
+		fh_out_detailed.puts "Protein"
+		fh_out_detailed.puts "#genes,#CTGs"
+
 		prot = ""
 		n_ctg = 0
 		n_conserved = 0
 		n_conserved_in5 = 0
+		pos_n_genes = Hash.new(0) # use this hash to extract number of CTGs occuring in 1, 2, 3, ... genes (the detailed csv)
+
 		File.open(file_in).each do |line|
 			line.chomp!
 			parts = line.split("\t")
@@ -1519,13 +1571,24 @@ class PredictionsController < ApplicationController
 				# its a protein
 
 				# write data of last protein, if this is not the very first protein
-				fh_out.puts prot + "," + n_ctg + "," + n_conserved.to_s + "," + n_conserved_in5.to_s if ! prot.blank?
+				if ! prot.blank? then
+					fh_out.puts prot + "," + n_ctg + "," + n_conserved.to_s + "," + n_conserved_in5.to_s 
+
+					# write detailed output
+					fh_out_detailed.puts prot
+					pos_n_genes.keys.sort.each do |key|
+						fh_out_detailed.puts key.to_s + "," + pos_n_genes[key].to_s
+					end
+					fh_out_detailed.puts ""
+
+				end
 
 				# set up data for this protein
 				prot = line
 				n_ctg = 0
 				n_conserved = 0
 				n_conserved_in5 = 0
+				pos_n_genes = Hash.new(0)
 
 			elsif line.include?("CTG positions.") 
 				# its the total number of CTG positions in this protein
@@ -1535,6 +1598,12 @@ class PredictionsController < ApplicationController
 				# its a row with ctg usage data
 
 				n_ctgs = n_ctgs.to_i # a string will be converted to zero, which is ok for now
+
+				if n_ctgs > 0 then
+					# number CTGs occuring in xx genes
+					pos_n_genes[n_ctgs] += 1
+				end
+
 				if n_ctgs > 1 then
 					# its conserved, as it occurs in at least one prot
 					n_conserved += 1
@@ -1543,17 +1612,22 @@ class PredictionsController < ApplicationController
 				if n_ctgs > 4 
 					# its also high conserved, as it occures in at least 5 prots
 					n_conserved_in5 += 1
-
-				end		
+				end
 			end
 		end
 
 		# write data of last protein
 		fh_out.puts prot + "," + n_ctg + "," + n_conserved.to_s + "," + n_conserved_in5.to_s
+		# write detailed output
+		fh_out_detailed.puts prot
+		pos_n_genes.keys.sort.each do |key|
+			fh_out_detailed.puts key.to_s + "," + pos_n_genes[key].to_s
+		end
 
 		fh_out.close
+		fh_out_detailed.close
+
 		render :eval_ref_data, formats:[:js]
 	end
-
 
 end

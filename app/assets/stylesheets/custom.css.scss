@@ -53,10 +53,8 @@ a {
     }
 }
 
-a.external { background:url("/assets/icons/link.png") no-repeat center right; text-decoration:underline; padding-right:18px;}
-
-a.internal { background:url("/assets/icons/anchor.png") no-repeat center right; text-decoration:underline; padding-right:18px;}
-
+a.external { background: url("icons/link.png") no-repeat center right; text-decoration:underline; padding-right:18px;}
+a.internal { background:url("icons/anchor.png") no-repeat center right; text-decoration:underline; padding-right:18px;}
 
 h1, h2, h3, h4, h5 {
 }
@@ -75,7 +73,7 @@ h1, h2, h3, h4, h5 {
 #logo {
     height:70px;
     width: 900px;
-    background: url("/assets/layout/bagheera-banner_v3.png") no-repeat scroll right top transparent;
+    background: url("layout/bagheera-banner_v3.png") no-repeat scroll right top transparent;
 }
 
 #nav, ul {

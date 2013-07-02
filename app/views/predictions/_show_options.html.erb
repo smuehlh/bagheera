@@ -2,6 +2,12 @@
 <%= 
 	form_tag(predict_genes_path, :remote => true) do
 		content_tag(:table) do
+			content_tag(:tr) do
+				content_tag(:td, "Reference species for gene prediction (Augustus)") +
+				content_tag(:td,
+					select_tag(:species, options_for_select(opt_species, pre_select_species))
+				)
+			end +
 			content_tag(:tr) do 
 				content_tag(:td, "Alignment method") +
 				content_tag(:td, 		
@@ -16,13 +22,8 @@
 					select_tag(:config, options_for_select(opt_config, pre_select_config), 
 					:disabled => true)
 				)
-			end +
-			content_tag(:tr) do
-				content_tag(:td, "Reference species for gene prediction (Augustus)") +
-				content_tag(:td,
-					select_tag(:species, options_for_select(opt_species, pre_select_species))
-				)
-			end #+
+			end
+
 			# content_tag(:tr) do
 			# 	content_tag(:td, "Predict genes for five best BLAST hits") +
 			# 	content_tag(:td, 

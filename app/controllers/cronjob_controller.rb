@@ -2,17 +2,26 @@ class CronjobController < ApplicationController
 # debug me by calling "script/rails runner 'CronjobController.prepare_ref_data'" on command line and including a "debugger" anywhere
 	def self.prepare_ref_data
 
-		# wait for wget to be finished
-		puts Time.now 
+		# wait for wget to be finished, but don't wait forever! (max. 10 minutes)
+		start = Time.now
+		puts "Starting execution: prepare reference data. Wait until they are fetched!"
 		begin
+			fin = Time.now
+			puts fin
 			sleep(30) 
-		end while ! FileTest.file?(BASE_PATH + "new_" + REF_DATA)
-		puts "wget finished:"
-		puts Time.now 
+		end while (! FileTest.file?(BASE_PATH + "new_" + REF_DATA) || fin - start >= 600)
+		if fin - start >= 600 then
+			puts "ERROR with wget. Aborting."
+			exit
+		else
+			puts "wget finished: #{fin}"
+			# waiting another 30 seconds to make sure the entire file is written
+			sleep(30)
+		end
 
 		# create directory for newly created reference data
 		path_new_data = BASE_PATH + "new/"
-		puts "Saving data to temporaray file #{path_new_data}"
+		puts "Saving all new data to temporaray file #{path_new_data}"
 		if File.exists?(path_new_data) then
 			FileUtils.rm_r(Dir.glob(path_new_data + "*"), :verbose => true)
 		else
@@ -23,7 +32,7 @@ class CronjobController < ApplicationController
 		# load reference data
 		data, errors = load_ref_data
 		puts errors.join(" ")
-		puts(" ... done")
+puts data.keys
 		if errors.empty? then
 			puts "Successfully loaded reference data"
 			puts "Separating myosin, actin and kinesin by class"
@@ -72,7 +81,7 @@ puts "Kin done"
 				# check and correct length of each aligned sequence
 				is_true = ensure_length(data_file)
 				if ! is_true then
-					puts "\t #{prot}: Not all sequence were of same lenght. Now they are."
+					puts "\t #{prot}: Not all sequences were of same lenght. Now they are."
 				end
 				# check if mafft accepts them as aligned
 				is_true = ensure_mafft_is_fine(data_file)
@@ -170,6 +179,7 @@ puts "Kin done"
 		old_alignment = data[prot]["alignment"]
 		headers, seqs = fasta2str(old_alignment)
 
+begin
 		genes.each do |name|
 			if prot.include?("Myosin") then
 				name =~ /[a-zA-Z_]+(Myo)?([0-9]+|Mhc)/
@@ -206,6 +216,11 @@ puts "Kin done"
 				# no else needed: even if no sequence exists for this key, the other functions can handle missing data
 			end
 		end
+rescue => e
+	puts e
+end
+		
+	
 		return new_data
 	end
 

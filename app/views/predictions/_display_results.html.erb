@@ -68,34 +68,6 @@
 
             if value[:ctg_pos].any? then   
 
-                # -old part begin
-                # if value[:ref_chem].any? then 
-                #     # # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps)
-                #     # draw_table(ruby2human_counting(value[:ref_chem].keys), aa_pct, value[:ref_chem].collect {|_, v| v[:aa_num]}, tab_aa) +
-                #     # content_tag(:normal, "Only amino acids accounting for more than 5% of the sequences at the respective position are shown.")
-
-                # else
-                #     content_tag(:i, "No CTG position aligned with discriminative sites of reference data") +
-                #     tag(:br)
-                # end +
-                # if value[:ref_ctg].any? then
-
-                #     draw_table(ruby2human_counting(value[:ref_ctg].keys), 
-                #         format_ctg_stats(value[:ref_ctg]), 
-                #         value[:ref_ctg].collect {|_, v| v[:ctg_num]}, 
-                #         tab_ctg) 
-
-                # else
-                #     content_tag(:i, "No CTG codons in reference data at same positions") +
-                #     tag(:br)
-                # end +
-
-                # tag(:br) +
-
-                # content_tag(:normal, pluralize(value[:ref_seq_num].to_s, "sequence") << " in reference alignment") +
-
-                # -old part end
-
                 ### this part is to output info about missing data
                 content_tag(:i, "") + # no ouput, but needed to display rest correctly !
 

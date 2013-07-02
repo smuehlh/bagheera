@@ -15,7 +15,7 @@
 			content_tag(:td, 
 				@stats["conserved_pos"].to_s + 
 				# these are the proteins which contain a predicted, conserved CTG position
-				", in " + @stats["prot_conserved_pos"].to_s + " protein".pluralize(@stats["prot_conserved_pos"])
+				" (" + @stats["prot_conserved_pos"].to_s + " protein".pluralize(@stats["prot_conserved_pos"]) + ")"
 			)
 		) +
 		# # these are the proteins which contain a predicted, conserved CTG position

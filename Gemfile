@@ -55,6 +55,8 @@ end
 # gem 'capistrano'
 
 gem 'thin'
+# gem 'delayed_job_active_record'
+# gem 'sqlite3'
 gem 'debugger'
 gem "dalli"
 gem 'fancybox-rails'
