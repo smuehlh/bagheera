@@ -1,5 +1,6 @@
 require 'peach'
 require 'Tools'
+require 'open3'
 
 class PredictionsController < ApplicationController
 

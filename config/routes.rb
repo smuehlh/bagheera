@@ -1,7 +1,5 @@
 Bagheera::Application.routes.draw do
-
-  scope 'bagheera' do
-
+ if ENV && ENV["PWD"] && (ENV["PWD"].include?("fab8") || ENV["PWD"].include?("jenkins")) then
     root to: 'predictions#search'
 
     match '/team', to: 'static_pages#team', as: 'team', :via => [:get]
@@ -15,10 +13,28 @@ Bagheera::Application.routes.draw do
     match 'predict_more', to: 'predictions#predict_more', as: 'predict_more', :via => [:get]
     match 'read_status', to: 'predictions#read_status', as: 'read_status', :via => [:get]
     match 'eval', to: 'predictions#stat_conserved_pos', as: 'eval', :via => [:get]
+  else
+    scope '/bagheera' do
 
+      root to: 'predictions#search'
+
+      match '/team', to: 'static_pages#team', as: 'team', :via => [:get]
+      match '/help', to: 'static_pages#help', as: 'help', :via => [:get]
+      match '/contact', to: 'static_pages#contact', as: 'contact', :via => [:get]
+
+      match 'upload_file', to: 'predictions#upload_file', as: 'upload_file', :via => [:post]
+      match 'predict_genes', to: 'predictions#predict_genes', as: 'predict_genes', :via => [:post]
+      match 'load_example', to: 'predictions#load_example', as: 'load_example', :via => [:get]
+      match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
+      match 'predict_more', to: 'predictions#predict_more', as: 'predict_more', :via => [:get]
+      match 'read_status', to: 'predictions#read_status', as: 'read_status', :via => [:get]
+      match 'eval', to: 'predictions#stat_conserved_pos', as: 'eval', :via => [:get]
+
+    end
   end
 
- 
+
+
   # The priority is based upon order of creation:
   # first created -> highest priority.
 
