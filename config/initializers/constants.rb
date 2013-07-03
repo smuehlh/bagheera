@@ -12,7 +12,8 @@ PAIR_ALIGN =  Rails.root.join('lib', 'pair_align').to_s #"/usr/local/bin/pair_al
 
 #host depending settings
 if ENV && ENV["PWD"] && (ENV["PWD"].include?("fab8") || ENV["PWD"].include?("jenkins")) then
-	LUCULLUS_URL = "http://fab8:8080/tpl_os"
+        LUCULLUS_URL = "http://fab8:8080/tpl_os"
 else
-	LUCULLUS_URL = "http://www.motorprotein.de/bagheera/tpl_os"
+        LUCULLUS_URL = "http://www.motorprotein.de/tpl_os"
 end
+

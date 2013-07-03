@@ -61,6 +61,9 @@ module Bagheera
 
     # Enable the asset pipeline
     config.assets.enabled = true
+    config.assets.prefix = "/bagheera/assets"
+
+
 
     # Version of your assets, change this if you want to expire all your assets
     config.assets.version = '1.0'
