@@ -1,4 +1,0 @@
-source :rubygems
-gem 'ci_reporter', :path => '../..'
-gem 'spinach'
-gem 'rspec'
