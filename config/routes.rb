@@ -12,7 +12,7 @@ Bagheera::Application.routes.draw do
     match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
     match 'predict_more', to: 'predictions#predict_more', as: 'predict_more', :via => [:get]
     match 'read_status', to: 'predictions#read_status', as: 'read_status', :via => [:get]
-    match 'eval', to: 'predictions#stat_conserved_pos', as: 'eval', :via => [:get]
+    match 'eval', to: 'predictions#eval_ref_data', as: 'eval', :via => [:get]
   else
     scope '/bagheera' do
 
@@ -28,7 +28,7 @@ Bagheera::Application.routes.draw do
       match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
       match 'predict_more', to: 'predictions#predict_more', as: 'predict_more', :via => [:get]
       match 'read_status', to: 'predictions#read_status', as: 'read_status', :via => [:get]
-      match 'eval', to: 'predictions#stat_conserved_pos', as: 'eval', :via => [:get]
+      # match 'eval', to: 'predictions#stat_conserved_pos', as: 'eval', :via => [:get]
 
     end
   end

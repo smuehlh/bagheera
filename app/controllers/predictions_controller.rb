@@ -1484,10 +1484,18 @@ class PredictionsController < ApplicationController
 			end
 
 		end # if fatal_error.empty?
+
+		# "free" some memory
+		ref_alignment_cols = nil
+		ref_data = nil
+		ref_alignment = nil
+
 		fh.close
-		fh_prot.close
 		fh_org.close
-		parse_all_stats
+		FileUtils.cp "/tmp/cug/statistics_about_ref_data.txt", "/fab8/smuehlh/data/cugusage/statistics_about_ref_data.txt"
+		stat_conserved_pos
+		stats_ctg_prot
+		# parse_all_stats
 		render :eval_ref_data, formats:[:js]
 	end
 
