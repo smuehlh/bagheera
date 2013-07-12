@@ -1345,6 +1345,31 @@ class PredictionsController < ApplicationController
 			# - CTGs in other genes at this position
 	# also writes: number of CTG codons per organism
 
+	def sp2sp_abbr
+		fh = File.new("/fab8/smuehlh/data/cugusage/sp_sp-abbr.csv", "w")
+
+		ref_data, fatal_error = load_ref_data
+		list = {}
+		if fatal_error.empty? then
+			ref_data.keys.each do |prot|
+				ref_data[prot]["genes"].keys.each do |k|
+					org = ref_data[prot]["genes"][k]["species"]
+					if ! list.has_key?(org) then
+						puts k
+						list[org] = k.match(/([A-Z][_a-z]+)[A-Z]\w*/)[1]
+					end # ! list.has_key?(org)
+				end # ref_data[prot]["genes"].each
+			end # ref_data.each
+		end # if fatal_error.empty?
+
+		list.each do |sp, sp_abbr|
+			fh.puts sp + "," + sp_abbr
+		end
+		fh.close
+
+		render :eval_ref_data, formats:[:js]
+	end
+
 	def eval_ref_data
 
 		fh = File.new("/tmp/cug/statistics_about_ref_data.txt", "w")
