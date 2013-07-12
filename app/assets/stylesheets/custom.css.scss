@@ -377,6 +377,7 @@ input.defaulttext, textarea.defaulttext {
 
 tr.grey:hover td {
     color: black;
+    background: #ededed; /* to better keep track of the line the mouse is over */
 }
 
 /*.predTable td .normal_text {
