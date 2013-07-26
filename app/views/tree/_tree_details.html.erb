@@ -1,0 +1,21 @@
+<table>
+<%=	content_tag(:tr) do
+			content_tag(:th, "Selected protein") +
+			content_tag(:th, "Number of sequences")
+	end %>
+<% @selected_prots.sort.each do |prot, n_sp| %>
+
+	<%= content_tag(:tr, 
+		content_tag(:td, prot) + 
+		content_tag(:td, n_sp.to_s)
+	) %>
+
+<% end %>
+</table>
+
+<br>
+<%= link_to( "Download tree", download_path, :class => "internal") %>
+<br>
+<%= content_tag(:p, @minor_error.join("\n")) %>
+
+

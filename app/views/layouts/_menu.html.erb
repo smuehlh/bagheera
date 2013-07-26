@@ -1,7 +1,10 @@
 <div id="menu">
   <ul>
+    <% if controller.action_name == "home" then selected = " class='selected'" else selected = "" end%>
+    <li<%=raw(selected)%>><%= link_to "Home", root_path %></li>
+
     <% if controller.action_name == "search" then selected = " class='selected'" else selected = "" end%>
-    <li<%=raw(selected)%>><%= link_to "Prediction", root_path %></li>
+    <li<%=raw(selected)%>><%= link_to "Prediction", prediction_path %></li>
 
     <% if controller.action_name == "help" then selected = " class='selected'" else selected = "" end%>
     <li<%=raw(selected)%>><%= link_to "Help", help_path %></li>

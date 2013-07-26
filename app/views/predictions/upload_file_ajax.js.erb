@@ -1,19 +1,28 @@
 <% if @fatal_error.blank? then %>
+	// file upload successful
 	hide_show_waiting('hide');
 	$('#uploaded_files').html('<%=session[:file][:name]%>');
-	$('#h2_set_options').show();
-	<% new_content = escape_javascript(render(partial: "show_options"))%>
-	$('#set_options').html('<%=new_content%>');
-	$('#set_options').show();
-	// hide results to avoid showing results of last file
-	$('#results_section').hide();
+	// enable options section
+	$('#options_form').removeClass('disabled');
+	$('#species').removeAttr('disabled');
+	$('#algo').removeAttr('disabled');
+	$('#predict_button').removeAttr('disabled');
+	// hide results
+	$('#results_section').show();
+	$('#results_section').html('Start prediction first.');
+	$('#tree_section').show();
+	$('#tree_section').html('Start prediction first.');
 <% else%>
+	// error during file upload
 	$('#uploaded_files').html('No file uploaded');
-	// $('#options_section').hide();
-	$('#h2_set_options').hide();
-	$('#set_options').hide();
-	$('#predict_button').hide();
-	$('#results_section').hide();
+	// disable options section
+	$('#options_form').addClass('disabled');
+	$('#species').attr('disabled', 'disabled');
+	$('#algo').attr('disabled', 'disabled');
+	$('#predict_button').attr('disabled', 'disabled');
+	// hide results
+	$('#results_section').html('Start prediction first.');
+	$('#tree_section').html('Start prediction first.');
 	// show_error hides waiting animation
 	show_error('<%=raw(@fatal_error.join("<br />"))%>');
 	$('#example_file_field').show();

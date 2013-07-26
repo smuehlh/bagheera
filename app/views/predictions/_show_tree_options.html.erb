@@ -1,0 +1,29 @@
+<%= 
+	content_tag(:p, "Calculate phylogenetic tree with Maximum Likelihood method as implemented in FastTree. This is only useful if alignment method was MAFFT.") +
+	form_tag(calc_tree_path, :remote => true) do
+		# hidden_field_tag(:session_id, session[:file][:id]) +
+		content_tag(:table) do
+			content_tag(:tr) do
+				content_tag(:th, 
+					"Choose number of protein families/ classes to concatenate for tree"
+				)
+			end +
+			content_tag(:tr) do
+				content_tag(:td,
+					label_tag(:prot_5, "Use 5 proteins") +
+					radio_button_tag(:n_prot, "5", :checked => true)
+				)
+			end +
+			content_tag(:tr) do
+				content_tag(:td,
+					label_tag(:prot_10, "Use 10 proteins") +
+					radio_button_tag(:n_prot, "10")
+				)
+			end
+		end + 
+		submit_tag("Calculate tree",
+			:id => "tree_button",
+			onclick: "hide_show_waiting('show');"
+		)
+	end
+%>

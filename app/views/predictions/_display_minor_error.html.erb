@@ -3,8 +3,6 @@
 # minor_error: external program error
 # @predicted_prots[][:message]: CTG usage prediction not successful, but no program crashed
 if @minor_error.any? || @predicted_prots.values.collect{|k,v| k[:message].join(" ")}.max.length > 0 then %>
-	
-	<%= content_tag(:h2, "Codon usage predictions without result") %>
 	<table>
 	<% @predicted_prots.keys.sort_by { |key| key.to_s.naturalized }.each do |key| %>
 	    <% prot_name = key =~ /(.+)_\d+$/ ? $1 : key # extract protein name %>

@@ -4,15 +4,30 @@ stop_periodically_show_stat();
 <% if @fatal_error.any? then%>
 	show_error('<%=raw(@fatal_error.join("<br />"))%>');
 <% else %>
+	// prepare results layout
 	$('#results_section').show();
+	$('#results_section').html('<h2>Summary</h2>');
+	$('#results_section').append('<div id="results_stats"></div>');
+	$('#results_section').append('<h2>Predicted Genes</h2>');
+	$('#results_section').append('<div id="results_pred"></div>');
+	$('#results_section').append('<div id="results_error"></div>');
+
+	// fill layout with content
 	<% new_content = escape_javascript(render(partial: "display_results"))%>
 	$('#results_pred').html('<%=new_content%>');
 
 	<% new_content = escape_javascript(render(partial: "display_stats"))%>
 	$('#results_stats').html('<%=new_content%>');
 
+	$('#results_error').html('<h2>Codon usage predictions without result</h2>')
 	<% new_content = escape_javascript(render(partial: "display_minor_error"))%>
-	$('#results_error').html('<%=new_content%>');
+	$('#results_error').append('<%=new_content%>');
 	$('#results_error').show();
+
+	// prepare tree layout
+	$('#tree_section').show();
+	// fill tree layout with content
+	<% new_content = escape_javascript(render(partial: "show_tree_options")) %>
+	$('#tree_section').html('<%= new_content %>');
 <% end %>
 

@@ -2,7 +2,7 @@
 	show_error('<%=raw(@fatal_error.join("<br />"))%>');
 <% else %>
 	<% if @minor_error.any? then%>
-		show_error('<%=raw(@minor_error.join("<br />"))%>')
+		// show_error('<%=raw(@minor_error.join("<br />"))%>');
 		<% new_content = escape_javascript(render(partial: "display_minor_error"))%>
 		$('#results_error').append('<%=new_content%>');
 	<% end %>

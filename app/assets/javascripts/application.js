@@ -173,6 +173,7 @@ function hide_show_waiting(kind) {
     }
 };
 
+
 function toggle_icon(img, div, mode) {
     // if(!mode) mode = 'block';
     // if (div.clientHeight > 0) {

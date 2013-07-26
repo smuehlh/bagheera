@@ -19,3 +19,8 @@ every :sunday, :at => "4am" do
 
 end
 
+every :sunday, :at => "5am" do
+	# copy reference data to cymo
+	runner "CronjobController.copy_refdata_to_cymo", :output => '/tmp/cug/cron_copytocymo.log'
+end
+

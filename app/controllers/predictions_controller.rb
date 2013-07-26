@@ -12,6 +12,7 @@ class PredictionsController < ApplicationController
 	def search
 		delete_old_data # delete old uploaded genome files
 		prepare_new_session # a fresh session
+		File.open(Progress_file, 'w') { |f| f.write(write_status(1, 1, false)) }# setup status iframe
 	end
 
 	# Handel uploaded genome file: 
@@ -113,9 +114,9 @@ class PredictionsController < ApplicationController
 		render :show_alignment
 	end
 
-	def read_status
-		render :text => File.open(Progress_file, "r"){ |f| f.read }, :layout => false
-	end
+	# def read_status
+	# 	render :text => File.open(Progress_file, "r"){ |f| f.read }, :layout => false
+	# end
 
 	# Predict CUG usage for uploaded data
 	# 1) extract reference proteins
@@ -136,7 +137,7 @@ class PredictionsController < ApplicationController
 		session[:augustus] = { species: params[:species] }
 
 		ref_data, @fatal_error = load_ref_data
-
+debugger
 		@predicted_prots = {} # containing final results ...
 		@minor_error = [] # containing external program errors
 		if @fatal_error.empty? then
@@ -154,10 +155,13 @@ class PredictionsController < ApplicationController
 			# n_prot = ref_data.keys.size
 			# this_prot = 1
 
+			# File.open(Progress_file, 'w') { |f| f.write(write_status(this_prot, n_prot, false)) }
+			
+
 			# all other tasks need to be done for each ref protein
 			# peach for paralell execution, maximum 10 threads
-			# ref_data.peach(10) do |prot, all_prot_data|
-			ref_data.each do |prot, all_prot_data|
+			ref_data.peach(10) do |prot, all_prot_data|
+
 				@predicted_prots[prot] = {} # ... final results for each protein!
 				prot_basename = prot.gsub(" ", "-").downcase
 				file_basename = session[:file][:path].gsub("query.fasta", prot_basename)
@@ -275,13 +279,15 @@ class PredictionsController < ApplicationController
 				end
 				@predicted_prots[prot].merge!(results)
 
-				# File.open(Progress_file, 'w') { |f| f.fsync; f.write("Processed protein #{this_prot} from #{n_prot}") }
+				# # write nearly synchronos status file
+				# File.open(Progress_file, 'w') { |f| f.sync = true; f.write(write_status(this_prot,n_prot,false)) }
 				# this_prot += 1 # protein counter
 
 			end # ref_data.peach do |prot, des|
 
 		end # if @fatal_error.empty?
-
+		# write nearly synchronos status file
+		# File.open(Progress_file, "w") { |f| f.sync = true; f.write(write_status(n_prot,n_prot,true)) }
 		@stats = calc_stats(@predicted_prots)
 
 		render :predict_genes, formats: [:js]
@@ -385,6 +391,13 @@ class PredictionsController < ApplicationController
 			FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
 		rescue
 		end
+	end
+
+	def write_status(done, total, final=false)
+		html = ["<html>", "<head>"]
+		html += ['<meta http-equiv="refresh" content="5;url=./status.html">'] if ! final 
+		html += ["</head>", "<body>", "Processed #{done}/#{total}", "</body>", "</html>"]
+		return html.join(" ")
 	end
 
 	# load reference data from file alignment_gene_structure.json
@@ -681,11 +694,23 @@ class PredictionsController < ApplicationController
 			err = "No protein profile available for gene prediction. "
 		end	
 
-
 		stdin.close
 		output = stdout_err.read
 		stdout_err.close
-		if (! wait_thr.value.success?) || output.include?("ERROR") || ! output.include?("coding sequence") then
+
+		if wait_thr.value.termsig == 6 && err.nil? then
+			# memory error while using protein profile, try again without protein profile
+			stdin, stdout_err, wait_thr = Open3.popen2e(AUGUSTUS, "--AUGUSTUS_CONFIG_PATH=/usr/local/bin/augustus/config/", 
+				"--species=#{session[:augustus][:species]}", "--genemodel=exactlyone", "--strand=forward", "--codingseq=on", file)
+			
+			err = "Cannot use protein profile for gene prediction."
+			stdin.close
+			output = stdout_err.read
+			stdout_err.close
+			if (! wait_thr.value.success?) || output.include?("ERROR") || ! output.include?("coding sequence") then
+				return false, "", "", err
+			end
+		elsif (! wait_thr.value.success?) || output.include?("ERROR") || ! output.include?("coding sequence")
 			return false, "", "", err
 		end
 
@@ -1347,7 +1372,6 @@ class PredictionsController < ApplicationController
 
 	def sp2sp_abbr
 		fh = File.new("/fab8/smuehlh/data/cugusage/sp_sp-abbr.csv", "w")
-
 		ref_data, fatal_error = load_ref_data
 		list = {}
 		if fatal_error.empty? then
@@ -1365,12 +1389,29 @@ class PredictionsController < ApplicationController
 		list.each do |sp, sp_abbr|
 			fh.puts sp + "," + sp_abbr
 		end
+
 		fh.close
 
 		render :eval_ref_data, formats:[:js]
 	end
 
-	def eval_ref_data
+def eval_ref_data
+	ref_data, fatal_error = load_ref_data
+
+	if fatal_error.empty? then
+		ref_data.keys.sort_by { |key| key.to_s.naturalized }.each do |prot|
+			puts prot
+			ref_alignment = Hash[*ref_data[prot]["alignment"].split("\n")]
+			ref_alignment.keys.each {|k| ref_alignment[ k.sub(">", "") ] = ref_alignment.delete(k)}
+			lens = ref_alignment.values.collect {|v| v.gsub("-", "").length}
+			n_seqs = lens.size
+			puts (lens.sum.to_f/n_seqs).round
+		end
+	end
+	render :eval_ref_data, formats:[:js]
+end
+
+	def eval_ref_data2
 
 		fh = File.new("/tmp/cug/statistics_about_ref_data.txt", "w")
 
@@ -1525,51 +1566,62 @@ class PredictionsController < ApplicationController
 	end
 
 	# number of CTG codons per protein
+
+	# def stats_ctg_prot
+	# 	fh = out_ctg_prot = "/fab8/smuehlh/data/cugusage/ctg_prot_neu.csv"
+	# 	File.open(fh).each do |line|
+	# 		next if line.include?("Protein")
+	# 		line.chomp!
+	# 		parts = line.split("\;")
+	# 		puts "#{parts[0]},#{(parts[1].to_f/parts[2].to_f).round(2)}"
+	# 	end
+	# 	render :eval_ref_data, formats:[:js]
+	# end
 	def stats_ctg_prot 
 		file_in = "/fab8/smuehlh/data/cugusage/statistics_about_ref_data.txt"
 
 		# out-file 1: Verteilung CTG Positionen pro Protein
-		out_ctg_prot = "/fab8/smuehlh/data/cugusage/ctg_prot.csv"
+		out_ctg_prot = "/fab8/smuehlh/data/cugusage/ctg_prot_neu.csv"
 		fh_ctg_prot = File.new(out_ctg_prot, "w")
 		fh_ctg_prot.puts "Protein,# CTGs"
 
 		prot = ""
-		n_ctg_a = 0
-		n_ctg_k = 0
-		n_ctg_m = 0
+		# n_ctg_a = 0
+		# n_ctg_k = 0
+		# n_ctg_m = 0
 		File.open(file_in).each do |line|
 			if ! line.include?(".") && ! line.include?("\t") then
 				# its an protein
-				if line.include?("Actin") then
-					prot = "Actin"
-				elsif line.include?("Kinesin")
-					prot = "Kinesin"
-				elsif line.include?("Myosin heavy chain")
-					prot = "Myosin heavy chain"
-				else
+				# if line.include?("Actin") then
+				# 	prot = "Actin"
+				# elsif line.include?("Kinesin")
+				# 	prot = "Kinesin"
+				# elsif line.include?("Myosin heavy chain")
+				# 	prot = "Myosin heavy chain"
+				# else
 					prot = line.chomp
-				end
+				# end
 			elsif line.include?("CTG positions.") 
 				# its the number of CTG positions
 				n_ctg = line.match(/\d+/)[0]
-				if prot == "Actin" then
-					n_ctg_a += n_ctg.to_i
+				# if prot == "Actin" then
+				# 	n_ctg_a += n_ctg.to_i
 
-				elsif prot == "Kinesin"
-					n_ctg_k += n_ctg.to_i
+				# elsif prot == "Kinesin"
+				# 	n_ctg_k += n_ctg.to_i
 
-				elsif prot == "Myosin heavy chain"
-					n_ctg_m += n_ctg.to_i
+				# elsif prot == "Myosin heavy chain"
+				# 	n_ctg_m += n_ctg.to_i
 
-				else
+				# else
 					fh_ctg_prot.puts prot + "," + n_ctg
-				end
+				# end
 
 			end
 		end
-		fh_ctg_prot.puts "Actin,"+n_ctg_a.to_s
-		fh_ctg_prot.puts "Kinesin,"+n_ctg_k.to_s
-		fh_ctg_prot.puts "Myosin heavy chain,"+n_ctg_m.to_s
+		# fh_ctg_prot.puts "Actin,"+n_ctg_a.to_s
+		# fh_ctg_prot.puts "Kinesin,"+n_ctg_k.to_s
+		# fh_ctg_prot.puts "Myosin heavy chain,"+n_ctg_m.to_s
 
 		fh_ctg_prot.close
 
@@ -1619,6 +1671,7 @@ class PredictionsController < ApplicationController
 
 				# set up data for this protein
 				prot = line
+				puts prot
 				n_ctg = 0
 				n_conserved = 0
 				n_conserved_in5 = 0
@@ -1627,7 +1680,7 @@ class PredictionsController < ApplicationController
 			elsif line.include?("CTG positions.") 
 				# its the total number of CTG positions in this protein
 				n_ctg = line.match(/\d+/)[0]
-						
+					puts line	
 			elsif ! n_ctgs.nil? 
 				# its a row with ctg usage data
 

@@ -1,11 +1,11 @@
 <%opt_algo, pre_select_algo, opt_config, pre_select_config, opt_species, pre_select_species = fill_selection_tags%>
 <%= 
-	form_tag(predict_genes_path, :remote => true) do
+	form_tag(predict_genes_path, :remote => true, :class => "disabled", :id => "options_form") do
 		content_tag(:table) do
 			content_tag(:tr) do
 				content_tag(:td, "Reference species for gene prediction (Augustus)") +
 				content_tag(:td,
-					select_tag(:species, options_for_select(opt_species, pre_select_species))
+					select_tag(:species, options_for_select(opt_species, pre_select_species), :disabled => true)
 				)
 			end +
 			content_tag(:tr) do 
@@ -13,7 +13,8 @@
 				content_tag(:td, 		
 					select_tag(:algo, options_for_select(opt_algo, pre_select_algo), 
 					onchange:  
-					"if ($('#algo').val() == 'dialign' || $('#algo').val() == 'mafft' ) {$('#config').attr('disabled', 'disabled');} else {$('#config').removeAttr('disabled');}")
+					"if ($('#algo').val() == 'dialign' || $('#algo').val() == 'mafft' ) {$('#config').attr('disabled', 'disabled');} else {$('#config').removeAttr('disabled');}",
+					:disabled => true)
 				)
 			end +
 			content_tag(:tr) do
@@ -35,8 +36,9 @@
 		# uncomment if submit tag should be used
 		# submit_tag("Use options")
 		# comment if submit-tag should be used
-		submit_tag("Predict", class: "nice_button", 
+		submit_tag("Start prediction", #class: "nice_button", 
 			:id => "predict_button", 
-			onclick: "periodically_show_stat();")
+			onclick: "periodically_show_stat();",
+			:disabled => true)
 	end
 %>

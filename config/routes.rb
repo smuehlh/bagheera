@@ -1,7 +1,8 @@
 Bagheera::Application.routes.draw do
  if ENV && ENV["PWD"] && (ENV["PWD"].include?("fab8") || ENV["PWD"].include?("jenkins")) then
-    root to: 'predictions#search'
+    root to: 'static_pages#home'
 
+    match '/prediction', to: 'predictions#search', as: 'prediction', :via => [:get]
     match '/team', to: 'static_pages#team', as: 'team', :via => [:get]
     match '/help', to: 'static_pages#help', as: 'help', :via => [:get]
     match '/contact', to: 'static_pages#contact', as: 'contact', :via => [:get]
@@ -11,8 +12,11 @@ Bagheera::Application.routes.draw do
     match 'load_example', to: 'predictions#load_example', as: 'load_example', :via => [:get]
     match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
     match 'predict_more', to: 'predictions#predict_more', as: 'predict_more', :via => [:get]
-    match 'read_status', to: 'predictions#read_status', as: 'read_status', :via => [:get]
-    # match 'eval', to: 'predictions#eval_ref_data', as: 'eval', :via => [:get]
+    match 'calc_tree', to: 'tree#calc_tree', as: 'calc_tree', :via => [:post]
+    match 'download', to: 'tree#download', as: 'download', :via => [:get]
+
+    # match 'read_status', to: 'predictions#read_status', as: 'read_status', :via => [:get]
+    match 'eval', to: 'predictions#stat_conserved_pos', as: 'eval', :via => [:get]
   else
     scope '/bagheera' do
 
@@ -27,9 +31,9 @@ Bagheera::Application.routes.draw do
       match 'load_example', to: 'predictions#load_example', as: 'load_example', :via => [:get]
       match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
       match 'predict_more', to: 'predictions#predict_more', as: 'predict_more', :via => [:get]
-      match 'read_status', to: 'predictions#read_status', as: 'read_status', :via => [:get]
+      match 'calc_tree', to: 'tree#calc_tree', as: 'calc_tree', :via => [:post]
+      match 'download', to: 'tree#download', as: 'download', :via => [:get]
       # match 'eval', to: 'predictions#stat_conserved_pos', as: 'eval', :via => [:get]
-
     end
   end
 

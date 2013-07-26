@@ -32,7 +32,7 @@ class CronjobController < ApplicationController
 		# load reference data
 		data, errors = load_ref_data
 		puts errors.join(" ")
-puts data.keys
+
 		if errors.empty? then
 			puts "Successfully loaded reference data"
 			puts "Separating myosin, actin and kinesin by class"
@@ -44,18 +44,22 @@ puts "Myo done"
 puts "Actin done"
 			kinesin_data = separate_by_class(data, "Kinesin")
 puts "Kin done"
+			tubulin_data = separate_by_class(data, "Tubulin")
+puts "Tub done"
 			# delete unseparated data 
 			puts "Deleting unseparated data"
 
 			data.delete("Myosin heavy chain")
 			data.delete("Actin related protein")
 			data.delete("Kinesin")
+			data.delete("Tubulin")
 			# add separated (do this after deletion of unseparated !!! as old key is used as "default class")
 			puts "Add separated data to reference data"
 
 			data.merge!(myo_data)
 			data.merge!(actin_data)
 			data.merge!(kinesin_data)
+			data.merge!(tubulin_data)
 
 			# delete kinesin and myosin orphans, and myosin class 17 (extremly unusual for saccharomycetes!)
 			data.delete("Myosin heavy chain")
@@ -109,7 +113,8 @@ puts "Kin done"
 				# puts "Moving new file to place ... "
 				# FileUtils.mv(BASE_PATH + "new_" + REF_DATA, BASE_PATH + REF_DATA)
 				puts "Moving new reference data to place ..."
-				FileUtils.rm Dir.glob(BASE_PATH + "*.fasta")
+				FileUtils.rm Dir.glob(BASE_PATH + "*.fasta"), :verbose => true
+				FileUtils.rm Dir.glob(BASE_PATH + "*.prfl"), :verbose => true
 				FileUtils.mv Dir.glob(path_new_data + "*"), BASE_PATH, :verbose => true
 				FileUtils.rm_rf path_new_data, :secure => true, :verbose => true
 				FileUtils.rm_rf "/tmp/cug/new_alignment_gene_structure.json", :verbose => true
@@ -125,7 +130,7 @@ puts "Kin done"
 
 	# delete old data in /tmp/cug/ and /tmp/cymobase_alignment_cug*
 	# data from old predictions and show_alignment requests
-	def delete_old_data(days = 1)
+	def self.delete_old_data(days = 1)
 		begin
 			Dir.glob(BASE_PATH + "**/") do |dir|
 				if dir == BASE_PATH then
@@ -139,6 +144,20 @@ puts "Kin done"
 			FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
 		rescue => e
 			puts "Could not delete old data: #{e}"
+		end
+	end
+
+	# copy new reference data to cymo
+	# only if the update worked properly
+	def self.copy_refdata_to_cymo
+		puts "---"
+		file_date = File.new("/tmp/cug/alignment_gene_structure.json").mtime
+		# ref data file should be from today if the update worked!
+		if Time.now.to_date === file_date.to_date then
+			puts "Ref data up ot date - copy them to cymo"
+			system("cd /fab8/db_scripts/deployment/bagheera/ && cap deploy_refdata")
+		else
+			puts "Ref data not up to date - do nothing!"	
 		end
 	end
 
@@ -186,6 +205,9 @@ begin
 				klass = $2 if $2
 			elsif prot.include?("Actin") 
 				name =~ /[a-zA-Z_]+(Arp)([0-9]+)/
+				klass = $2 if $2
+			elsif prot.include?("Tubulin")
+				name =~ /[a-zA-Z_]+(Tub)([0-9]+)/
 				klass = $2 if $2
 			else
 				name =~ /[a-zA-Z_]+(Kinesin)([0-9]+)/

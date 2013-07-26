@@ -73,7 +73,7 @@ h1, h2, h3, h4, h5 {
 #logo {
     height:70px;
     width: 900px;
-    background: url("layout/bagheera-banner_v4.png") no-repeat scroll right top transparent;
+    background: url("layout/bagheera-banner_v5.png") no-repeat scroll right top transparent;
 }
 
 #nav, ul{
@@ -344,6 +344,9 @@ input.defaulttext, textarea.defaulttext {
     margin-top: 5px;
 }
 
+form.disabled {
+    color: $dunkelgrau;
+}
 /* display results */
 .pred_nothing {
     font-style: italic;

@@ -5,18 +5,13 @@
 <p>
 <%= render :partial => "upload_file" %>
 </p>
-<br />
-<h2 id="h2_set_options" style="display:none; clear:both;">Gene prediction and alignment options</h2>
-<div id="set_options" style="clear:both;"></div>
-<!-- uncomment if alignment options should have an own submit-button instead of the big "Predict one: the following is the this big predict-button  -->
-<!-- <div id="predict_button" style="display:none;">
-	<%#= link_to("Predict", predict_genes_path , {:remote => true, :class =>"nice_button", :id => "predict_genes", :onclick => "hide_show_waiting('show');"}) %>
-</div> -->
-<div id="results_section" style="display:none;">
-	<h1>Results</h1>
-	<h2>Summary</h2>
-	<div id="results_stats"></div>
-	<h2>Predicted Genes</h2>
-	<div id="results_pred"></div>
-	<div id="results_error"></div>
-</div>
+<br>
+
+<h2 style="clear:both;">Gene prediction and alignment options</h2>
+<%= render :partial => "show_options" %>
+<br>
+<h1>Results</h1>
+<div id="results_section">Start prediction first.</div>
+<br>
+<h1>Phylogenetic tree</h1>
+<div id="tree_section">Start prediction first.</div>
