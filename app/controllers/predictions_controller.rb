@@ -137,7 +137,7 @@ class PredictionsController < ApplicationController
 		session[:augustus] = { species: params[:species] }
 
 		ref_data, @fatal_error = load_ref_data
-debugger
+
 		@predicted_prots = {} # containing final results ...
 		@minor_error = [] # containing external program errors
 		if @fatal_error.empty? then
