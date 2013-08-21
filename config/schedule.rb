@@ -1,4 +1,4 @@
-every :sunday, :at => "4am" do
+every 1.month, :at => "start of the month at 4am" do
 
 	command "rm -f /tmp/cug/cron.log && rm -f /tmp/cug/cron_ruby.log && rm -f /tmp/cug/err.log"
 
@@ -19,7 +19,7 @@ every :sunday, :at => "4am" do
 
 end
 
-every :sunday, :at => "5am" do
+every 1.month, :at => "start of the month at 5am" do
 	# copy reference data to cymo
 	runner "CronjobController.copy_refdata_to_cymo", :output => '/tmp/cug/cron_copytocymo.log'
 end

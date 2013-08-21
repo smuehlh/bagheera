@@ -1005,7 +1005,7 @@ class PredictionsController < ApplicationController
 			nl = rec.index("\n") # first match: separating header from seq
 			header = rec[0..nl-1]
 			seq = rec[nl+1..-1]
-			seq.gsub!(/\r?\n/,'') # removing all remaining \n from seq 
+			seq.gsub!(/\r?\n/,'') || seq # removing all remaining \n from seq 
 			headers.push(header)
 			seqs.push(seq)
 		end
@@ -1060,9 +1060,10 @@ class PredictionsController < ApplicationController
 		pred_prot = output.match(/protein sequence = \[(.*)\]/m)[1]
 		pred_dna = output.match(/coding sequence = \[(.*?)\]/m)[1]
 		# prepare output
-		pred_prot.gsub!("\n# ", "").upcase!
-		pred_dna.gsub!("\n# ", "").upcase!
-		return pred_prot, pred_dna
+		# using the non-destructive variant is important, as gsub! returns nil if no substituion made
+		prot = pred_prot.gsub("\n# ", "").upcase
+		dna = pred_dna.gsub("\n# ", "").upcase
+		return prot, dna
 	end
 
 	# calculate position of residue in unaligned sequence based on the position in aligned sequence
@@ -1410,22 +1411,107 @@ def eval_ref_data
 	end
 	render :eval_ref_data, formats:[:js]
 end
+	def eval_refdata_prot_pro_species
+		# done: 20 august
+
+		ref_data, fatal_error = load_ref_data
+		fh = File.new("/fab8/smuehlh/data/cugusage/stats_2008/prots_per_org.csv", "w")
+		orgs = {}
+		if fatal_error.empty? then
+			ref_data.keys.sort_by {|key| key.to_s.naturalized}.each do |prot|
+				puts prot
+				ref_data[prot]["genes"].each do |name, gene|
+					if orgs.has_key?(gene["species"]) then
+						if orgs[gene["species"]].has_key?(prot) then
+							orgs[gene["species"]][prot] += 1
+						else
+							orgs[gene["species"]][prot] = 1
+						end
+					else
+						orgs[gene["species"]] = {}
+						orgs[gene["species"]][prot] = 1
+					end
+				end
+			end
+			fh.puts "Species,#{orgs.keys.collect{|sp| orgs[sp].keys}.flatten.uniq.sort.join(",")}"
+			allprots = orgs.keys.collect{|sp| orgs[sp].keys}.flatten.uniq.sort
+			orgs.keys.each do |sp|
+				line_array = Array.new(allprots.size)
+				# add every protein count to corresponding field in line_array
+				orgs[sp].keys.sort_by {|key| key.to_s.naturalized}.each do |prot|
+					ind = allprots.index(prot)
+					line_array[ind] = orgs[sp][prot]
+				end
+				fh.puts "#{sp},#{line_array.join(",")}"
+			end
+		end
+		fh.close
+		render :eval_ref_data, formats:[:js]
+	end
 
 	def eval_ref_data2
+# Achtung: geht nur haeppechenweise mit use_not, next und break !!!
+		fh = File.new("/fab8/smuehlh/data/cugusage/stats_2008/statistics_about_ref_data.txt", "a")
 
-		fh = File.new("/tmp/cug/statistics_about_ref_data.txt", "w")
-
-		fh_org = File.new("/fab8/smuehlh/data/cugusage/ctg_org.csv", "w")
+		fh_org = File.new("/fab8/smuehlh/data/cugusage/stats_2008/ctg_org.csv", "a")
 		fh_org.puts "Organism,# CTGs"
 
 		ref_data, fatal_error = load_ref_data
 
 		if fatal_error.empty? then
 			results_per_org = {}
+			# use_not = ["Actin related protein",
+			# 	"Actin related protein Class 1",
+			# 	"Actin related protein Class 2",
+			# 	"Actin related protein Class 3",
+			# 	"Actin related protein Class 4",
+			# 	"Actin related protein Class 5",
+			# 	"Actin related protein Class 6",
+			# 	"Actin related protein Class 7",
+			# 	"Actin related protein Class 8",
+			# 	"Actin related protein Class 9",
+			# 	"Actin related protein Class 10",
+			# 	"Calcineurin",
+			# 	"Calmodulin",
+			# 	"Capping Protein",
+			# 	"Centrin",
+			# 	"Coronin",
+			# 	"Dynactin1 p150",
+			# 	"Dynactin2 p50",
+			# 	"Dynactin3 p24",
+			# 	"Dynactin4 p62",
+			# 	"Dynactin5 p25",
+			# 	"Dynein Heavy Chain",
+			# 	"Dynein Intermediate Chain",
+			# 	"Dynein Light Chain 8",
+			# 	"Dynein Light Intermediate Chain",
+			# 	"Dynein TcTex",
+			# 	"Formin",
+			# 	"Frequenin",
+			# 	"Kinesin Class 1",
+			# 	"Kinesin Class 3",
+			# 	"Kinesin Class 4",
+			# 	"Kinesin Class 5",
+			# 	"Kinesin Class 8",
+			# 	"Kinesin Class 14",
+			# 	"Kinesin Class 15",
+			# 	"Kinesin Class 16",
+			# 	"Myosin essential light chain"]
+
+			regex = Regexp.union(*use_not)
+
 			ref_data.keys.sort_by { |key| key.to_s.naturalized }.each do |prot|
-				puts prot	
+
+				# if regex.match(prot) then
+				# 	puts "Skipping #{prot}"
+				# 	next
+				# end
+				# break if prot == "Myosin heavy chain Class 1"
+				puts prot
+
+
 				# statistics about all CTG-Positions in reference data
-				results = {ref_seq_num: "", ctg_pos: [], ref_chem: {}, ref_ctg: {}}
+				results = {ref_seq_num: "", ctg_pos: [], ref_chem: {}, ref_ctg: {}, sc_c_aa: {}, ca_a_aa: {}}
 
 				pos2key = {} # map from ctg position to a sequece containing this ctg
 
@@ -1473,6 +1559,9 @@ end
 					# all amino acids and all codons for a given CTG position
 					col = []
 					codons = []
+					# amino acids used by c.albicans and s.cerevisiae at this CTG position, default if prot is not encoded: ""
+					ca_a_aa = ""
+					sc_c_aa = ""
 					
 	 				# get reference key of a sequence containing this CTG position
 	 				ref_key = pos2key[pos]
@@ -1492,11 +1581,23 @@ end
 							spos = alignment_pos2sequence_pos(ref_cymopos, cymo_prot) # position in sequece without gaps
 							codons << get_codon(ref_data[prot]["genes"][cymo_header]["gene"], spos)
 						end
+
+						# collect amino acid used by reference species
+						if cymo_header.match(/^(Sc_c)[A-Z]/) then
+							sc_c_aa = cymo_prot[ref_cymopos]
+						end
+						if cymo_header.match(/^(Ca_a)[A-Z]/) then
+							ca_a_aa = cymo_prot[ref_cymopos]
+						end
 					end
 
 					# store results
 					ref_alignment_cols << col
 					ref_codons << codons.compact # if only nil- placeholders, it will be an empty array
+
+					# amino acid used by s.cerevisiae and c.albicans
+					results[:sc_c_aa][pos] = sc_c_aa
+					results[:ca_a_aa][pos] = ca_a_aa
 				end
 
 				# amino acid usage 
@@ -1517,7 +1618,7 @@ end
 				fh.puts "#{results[:ref_seq_num]} sequences."
 				fh.puts "#{results[:ctg_pos].size} CTG positions."
 				fh.puts ""
-				fh.puts "CTG position\tDistribution of amino acids\tNumber of amino acids\tCTG usage\tNumber of CTG codons"
+				fh.puts "CTG position\tDistribution of amino acids\tNumber of amino acids\tCTG usage\tNumber of CTG codons\tUsage Sc_c\t Usage Ca_c"
 				results[:ctg_pos].sort.each do |pos|
 					# check if for all ctg positsions info about aa distribution and ctg usage exists
 					if results[:ref_chem].has_key?(pos) then
@@ -1535,12 +1636,26 @@ end
 						ctg_stat = "Not discriminative."
 						n_ctgs = "-"
 					end
+					if results[:sc_c_aa].has_key?(pos) then
+						sc_c_aa = results[:sc_c_aa][pos]
+					else
+						sc_c_aa = ""
+					end
 
+					if results[:ca_a_aa].has_key?(pos) then
+						ca_a_aa = results[:ca_a_aa][pos]
+					else
+						ca_a_aa = ""
+					end
 					# tab separated list of all statistics for this position
 					# pos + 1 to convert between ruby and human counting! 
-					fh.puts "#{view_context.ruby2human_counting(pos)}\t#{aa_stat}\t#{n_aas}\t#{ctg_stat}\t#{n_ctgs}"
+					fh.puts "#{view_context.ruby2human_counting(pos)}\t#{aa_stat}\t#{n_aas}\t#{ctg_stat}\t#{n_ctgs},\t#{sc_c_aa}\t#{ca_a_aa}"
 				end
 				fh.puts ""
+				# "free" some memory
+				results = nil
+				ref_alignment_cols = nil
+				ref_alignment = nil
 
 			end # ref_data.each
 
@@ -1558,7 +1673,6 @@ end
 
 		fh.close
 		fh_org.close
-		FileUtils.cp "/tmp/cug/statistics_about_ref_data.txt", "/fab8/smuehlh/data/cugusage/statistics_about_ref_data.txt"
 		stat_conserved_pos
 		stats_ctg_prot
 		# parse_all_stats
@@ -1578,10 +1692,10 @@ end
 	# 	render :eval_ref_data, formats:[:js]
 	# end
 	def stats_ctg_prot 
-		file_in = "/fab8/smuehlh/data/cugusage/statistics_about_ref_data.txt"
+		file_in = "/fab8/smuehlh/data/cugusage/stats_2008/statistics_about_ref_data.txt"
 
 		# out-file 1: Verteilung CTG Positionen pro Protein
-		out_ctg_prot = "/fab8/smuehlh/data/cugusage/ctg_prot_neu.csv"
+		out_ctg_prot = "/fab8/smuehlh/data/cugusage/stats_2008/ctg_prot_neu.csv"
 		fh_ctg_prot = File.new(out_ctg_prot, "w")
 		fh_ctg_prot.puts "Protein,# CTGs"
 
@@ -1631,13 +1745,13 @@ end
 	# number of CTG codons per protein and number of conserved CTG codons (occuring in min. 2 and min. 5 genes) per protein
 	# number of CTG codons broken down: number of genes vs. number of ctgs occuring in that many genes  
 	def stat_conserved_pos
-		file_in = "/fab8/smuehlh/data/cugusage/statistics_about_ref_data.txt"
+		file_in = "/fab8/smuehlh/data/cugusage/stats_2008/statistics_about_ref_data.txt"
 
-		out_conserved = "/fab8/smuehlh/data/cugusage/prot_conserved_pos.csv"
+		out_conserved = "/fab8/smuehlh/data/cugusage/stats_2008/prot_conserved_pos.csv"
 		fh_out = File.new(out_conserved, "w")
 		fh_out.puts "Protein,#CTGs,#CTGs in min.2,#CTGs in min.5"
 
-		out_broken_down = "/fab8/smuehlh/data/cugusage/prot_conserved_pos_detail.csv"
+		out_broken_down = "/fab8/smuehlh/data/cugusage/stats_2008/prot_conserved_pos_detail.csv"
 		fh_out_detailed = File.new(out_broken_down, "w")
 		fh_out_detailed.puts "Protein"
 		fh_out_detailed.puts "#genes,#CTGs"
