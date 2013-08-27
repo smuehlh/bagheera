@@ -1,5 +1,20 @@
 class CronjobController < ApplicationController
+	require 'open3'
 # debug me by calling "script/rails runner 'CronjobController.prepare_ref_data'" on command line and including a "debugger" anywhere
+	
+	def self.update_ref_data
+		# rm log files
+		FileUtils.rm_f "/tmp/cug/cron.log" "/tmp/cug/err.log"
+		# wget
+		is_success = system("wget --spider http://fab8:2001/api_cug_alignment/all -a '/tmp/cug/cron.log'")
+		# prepare data
+		if is_success then
+			prepare_ref_data
+		else
+			puts "wget not successul. Aborting!"
+		end
+	end
+
 	def self.prepare_ref_data
 
 		# wait for wget to be finished, but don't wait forever! (max. 10 minutes)
@@ -46,6 +61,8 @@ puts "Actin done"
 puts "Kin done"
 			tubulin_data = separate_by_class(data, "Tubulin")
 puts "Tub done"
+			capping_data = separate_by_class(data, "Capping Protein")
+puts "CAP done"
 			# delete unseparated data 
 			puts "Deleting unseparated data"
 
@@ -53,6 +70,7 @@ puts "Tub done"
 			data.delete("Actin related protein")
 			data.delete("Kinesin")
 			data.delete("Tubulin")
+			data.delete("Capping Protein")
 			# add separated (do this after deletion of unseparated !!! as old key is used as "default class")
 			puts "Add separated data to reference data"
 
@@ -60,11 +78,22 @@ puts "Tub done"
 			data.merge!(actin_data)
 			data.merge!(kinesin_data)
 			data.merge!(tubulin_data)
+			data.merge!(capping_data)
 
-			# delete kinesin and myosin orphans, and myosin class 17 (extremly unusual for saccharomycetes!)
+			# delete all proteins which are extremely unusual for saccharomycetes
+			data.delete("Calcineurin")
+			data.delete("Calmodulin")
+			data.delete("Centrin")
+			data.delete("Frequenin")
+			data.delete("Dynein Light Intermediate Chain")
 			data.delete("Myosin heavy chain")
+			data.delete("Myosin essential light chain")
+			data.delete("Myosin regulatory light chain")
 			data.delete("Myosin heavy chain Class 17")
 			data.delete("Kinesin")
+			data.delete("Kinesin Class 4")
+			data.delete("Kinesin Class 16")
+
 
 			# save updated reference data
 			puts "Saving updated reference data to file"
@@ -107,17 +136,59 @@ puts "Tub done"
 
 			end # data.each
 			puts "Finished."
-			# set correct permissions
+
+
+			# remove data from same species as the 'load example' file: Ca_b
+			puts "Create reference data without example genome"
+			path_no_ca_b = path_new_data + PATH_REF_WO_EXAMPLE
+			FileUtils.mkdir(path_no_ca_b, :mode => 0775)
+			# reference data
+			data_no_ca_b = del_ca_b_from_ref(data)
+			fh = File.new(path_no_ca_b + REF_DATA, "w")
+			fh.puts JSON.dump(data_no_ca_b)
+			fh.close
+			# alignment files
+			data_no_ca_b.each do |prot, prot_data|
+				data_file = path_no_ca_b + prot.gsub(" ", "-").downcase + ".fasta"
+				fasta = prot_data["alignment"]
+
+				File.open(data_file, 'w'){|f| f.write(fasta)}
+				# check and correct length of each aligned sequence
+				is_true = ensure_length(data_file)
+				if ! is_true then
+					puts "\t #{prot}: Not all sequences were of same lenght. Now they are."
+				end
+				# check if mafft accepts them as aligned
+				is_true = ensure_mafft_is_fine(data_file)
+				if ! is_true then
+					puts "\t #{prot}: Mafft thinks, there are not aligned. So align them with mafft ... "
+
+					# align them with mafft
+					is_true = run_mafft(data_file)
+					if is_true then 
+						puts " done."
+					else
+						puts " ... Could not align."
+					end
+				end 
+				
+				# calculate profile
+				puts "Generating protein profiles ... "
+				is_true = calc_protein_profiles(data_file)
+			end
+			puts "done"
+
 
 			begin
 				# puts "Moving new file to place ... "
 				# FileUtils.mv(BASE_PATH + "new_" + REF_DATA, BASE_PATH + REF_DATA)
 				puts "Moving new reference data to place ..."
-				FileUtils.rm Dir.glob(BASE_PATH + "*.fasta"), :verbose => true
-				FileUtils.rm Dir.glob(BASE_PATH + "*.prfl"), :verbose => true
-				FileUtils.mv Dir.glob(path_new_data + "*"), BASE_PATH, :verbose => true
+				FileUtils.rm_f Dir.glob(BASE_PATH + "*.fasta"), :verbose => true
+				FileUtils.rm_f Dir.glob(BASE_PATH + "*.prfl"), :verbose => true
+				FileUtils.rm_rf Dir.glob(BASE_PATH + PATH_REF_WO_EXAMPLE), :verbose => true
+				FileUtils.mv Dir.glob(path_new_data + "*"), BASE_PATH, :verbose => true, :force => true
 				FileUtils.rm_rf path_new_data, :secure => true, :verbose => true
-				FileUtils.rm_rf "/tmp/cug/new_alignment_gene_structure.json", :verbose => true
+				# FileUtils.rm_rf "/tmp/cug/new_alignment_gene_structure.json", :verbose => true
 				puts "done."
 			rescue => e
 				puts "Could not move new files to place:"
@@ -135,13 +206,15 @@ puts "Tub done"
 			Dir.glob(BASE_PATH + "**/") do |dir|
 				if dir == BASE_PATH then
 					next
+				elsif dir == BASE_PATH + PATH_REF_WO_EXAMPLE 
+					next
 				elsif File.mtime(dir) <= days.day.ago
 					FileUtils.rm_rf(dir, :secure=>true)
 				end
 			end
 
 			# delete alignment file for show-alignment function
-			FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
+			FileUtils.rm_f Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
 		rescue => e
 			puts "Could not delete old data: #{e}"
 		end
@@ -208,6 +281,9 @@ begin
 				klass = $2 if $2
 			elsif prot.include?("Tubulin")
 				name =~ /[a-zA-Z_]+(Tub)([0-9]+)/
+				klass = $2 if $2
+			elsif prot.include?("Capping")
+				name =~ /[a-zA-Z_]+(CAP)([0-9]+)/
 				klass = $2 if $2
 			else
 				name =~ /[a-zA-Z_]+(Kinesin)([0-9]+)/
@@ -299,6 +375,32 @@ end
 		stdout_err.close
 		File.open(file, 'w') {|f| f.write(output)}
 		return true
+	end
+
+	# delete Ca_b genes from the reference data
+	# method should be called only if the example data Ca_b were loaded
+	def self.del_ca_b_from_ref(data)
+		# todo: in cronjob ausfuerhen und speicher!!!
+		new_data = {}
+		data.each do |prot, dat|
+			new_data[prot] = {}
+			# delete from alignment
+			begin
+			ref_alignment = Hash[*data[prot]["alignment"].split("\n")]
+			reduced = ref_alignment.delete_if {|k,v| k =~ /Ca_b/}
+			rescue => e
+				puts "---"
+				puts "ERROR (#{prot}):"
+				puts e
+				puts "---"
+				return data
+			end
+			new_data[prot]["alignment"] = reduced.map{|k,v| "#{k}\n#{v}"}.join("\n") + "\n"
+			# delete gene structures
+			reduced = data[prot]["genes"].delete_if {|k,v| k =~ /Ca_b/}
+			new_data[prot]["genes"] = reduced
+		end
+		return new_data
 	end
 
 	# convert header and sequence into fasta-format

@@ -51,10 +51,10 @@ function load_fileupload() {
             }
         },
         submit: function() {
+            // UPDATE: upload_file_ajax.js.erb handles all of this, no need to do it here!
             // first hide the predict button and results in case a subsequent submit contains false data
-            $('#predict_button').hide();
-            $('#options_section').hide();
-            $('#results_section').hide();
+            // $('#predict_button').hide();
+            // $('#results_section').hide();
             // show loading anim
             hide_show_waiting('show');
         }
@@ -90,9 +90,9 @@ function load_fileupload_old() {
 };
 
 function show_error(error) {
+    hide_show_waiting('hide');
     $('#errors_container').html(error);
     $('#error').click();
-    hide_show_waiting('hide');
 };
 
 function load_fancy_boy() {

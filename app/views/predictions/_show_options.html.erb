@@ -3,6 +3,12 @@
 	form_tag(predict_genes_path, :remote => true, :class => "disabled", :id => "options_form") do
 		content_tag(:table) do
 			content_tag(:tr) do
+				content_tag(:td, "Use BLAST low complexity filter") +
+				content_tag(:td,
+					check_box_tag(:blast, "1", false, :disabled => true)
+				)
+			end +
+			content_tag(:tr) do
 				content_tag(:td, "Reference species for gene prediction (Augustus)") +
 				content_tag(:td,
 					select_tag(:species, options_for_select(opt_species, pre_select_species), :disabled => true)

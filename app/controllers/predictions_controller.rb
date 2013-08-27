@@ -12,7 +12,7 @@ class PredictionsController < ApplicationController
 	def search
 		delete_old_data # delete old uploaded genome files
 		prepare_new_session # a fresh session
-		File.open(Progress_file, 'w') { |f| f.write(write_status(1, 1, false)) }# setup status iframe
+		# File.open(Progress_file, 'w') { |f| f.write(write_status(1, 1, false)) }# setup status iframe
 	end
 
 	# Handel uploaded genome file: 
@@ -133,14 +133,23 @@ class PredictionsController < ApplicationController
 	# accessible params in view: @minor_error [Array] Errors during gene prediction of single proteins, no program abort
 	def predict_genes
 		# add options to session
+		use_low_comp_filter = params.has_key?(:blast) ? true : false
 		session[:align] = { algo: params[:algo], config: params[:config] }
 		session[:augustus] = { species: params[:species] }
+		session[:blast] = { use_low_comp_filter: use_low_comp_filter}
 
-		ref_data, @fatal_error = load_ref_data
+		if session[:file][:name] == "Candida_albicans_WO_1.fasta" then
+			ref_data, @fatal_error = load_ref_data(true) # true: use ref_data without candida albicans wo 1
+			ref_files_path = BASE_PATH + PATH_REF_WO_EXAMPLE
+		else
+			ref_data, @fatal_error = load_ref_data
+			ref_files_path = BASE_PATH
+		end 
 
 		@predicted_prots = {} # containing final results ...
 		@minor_error = [] # containing external program errors
 		if @fatal_error.empty? then
+
 			# sucessfully loaded reference data file
 			# setup blast database
 			genome_db = session[:file][:path].gsub(".fasta", "_db")
@@ -166,41 +175,62 @@ class PredictionsController < ApplicationController
 				prot_basename = prot.gsub(" ", "-").downcase
 				file_basename = session[:file][:path].gsub("query.fasta", prot_basename)
 
-				### 1) extract reference proteins if they do not already exist
-				file_refseq = BASE_PATH + prot_basename + "-refseq.fasta"
-				# ref_prot_species, ref_prot_stat, ref_prot_seq, ref_prot_key = "", "", "", ""
+				### 1) get "best" reference protein according to selected augustus model
+				file_refseq = file_basename + "-refseq.fasta"
 				ref_prot_seq, ref_prot_key = "", ""
 
-				if File.exists?(file_refseq) && ! File.zero?(file_refseq) then
-					header, ref_prot_seq = fasta2str(File.read(file_refseq))
-					ref_prot_key = header[0].split("@")[1]
-					ref_prot_seq = ref_prot_seq[0]
-				else
-					# find best reference sequence and fill variables with these data
-					# Ca_b: Candida albicans WO-1
-					ca_genes = all_prot_data["genes"].keys.select {|key| key =~ /Ct_a/ && all_prot_data["genes"][key]["completeness"] =~ /[complete|partial]/}
-					if ca_genes.any? then
-						# Ca_b and complete gene structure
-						ref_prot_key = ca_genes.find {|key| all_prot_data["genes"][key]["completeness"] == "complete" &&  all_prot_data["genes"][key] =~ /Ca_b/}
-						# ... or ... other Ca and complete gene structure
-						ref_prot_key = ca_genes.find {|key| all_prot_data["genes"][key]["completeness"] == "complete"} if ref_prot_key.blank?
-						# ... or ... Ca_b and partial
-						ref_prot_key = ca_genes.find {|key| key =~ /Ca_b/} if ref_prot_key.blank?
+				matched_sp_abbr = ""
+				case session[:augustus][:species]
+				when 'candida_albicans'
+					if session[:file][:name] == "Candida_albicans_WO_1.fasta" then
+						# example genome Ca_b was loaded, and deleted from reference data
+						matched_sp_abbr = "Ca_a"
+					else
+						matched_sp_abbr = "Ca_b"
 					end
-					# ... or ... use first gene with complete gene structure
-					ref_prot_key = all_prot_data["genes"].keys.find {|key| all_prot_data["genes"][key]["completeness"] =~ /complete/} if ref_prot_key.blank?
-					# ... or ... or just any gene at all
-					ref_prot_key = all_prot_data["genes"].keys.first if ref_prot_key.blank?
-
-
-					# not necessary if file already exists ...
-					ref_prot_seq = extract_prot_seq(all_prot_data["genes"][ref_prot_key]["gene"])
-
-					# save reference protein in fasta format to file
-					header = all_prot_data["genes"][ref_prot_key]["species"] + "@" + ref_prot_key
-					File.open(file_refseq, 'w'){|f| f.write(str2fasta(header, ref_prot_seq))}
+				when 'candida_guilliermondii'
+					matched_sp_abbr = "Mrg"
+				when 'candida_tropicalis'
+					matched_sp_abbr = "Ct_a"
+				when 'debaryomyces_hansenii'
+					matched_sp_abbr = "Deh"
+				when 'eremothecium_gossypii'
+					matched_sp_abbr = "Erg"
+				when 'kluyveromyces_lactis'
+					matched_sp_abbr = "Kl"
+				when 'lodderomyces_elongisporus'
+					matched_sp_abbr = "Loe"
+				when 'pichia_stipitis'
+					matched_sp_abbr = "Shs"
+				when 'saccharomyces_cerevisiae_S288C'
+					matched_sp_abbr = "Sc_c"
+				when 'saccharomyces_cerevisiae_rm11-1a_1'
+					matched_sp_abbr = "Sc_b"
+				when 'yarrowia_lipolytica'
+					matched_sp_abbr = "Yl"
 				end
-					
+
+				genes = all_prot_data["genes"].keys.select {|key| key =~ /#{matched_sp_abbr}/ && all_prot_data["genes"][key]["completeness"] =~ /[complete|partial]/}
+
+				if genes.size == 1 then
+					# no choice at all
+					ref_prot_key = genes[0]
+				elsif genes.any?
+					# correct species and complete gene structure
+					ref_prot_key = genes.find {|key| all_prot_data["genes"][key]["completeness"] == "complete" &&  all_prot_data["genes"][key] =~ /#{matched_sp_abbr}/}
+					# ... or ... partial
+					ref_prot_key = genes.find {|key| key =~ /#{matched_sp_abbr}/} if ref_prot_key.blank?
+				end
+				# ... or ... use first gene with complete gene structure
+				ref_prot_key = all_prot_data["genes"].keys.find {|key| all_prot_data["genes"][key]["completeness"] =~ /complete/} if ref_prot_key.blank?
+				# ... or ... or just any gene at all
+				ref_prot_key = all_prot_data["genes"].keys.first if ref_prot_key.blank?
+				ref_prot_seq = extract_prot_seq(all_prot_data["genes"][ref_prot_key]["gene"])
+
+				# save reference protein in fasta format to file
+				header = all_prot_data["genes"][ref_prot_key]["species"] + "@" + ref_prot_key
+				File.open(file_refseq, 'w'){|f| f.write(str2fasta(header, ref_prot_seq))}
+
 #				currently, some more information about the reference protein is needed
 				@predicted_prots[prot][:ref_species] = all_prot_data["genes"][ref_prot_key]["species"]
 				@predicted_prots[prot][:ref_prot] = ref_prot_seq
@@ -213,8 +243,10 @@ class PredictionsController < ApplicationController
 
 				### 2.1) BLAST
 				file_blast = file_basename + ".blast"
+				filter_option = session[:blast][:use_low_comp_filter] ? "m S" : "F"
+
 						# -p [PROGRAM] protein query against nt-db -d [DATABASE] -i [FILE] -m8 [OUTPUT FORMAT] -F [FILTERING] -s [SMITH-WATERMAN ALIGNMENT] T 
-				stdin, stdout_err, wait_thr = Open3.popen2e(BLASTALL, "-p", "tblastn", "-d", genome_db, "-i", file_refseq, "-m8", "-F", "m S", "-s", "T")
+				stdin, stdout_err, wait_thr = Open3.popen2e(BLASTALL, "-p", "tblastn", "-d", genome_db, "-i", file_refseq, "-m8", "-F", filter_option, "-s", "T")
 				stdin.close
 				output = stdout_err.read
 				stdout_err.close
@@ -250,9 +282,10 @@ class PredictionsController < ApplicationController
 				end
 
 				# next comes alignment, so the alignment of all reference sequences is needed
+				file_refall = ref_files_path + prot_basename + ".fasta"
+
 				if session[:algo] == "mafft" then
 					# check if reference data are already aligned
-					file_refall = BASE_PATH + prot_basename + ".fasta"
 					if ! FileTest.file?(file_refall) then
 						# no, so calculate alignment
 						puts "Need to calculate reference alignment with MAFFT first!"
@@ -264,7 +297,8 @@ class PredictionsController < ApplicationController
 						end
 					end
 				end
-				is_success, aligned_fasta, err = align_pred_ref(file_basename, pred_seq)
+
+				is_success, aligned_fasta, err = align_pred_ref(file_basename, file_refall, pred_seq)
 				if ! is_success || ! err.blank? then
 					# an error occured
 					write_minor_error(prot, err)
@@ -308,13 +342,22 @@ class PredictionsController < ApplicationController
 		# prepare stuff
 		@predicted_prots = {}
 		@minor_error = [] # external program errors
-		ref_data, @fatal_error = load_ref_data
+		if session[:file][:name] == "Candida_albicans_WO_1.fasta" then
+			ref_data, @fatal_error = load_ref_data(true)
+			ref_files_path = BASE_PATH + PATH_REF_WO_EXAMPLE
+		else
+			ref_data, @fatal_error = load_ref_data
+			ref_files_path = BASE_PATH
+		end 
 
 		if @fatal_error.empty? then
 			prot_basename = @prot.gsub(" ", "-").downcase
 			file_basename = session[:file][:path].gsub("query.fasta", prot_basename)
-			file_refseq = BASE_PATH + prot_basename + "-refseq.fasta"
+
+			file_refseq = file_basename + "-refseq.fasta"
 			file_blast = file_basename + ".blast"
+			file_refall = ref_files_path + prot_basename + ".fasta"
+
 			headers, seqs = fasta2str(File.read(file_refseq))
 			ref_species, ref_prot_key = headers[0].split("@")
 
@@ -347,7 +390,7 @@ class PredictionsController < ApplicationController
 				end
 
 				# no need to check again if alignment of all reference data exist
-				is_success, aligned_fasta, err = align_pred_ref(file_basename, n_hit, pred_seq)
+				is_success, aligned_fasta, err = align_pred_ref(file_basename, file_refall, n_hit, pred_seq)
 				if ! is_success || ! err.blank? then
 					# an error occured
 					write_minor_error(key, err)
@@ -383,6 +426,8 @@ class PredictionsController < ApplicationController
 			Dir.glob(BASE_PATH + "**/") do |dir|
 				if dir == BASE_PATH then
 					next
+				elsif dir == BASE_PATH + PATH_REF_WO_EXAMPLE 
+					next
 				elsif File.mtime(dir) <= days.day.ago
 					FileUtils.rm_rf(dir, :secure=>true)
 				end
@@ -401,10 +446,18 @@ class PredictionsController < ApplicationController
 	end
 
 	# load reference data from file alignment_gene_structure.json
+	# @param use_ref_data_without_ca_b [Boolean] 
+		# set true if the reference data without the species loaded via 'load example' should be used
+		# default: false
 	# @return [Hash] reference data
 	# @return [Array] Errors occured during file load
-	def load_ref_data
-		path = BASE_PATH + REF_DATA
+	def load_ref_data(use_ref_data_without_ca_b=false)
+		if use_ref_data_without_ca_b then
+			path = BASE_PATH + PATH_REF_WO_EXAMPLE + REF_DATA
+		else
+			path = BASE_PATH + REF_DATA
+		end
+
 		if ! FileTest.file?(path) then
 			errors = ["Fatal error.", "Cannot load reference data. Please contact us!"]
 			return false, errors
@@ -426,27 +479,6 @@ class PredictionsController < ApplicationController
 		File.open(file, 'w') {|f| f.write(output)}
 		return true
 	end
-
-
-# unsafe - better use one of the methods based on models/scipio_result.rb to extract protein translation 
-	# def extract_ref_data_alignment(data, nogaps=true)
-	# 	alignment = ""
-	# 	if nogaps then
-	# 		data["genes"].each do |k, v|
-	# 			seq = v["gene"].match(/prot_seq: (.*?)\n/)[1]
-	# 			if seq.nil? then 
-	# 				next
-	# 			end
-	# 			alignment << str2fasta(k, seq, true) # true: no linebreak after 80 chars
-	# 			alignment << "\n"
-	# 		end
-	# 		return alignment
-	# 	else
-	# 		return data["alignment"]
-	# 	end
-	# end
-
-
 
 	# parse predicted data to get statistics, store them in a file
 	# and combine stored ones with the ones from additionally predicted if neccessary
@@ -777,12 +809,14 @@ class PredictionsController < ApplicationController
 
 	# align reference protein with the predicted protein
 	# @param file_base [String] basename of files (containing protein name)
+	# @param ref_algn_path [String] path to reference alignment of this protein
 #	# @param hit [Fixnum] Number of blast hit of interest (human counting -> starts with 1)
 	# @param pred_seq [String] Predicted protein sequence
 	# @return [Boolean] True if no error occured
 	# @return [Array] Aligned sequences
 	# @return [String] Error indication which method failed only set if an error occured
-	def align_pred_ref(file_base, hit=1, pred_seq)
+	def align_pred_ref(file_base, ref_algn_path, hit=1, pred_seq)
+
 		file_unaligned = file_base + "-" + rand(1000000).to_s + ".fasta" # input file: unaligned seqs
 		file_aligned = file_base + "-" + hit.to_s + "-aligned.fasta" # output file: aligned seqs
 		fasta = str2fasta("Prediction", pred_seq, true) # true: do not split after 80 chars
@@ -790,14 +824,13 @@ class PredictionsController < ApplicationController
 		if session[:align][:algo] == "mafft" then
 			# file_unaligned contains only predicted sequence
 			File.open(file_unaligned, 'w') {|f| f.write(fasta)}
-			file_refall = file_base.sub(session[:file][:id]+"/", "") + ".fasta"
-			if File.zero?(file_refall) then
+			if File.zero?(ref_algn_path) then
 				# something went wrong during ref_data generation (cymo-api)
 				return false, "", "Cannot align predicted protein with reference data."
 			end
 		else
 			# file_unaligned contains both reference and predicted sequence
-			file_refseq = file_base.sub(session[:file][:id]+"/", "") + "-refseq.fasta"
+			file_refseq = file_base + "-refseq.fasta"
 			FileUtils.cp(file_refseq, file_unaligned)
 			File.open(file_unaligned, 'a') {|f| f.write("\n" + fasta)}
 		end
@@ -825,7 +858,7 @@ class PredictionsController < ApplicationController
 				# --amino: input is protein
 				# --anysymbol: replace unusal symbols by "X"
 				# --quiet: output only alignment
-			stdin, stdout_err, wait_thr = Open3.popen2e(MAFFT, "--addfragments", file_unaligned, "--amino", "--anysymbol", "--quiet", file_refall)
+			stdin, stdout_err, wait_thr = Open3.popen2e(MAFFT, "--addfragments", file_unaligned, "--amino", "--anysymbol", "--quiet", ref_algn_path)
 			stdin.close
 			output = stdout_err.read
 			stdout_err.close
@@ -1396,7 +1429,7 @@ class PredictionsController < ApplicationController
 		render :eval_ref_data, formats:[:js]
 	end
 
-def eval_ref_data
+def mean_protein_length
 	ref_data, fatal_error = load_ref_data
 
 	if fatal_error.empty? then
@@ -1460,7 +1493,7 @@ end
 
 		if fatal_error.empty? then
 			results_per_org = {}
-			# use_not = ["Actin related protein",
+			use_not = [] #["Actin related protein",
 			# 	"Actin related protein Class 1",
 			# 	"Actin related protein Class 2",
 			# 	"Actin related protein Class 3",
@@ -1497,15 +1530,16 @@ end
 			# 	"Kinesin Class 15",
 			# 	"Kinesin Class 16",
 			# 	"Myosin essential light chain"]
+			# "Myosin heavy chain Class 1"
 
 			regex = Regexp.union(*use_not)
 
 			ref_data.keys.sort_by { |key| key.to_s.naturalized }.each do |prot|
 
-				# if regex.match(prot) then
-				# 	puts "Skipping #{prot}"
-				# 	next
-				# end
+				if regex.match(prot) then
+					puts "Skipping #{prot}"
+					next
+				end
 				# break if prot == "Myosin heavy chain Class 1"
 				puts prot
 
@@ -1514,28 +1548,6 @@ end
 				results = {ref_seq_num: "", ctg_pos: [], ref_chem: {}, ref_ctg: {}, sc_c_aa: {}, ca_a_aa: {}}
 
 				pos2key = {} # map from ctg position to a sequece containing this ctg
-
-				# get all CTG positions in all reference sequences
-				ref_data[prot]["genes"].keys.each do |k|
-
-					dna_seq = extract_gene_seq(ref_data[prot]["genes"][k]["gene"])
-					codons = dna_seq.scan(/.{1,3}/)
-					ctg_pos = codons.each_with_index.map{ |ele, ind| (ele == "CTG") ? ind : nil }.compact
-
-					# store ctg position
-					results[:ctg_pos] |= ctg_pos # set union
-
-					# store sequence key if it is a "new" ctg position
-					ctg_pos.each {|pos| pos2key[pos] = k if ! pos2key.has_key?(pos)}
-
-					# store ctg pos per organism
-					org = ref_data[prot]["genes"][k]["species"]
-					if ! results_per_org.has_key?(org) then
-						results_per_org[org] = {}
-					end
-					results_per_org[org][prot] = ctg_pos
-
-				end
 
 				# extract ref_alignment 
 				begin
@@ -1551,6 +1563,37 @@ end
 
 				results[:ref_seq_num] = ref_alignment.keys.size
 
+				# get all CTG positions in all reference sequences
+				ref_data[prot]["genes"].keys.each do |k|
+
+					dna_seq = extract_gene_seq(ref_data[prot]["genes"][k]["gene"])
+					codons = dna_seq.scan(/.{1,3}/)
+					ctg_pos = codons.each_with_index.map{ |ele, ind| (ele == "CTG") ? ind : nil }.compact
+
+					# store ctg position
+					# results[:ctg_pos] |= ctg_pos # set union
+					# !!! 
+					# pos should be position in reference alignments
+					ctg_pos_mapped = []
+					ctg_pos.each do |pos|
+						ctg_pos_mapped << sequence_pos2alignment_pos(pos, ref_alignment[k])
+					end
+					ctg_pos = ctg_pos_mapped
+					results[:ctg_pos] |= ctg_pos                         
+
+					# store sequence key if it is a "new" ctg position
+					ctg_pos.each {|pos| pos2key[pos] = k if ! pos2key.has_key?(pos)}
+
+					# store ctg pos per organism
+					org = ref_data[prot]["genes"][k]["species"]
+					if ! results_per_org.has_key?(org) then
+						results_per_org[org] = {}
+					end
+					results_per_org[org][prot] = ctg_pos
+
+				end
+
+
 				# get list of all amino acids and codons at all CTG -Positions
 				ref_alignment_cols = []
 				ref_codons = []
@@ -1565,7 +1608,10 @@ end
 					
 	 				# get reference key of a sequence containing this CTG position
 	 				ref_key = pos2key[pos]
-					ref_cymopos = sequence_pos2alignment_pos(pos, ref_alignment[ref_key])
+	 				# !!!
+	 				# pos is now the position in reference alignments
+					# ref_cymopos = sequence_pos2alignment_pos(pos, ref_alignment[ref_key])
+					ref_cymopos = pos
 
 					ref_alignment.each do |cymo_header, cymo_prot|
 
@@ -1673,8 +1719,8 @@ end
 
 		fh.close
 		fh_org.close
-		stat_conserved_pos
-		stats_ctg_prot
+		# stat_conserved_pos
+		# stats_ctg_prot
 		# parse_all_stats
 		render :eval_ref_data, formats:[:js]
 	end

@@ -1,5 +1,6 @@
 BASE_PATH = Dir::tmpdir + "/cug/" # all data files are stored in /tmp
 REF_DATA = "alignment_gene_structure.json"
+PATH_REF_WO_EXAMPLE = "without_ca_b/"
 
 FORMATDB = "/usr/bin/formatdb"
 BLASTALL = "/usr/bin/blastall"

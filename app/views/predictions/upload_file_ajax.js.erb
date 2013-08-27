@@ -3,9 +3,12 @@
 	hide_show_waiting('hide');
 	$('#uploaded_files').html('<%=session[:file][:name]%>');
 	// enable options section
+	$('#options_form').show();
 	$('#options_form').removeClass('disabled');
 	$('#species').removeAttr('disabled');
 	$('#algo').removeAttr('disabled');
+	$('#blast').removeAttr('disabled');
+	$('#predict_button').show();
 	$('#predict_button').removeAttr('disabled');
 	// hide results
 	$('#results_section').show();
@@ -19,11 +22,12 @@
 	$('#options_form').addClass('disabled');
 	$('#species').attr('disabled', 'disabled');
 	$('#algo').attr('disabled', 'disabled');
+	$('#blast').attr('disabled', 'disabled');
 	$('#predict_button').attr('disabled', 'disabled');
 	// hide results
 	$('#results_section').html('Start prediction first.');
 	$('#tree_section').html('Start prediction first.');
-	// show_error hides waiting animation
+	// side effect of show_error: hide_show_waiting('hide') is called!
 	show_error('<%=raw(@fatal_error.join("<br />"))%>');
 	$('#example_file_field').show();
 <% end%>
