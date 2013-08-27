@@ -5,8 +5,8 @@ require 'open3'
 class PredictionsController < ApplicationController
 
 	MAX_SIZE = 15728640 # 15 MB
-	HYDORPHOBIC_AAS = ["V", "I", "L"]
-	POLAR_AAS = ["S", "T"]
+	HYDORPHOBIC_AAS = ["V", "I", "L", "M", "F"]
+	POLAR_AAS = ["S", "T", "A", "C"]
 
 	# Render start page for prediction
 	def search
@@ -246,6 +246,7 @@ class PredictionsController < ApplicationController
 				filter_option = session[:blast][:use_low_comp_filter] ? "m S" : "F"
 
 						# -p [PROGRAM] protein query against nt-db -d [DATABASE] -i [FILE] -m8 [OUTPUT FORMAT] -F [FILTERING] -s [SMITH-WATERMAN ALIGNMENT] T 
+						# -F "m S" mask protein low complexity filter for lookup table only
 				stdin, stdout_err, wait_thr = Open3.popen2e(BLASTALL, "-p", "tblastn", "-d", genome_db, "-i", file_refseq, "-m8", "-F", filter_option, "-s", "T")
 				stdin.close
 				output = stdout_err.read
@@ -1486,7 +1487,7 @@ end
 # Achtung: geht nur haeppechenweise mit use_not, next und break !!!
 		fh = File.new("/fab8/smuehlh/data/cugusage/stats_2008/statistics_about_ref_data.txt", "a")
 
-		fh_org = File.new("/fab8/smuehlh/data/cugusage/stats_2008/ctg_org.csv", "a")
+		fh_org = File.new("/fab8/smuehlh/data/cugusage/stats_2008/ctg_org.csv", "w")
 		fh_org.puts "Organism,# CTGs"
 
 		ref_data, fatal_error = load_ref_data
@@ -1695,7 +1696,7 @@ end
 					end
 					# tab separated list of all statistics for this position
 					# pos + 1 to convert between ruby and human counting! 
-					fh.puts "#{view_context.ruby2human_counting(pos)}\t#{aa_stat}\t#{n_aas}\t#{ctg_stat}\t#{n_ctgs},\t#{sc_c_aa}\t#{ca_a_aa}"
+					fh.puts "#{view_context.ruby2human_counting(pos)}\t#{aa_stat}\t#{n_aas}\t#{ctg_stat}\t#{n_ctgs}\t#{sc_c_aa}\t#{ca_a_aa}"
 				end
 				fh.puts ""
 				# "free" some memory
@@ -1707,7 +1708,25 @@ end
 
 			# store results per org to file
 			results_per_org.each do |org, prots|
-				fh_org.puts org + "," + prots.values.flatten.size.to_s
+				sum = 0
+
+				# uniq positions for actins, myosins, kinesins, tubulins and capping prots!
+				# return total count with uniq positions
+				sum += prots.select{|k,_| k.match("Actin")}.values.flatten.uniq.size
+				sum += prots.select{|k,_| k.match("Capping")}.values.flatten.uniq.size
+				sum += prots.select{|k,_| k.match("Kinesin")}.values.flatten.uniq.size
+				sum += prots.select{|k,_| k.match("Myosin")}.values.flatten.uniq.size
+				sum += prots.select{|k,_| k.match("Tubulin")}.values.flatten.uniq.size
+
+				# delete these counts from hash and add the remaining to sum
+				prots.delete_if{|k,_| k.match("Actin")}
+				prots.delete_if{|k,_| k.match("Capping")}
+				prots.delete_if{|k,_| k.match("Kinesin")}
+				prots.delete_if{|k,_| k.match("Myosin")}
+				prots.delete_if{|k,_| k.match("Tubulin")}
+
+				sum += prots.values.flatten.size
+				fh_org.puts org + "," + sum.to_s
 			end
 
 		end # if fatal_error.empty?
@@ -1791,11 +1810,14 @@ end
 	# number of CTG codons per protein and number of conserved CTG codons (occuring in min. 2 and min. 5 genes) per protein
 	# number of CTG codons broken down: number of genes vs. number of ctgs occuring in that many genes  
 	def stat_conserved_pos
+
+# TODO
+# falsche counts fuer die conservierten pos! speichere dazu alle fuer actin, kinesin, ... etc und vergleiche dann ob konserviert!
 		file_in = "/fab8/smuehlh/data/cugusage/stats_2008/statistics_about_ref_data.txt"
 
 		out_conserved = "/fab8/smuehlh/data/cugusage/stats_2008/prot_conserved_pos.csv"
 		fh_out = File.new(out_conserved, "w")
-		fh_out.puts "Protein,#CTGs,#CTGs in min.2,#CTGs in min.5"
+		fh_out.puts "Protein,#CTGs,#CTGs in min.2,#CTGs in min.5,#aa,#CTG=Ser"
 
 		out_broken_down = "/fab8/smuehlh/data/cugusage/stats_2008/prot_conserved_pos_detail.csv"
 		fh_out_detailed = File.new(out_broken_down, "w")
@@ -1843,7 +1865,7 @@ end
 					puts line	
 			elsif ! n_ctgs.nil? 
 				# its a row with ctg usage data
-
+debugger
 				n_ctgs = n_ctgs.to_i # a string will be converted to zero, which is ok for now
 
 				if n_ctgs > 0 then

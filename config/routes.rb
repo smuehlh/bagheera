@@ -16,7 +16,7 @@ Bagheera::Application.routes.draw do
     match 'download', to: 'tree#download', as: 'download', :via => [:get]
 
     # match 'read_status', to: 'predictions#read_status', as: 'read_status', :via => [:get]
-    # match 'eval', to: 'predictions#mean_protein_length', as: 'eval', :via => [:get]
+    match 'eval', to: 'predictions#stat_conserved_pos', as: 'eval', :via => [:get]
   else
     scope '/bagheera' do
 

@@ -19,8 +19,8 @@
 		</tr>
 	</table>
 </h2>
-	<p>Some species of the <i>Saccharomycetes</i> clade translate the Leucine codon CUG as Serine. This webserver is designed to detect if your species uses yeast alternative codon usage or not. Therefore, you need to upload genome data. In this data, motor proteins are predicted and aligned with reference data from <a class = "external" href="http://www.cymobase.org/cymobase" target = "_blank">CymoBase</a>. The aligned predicted CUG positions are basis for the codon usage prediction.</p>
-
+	<p>
+	This webserver is designed to detect whether a species uses the yeast alternative codon usage or not. For the codon usage estimation, you need to upload genome data. In this data, cytoskeletal and motor proteins are predicted and aligned based on reference data from <a class = "external" href="http://www.cymobase.org/cymobase" target = "_blank">CymoBase</a>. The aligned predicted CUG positions are the basis for the codon usage prediction.</p>
 
 <h2>
 	<table width=100%>
@@ -30,7 +30,7 @@
 		</tr>
 	</table>
 </h2>
-	<p>Use the file upload button to upload your query data. Query data may be complete genome files as well as EST data. Query data must be in fasta format. Please note that the file upload is restricted to 15MB file size. To upload larger files, please contact us.</p>
+	<p>Use the file upload button to upload your query data. Query data need to be complete genome files or unique transcriptome clusters, and must be in fasta format. Please note that the file upload is restricted to 15MB file size. To upload larger files, please contact us.</p>
 
 <h2>
 	<table width=100%>
@@ -42,11 +42,10 @@
 </h2>
 
 	<h3>Options for gene prediction</h3>
-	<p>After you have entered query data, you can set options for gene prediction. Bagheera predicts motor protein genes in our query data with a standalone version of <a class = "external" href="http://bioinf.uni-greifswald.de/augustus/" target = "_blank">AUGUSTUS</a>. Select the species model most suitable to predict genes in your query data from the menue. Protein profiles generated from the reference proteins enhance gene prediction.</p>
+	<p>After you have entered the query data, you can set options for gene prediction. Bagheera predicts cytoskeletal and motor protein genes in the query data with a standalone version of <a class = "external" href="http://bioinf.uni-greifswald.de/augustus/" target = "_blank">AUGUSTUS</a>. Select the species feature model most suitable to predict genes in your query data from the menu. Protein profiles generated from the reference proteins are used to enhance the quality of the gene predictions.</p>
 
 	<h3>Options for alignment generation</h3>
-	<p>Bagheera aligns the predicted genes to the respective protein family and class. This is crucial for the mapping of CUG codons in the predicted genes. You can choose between different alignment methods. <a class = "external" href = "http://mafft.cbrc.jp/alignment/software/" target = "_blank">MAFFT</a> will add the predicted sequence to the reference multiple sequence alignment, while all other algorithms will perform a pairwise alignment between the predicted sequence and a selected reference sequence. In a second step, the aligned predicted sequence is mapped onto the reference multiple sequence alignment. Pairwise alignment methods are implemented in the <a class = "external" href = "http://www.seqan.de/" target = "_blank">SeqAn</a> library.</p>
-
+	<p>Bagheera aligns the predicted genes to the respective protein families and classes. This is crucial for the mapping of CUG codons in the predicted genes. You can choose between different alignment methods. <a class = "external" href = "http://mafft.cbrc.jp/alignment/software/" target = "_blank">MAFFT</a> will add the predicted sequence to the reference multiple sequence alignment, while all other algorithms will perform pairwise alignments between the predicted sequence and a reference sequence.This sequences is selected based on the species which was specified as AUGUSTUS species model.  In a second step, the aligned predicted sequence is mapped onto the reference multiple sequence alignment. Pairwise alignment methods are used as implemented in the <a class = "external" href = "http://www.seqan.de/" target = "_blank">SeqAn</a> library.</p>
 
 <h2>
 	<table width=100%>
@@ -57,9 +56,9 @@
 	</table>
 </h2>
 
-	<p>In the results section, you can view a short summary about the predicted CUG codons and the suggested codon usage. Beneath, the detailed results for every predicted motor protein are listed. You can toggle the display of the predicted protein itself with all CUG positions highlighted as well as the alignment between predicted protein and reference proteins. All CUG codons in the predicted sequence are translated as Leucine, regardless the suggested codon usage.</p>
+	<p>In the results section, you can view a short summary about the predicted CUG codons and the suggested codon usage. Beneath, the detailed results for every predicted cytoskeletal and motor protein are listed. You can toggle the display of the predicted protein itself with all CUG positions highlighted as well as the alignment between predicted protein and reference proteins. All CUG codons in the predicted sequence are translated as leucine, regardless the suggested codon usage.</p>
 	<p>Additional statistics are shown for every predicted CUG codon mapped to the reference data. These cover both the distribution of amino acids in reference data as well as the encoding of CUG codons conserved between reference proteins and the predicted protein.</p>
-	<p>The gene predicted is based on the first hit of a tblastn search of a reference protein in the uploaded query data. You can restart the gene prediction for a specific protein family by clicking the “Use next BLAST hits for gene prediction” button.</p>
+	<p>The gene prediction is based on the first hit of a TBLASTN search of a reference protein in the uploaded query data. You can restart the gene prediction for a specific protein family by clicking the “Use next BLAST hit for gene prediction” button. The next ten BLAST hits will be used.</p>
 
 <h2>
 	<table width=100%>
@@ -69,9 +68,9 @@
 		</tr>
 	</table>
 </h2>
-	<p>The prediction of the most probable decoding scheme is based on the CUG codon usage and amino acid distribution in the reference data.</p>
-	<p>On the one hand, the amino acid distribution of reference data is analysed. This is done only for those columns of the multiple sequence alignment, which are aligned with predicted CUG codons. The distribution of all amino acids accounting for more than 5&#37; of the reference data is listed in the view. Prediction of the codon usage is done based on the chemical properties of the amino acids. The hydrophobic amino acids Valine, Isoleucine and Leucine suggest the translation of the predicted CUG as Leucine (standard nuclear code). The presence of the polar amino acids Serine and Threonine on the other hand suggest the translation of the predicted CUG as Serine. However, only portions of these data are taken as hint for on or the other codon usage.  A predicted CUG position is considered as discriminative if either hydrophobic or polar amino acids account for more than 50&#37; of all amino acids while the other party accounts for less than 45&#37;. Discriminative positions are coloured in black, while non-discriminative positions are coloured in grey.</p>
-	<p>On the other hand, CUG codons conserved between the predicted protein and the reference data are taken as hint. The translation of CUG as Serine in the reference data suggests the translation of the predicted CUG as Serine as well. Likewise, the translation of CUG as Leucine in reference data suggests the translation of the predicted CUG as Leucine as well.</p>
+	<p>The prediction of the most probable decoding scheme is based on the CUG codon usage and amino acid distribution at the respective alignment position in the reference data.</p>
+	<p>On the one hand, the amino acid distribution of the reference data is analysed. This is done only for those columns of the multiple sequence alignment, which are aligned with CUG codons in the predicted genes. The distribution of all amino acids accounting for more than 5% of the reference data is listed in the view. Prediction of the codon usage is done based on the chemical properties of the amino acids. The hydrophobic amino acids valine, isoleucine, leucine, methionine and phenylalanine suggest the translation of the predicted CUG as leucine (standard nuclear code). The presence of the polar and small amino acids serine, threonine, cystein and alanine on the other hand suggest the translation of the predicted CUG as serine. However, only portions of these data are taken as hint for one or the other codon usage. A predicted CUG position is considered as discriminative if either hydrophobic or polar amino acids account for more than 50% of all amino acids while the other party accounts for less than 45%. Discriminative positions are coloured in black, while non-discriminative positions are coloured in grey.</p>
+	<p>On the other hand, CUG codons conserved between the predicted protein and the reference data are taken as hint. The translation of CUG as serine in the reference data suggests the translation of the predicted CUG as serine as well. Likewise, the translation of CUG as leucine in reference data suggests the translation of the predicted CUG as leucine as well.</p>
 	<p>The number of CUG positions suggesting alternative codon usage or standard codon usage is indicated for each predicted protein separately. In addition, the overall number is listed in the summary section.</p>
 
 <h2>
@@ -82,5 +81,5 @@
 		</tr>
 	</table>
 </h2>
-	<p>The reference data are manually annotated and curated motor proteins of Saccharomycetes clade. We have annotated more than 2300 sequences from 26 protein families. Out of these protein families, Actin related protein, Capping proteins, Kinesin, Myosin heavy chain and Tubulins can be split up into different classes, leading to a total count of 44 protein families/ classes used for codon usage prediction. Each of this protein family or class encodes a few up to a few hundered CUG codons. We have assembled these sequences in about 80 different species or strains of the Saccharomycetes clade. The reference data are updated from CymoBase once a month.</p>
+	<p>The reference data are manually annotated and curated cytoskeletal and motor proteins of the Saccharomycetes clade. We have annotated more than 2300 sequences from 26 protein families. Out of these protein families, actin-related proteins, capping proteins, kinesins, myosin heavy chain proteins and tubulins are split up into different classes/subfamilies, leading to a total count of 44 protein families/classes used as separate entities for codon usage prediction. Each of these protein families or classes encodes dozens up to a few hundred CUG codons. We have annotated these sequences in about 80 different species or strains of the Saccharomycetes clade. The reference data are updated from CymoBase once a month.</p>
 
