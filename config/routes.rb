@@ -16,7 +16,7 @@ Bagheera::Application.routes.draw do
     match 'download', to: 'tree#download', as: 'download', :via => [:get]
 
     # match 'read_status', to: 'predictions#read_status', as: 'read_status', :via => [:get]
-    match 'eval', to: 'predictions#stat_conserved_pos', as: 'eval', :via => [:get]
+    # match 'eval', to: 'predictions#stat_conserved_pos', as: 'eval', :via => [:get]
   else
     scope '/bagheera' do
 
@@ -33,7 +33,6 @@ Bagheera::Application.routes.draw do
       match 'predict_more', to: 'predictions#predict_more', as: 'predict_more', :via => [:get]
       match 'calc_tree', to: 'tree#calc_tree', as: 'calc_tree', :via => [:post]
       match 'download', to: 'tree#download', as: 'download', :via => [:get]
-      # match 'eval', to: 'predictions#stat_conserved_pos', as: 'eval', :via => [:get]
     end
   end
 

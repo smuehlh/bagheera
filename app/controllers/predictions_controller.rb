@@ -1813,6 +1813,7 @@ end
 
 # TODO
 # falsche counts fuer die conservierten pos! speichere dazu alle fuer actin, kinesin, ... etc und vergleiche dann ob konserviert!
+# OK: arp1 pos5 und arp2 pos5 als zwei unterschiedliche zaehlen
 		file_in = "/fab8/smuehlh/data/cugusage/stats_2008/statistics_about_ref_data.txt"
 
 		out_conserved = "/fab8/smuehlh/data/cugusage/stats_2008/prot_conserved_pos.csv"

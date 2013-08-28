@@ -58,7 +58,7 @@
 
 	<p>In the results section, you can view a short summary about the predicted CUG codons and the suggested codon usage. Beneath, the detailed results for every predicted cytoskeletal and motor protein are listed. You can toggle the display of the predicted protein itself with all CUG positions highlighted as well as the alignment between predicted protein and reference proteins. All CUG codons in the predicted sequence are translated as leucine, regardless the suggested codon usage.</p>
 	<p>Additional statistics are shown for every predicted CUG codon mapped to the reference data. These cover both the distribution of amino acids in reference data as well as the encoding of CUG codons conserved between reference proteins and the predicted protein.</p>
-	<p>The gene prediction is based on the first hit of a TBLASTN search of a reference protein in the uploaded query data. You can restart the gene prediction for a specific protein family by clicking the “Use next BLAST hit for gene prediction” button. The next ten BLAST hits will be used.</p>
+	<p>The gene prediction is based on the first hit of a TBLASTN search of a reference protein in the uploaded query data. You can restart the gene prediction for a specific protein family by clicking the “Use next BLAST hit for gene prediction” button. The next ten BLAST hits will then be used for gene prediction.</p>
 
 <h2>
 	<table width=100%>
@@ -82,4 +82,101 @@
 	</table>
 </h2>
 	<p>The reference data are manually annotated and curated cytoskeletal and motor proteins of the Saccharomycetes clade. We have annotated more than 2300 sequences from 26 protein families. Out of these protein families, actin-related proteins, capping proteins, kinesins, myosin heavy chain proteins and tubulins are split up into different classes/subfamilies, leading to a total count of 44 protein families/classes used as separate entities for codon usage prediction. Each of these protein families or classes encodes dozens up to a few hundred CUG codons. We have annotated these sequences in about 80 different species or strains of the Saccharomycetes clade. The reference data are updated from CymoBase once a month.</p>
+	<table>
+		<tr>
+			<td align="left">Show/Hide list of reference species</td>
+			<td align="left">
+				<%= 
+					image_tag("icons/down.png", 
+				        :id => "species_list_img", 
+				        :title => "Show/hide species list", 
+				        :onclick => "toggle_icon(this, $('#species_list'))"
+				    )
+			    %></td>
+		</tr>
+		<tr>
+			<td align="left">
+			    <div id="species_list" style="display:none">
+					Yarrowia lipolytica CLIB122<br>
+					Lipomyces starkeyi NRRL Y-11557<br>
+					Millerozyma farinosa CBS7064<br>
+					Nadsonia fulvescens var. elongata DSM 6958<br>
+					Kluyveromyces lactis NRRL Y-1140<br>
+					Kazachstania africana CBS 2517<br>
+					Kazachstania naganishii CBS 8797<br>
+					Kluyveromyces marxianus var. marxianus KCTC 17555<br>
+					Kluyveromyces aestuarii ATCC 18862<br>
+					Kluyveromyces wickerhamii UCD 54-210<br>
+					Lachancea kluyveri CBS 3082<br>
+					Lachancea kluyveri NRRL Y-12651<br>
+					Lachancea waltii NCYC 2644<br>
+					Lachancea thermotolerans CBS 6340<br>
+					Candida glabrata CBS138<br>
+					Naumovozyma castellii NRRL Y-12630<br>
+					Naumovozyma dairenensis CBS 421<br>
+					Lodderomyces elongisporus NRRL YB-4239<br>
+					Ascoidea rubescens NRRL Y17699<br>
+					Pachysolen tannophilus NRRL Y-2460<br>
+					Babjeviella inositovora NRRL Y-12698<br>
+					Clavispora lusitaniae ATCC 42720<br>
+					Candida orthopsilosis Co 90-125<br>
+					Hyphopichia burtonii NRRL Y-1933<br>
+					Debaryomyces hansenii CBS767<br>
+					Eremothecium gossypii ATCC 10895<br>
+					Eremothecium cymbalariae DBVPG#7215<br>
+					Pichia kudriavzevii M12<br>
+					Hanseniaspora valbyensis NRRL Y-1626<br>
+					Dekkera bruxellensis CBS 2499<br>
+					Pichia membranifaciens<br>
+					Ogataea polymorpha CBS 4732<br>
+					Ogataea angusta NCYC 495 leu1.1<br>
+					Ogataea parapolymorpha DL-1<br>
+					Komagataella pastoris DSMZ 70382<br>
+					Komagataella pastoris GS115<br>
+					Meyerozyma guilliermondii ATCC 6260<br>
+					Scheffersomyces stipitis CBS 6054<br>
+					Spathaspora passalidarum NRRL Y-27907<br>
+					Saccharomyces bayanus 623-6C<br>
+					Saccharomyces bayanus MCYC 623<br>
+					Saccharomyces bayanus var. uvarum<br>
+					Saccharomyces cerevisiae YJM789<br>
+					Saccharomyces cerevisiae RM11-1a<br>
+					Saccharomyces cerevisiae S288c<br>
+					Saccharomyces arboricola H-6<br>
+					Saccharomyces pastorianus Weihenstephan 34/70<br>
+					Saccharomyces kudriavzevii IFO 1802<br>
+					Saccharomyces mikatae IFO 1815<br>
+					Saccharomyces paradoxus NRRL Y-17217<br>
+					Zygosaccharomyces rouxii CBS732<br>
+					Tetrapisispora phaffii CBS 4417<br>
+					Torulaspora delbrueckii CBS 1146<br>
+					Tetrapisispora blattae CBS 6284<br>
+					Vanderwaltozyma polyspora DSM 70294<br>
+					Wickerhamomyces anomalus NRRL Y-366<br>
+					Candida albicans WO-1<br>
+					Candida arabinofermentans NRRL YB-2248<br>
+					Metschnikowia bicuspidata var. bicuspidata NRRL YB-4993<br>
+					Metschnikowia fructicola 277<br>
+					Candida tenuis NRRL Y-1498<br>
+					Candida albicans SC5314<br>
+					Candida tropicalis MYA-3404<br>
+					Candida parapsilosis<br>
+					Candida tanzawaensis NRRL Y-17324<br>
+					Wickerhamomyces ciferrii NRRL Y-1031<br>
+					Cyberlindnera jadinii NBRC 0988<br>
+					Candida caseinolytica NRRL Y-17796<br>
+					Candida dubliniensis CD36<br>
+					Saccharomyces cerevisiae YPS163<br>
+					Saccharomyces cerevisiae M22<br>
+					Saccharomyces cerevisiae JAY291<br>
+					Saccharomyces cerevisiae AWRI1631<br>
+					Kluyveromyces marxianus CBS712<br>
+					Saccharomyces servazzii CBS4311<br>
+					Saccharomyces unisporus<br>
+					Kazachstania exigua CBS379<br>
+				</div>
+			</td>
+			<td></td>
+		</tr>
+	</table>
 
