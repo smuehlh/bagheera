@@ -99,17 +99,24 @@ class PredictionsController < ApplicationController
 		headers, seqs = fasta2str(File.read(file_scr))
 		headers.map!{ |e| ">" << e } # add ">" again to make it a valid header
 		pred_seq_ind = headers.index(">Prediction")
-		if pred_seq_ind.nil? then
-			# ups, the pred seq is not called "Prediction" !!!
-			# add the very last line again, hopefully thats the predicted sequence
-			pred_seq_ind = headers.size - 1
+
+		if ! pred_seq_ind.nil? then
+			# found an element called "Prediction", remove it from its position and add it to the front
+			if pred_seq_ind != 0 then
+				# ... of course, unless it is already at the first pos
+				pred_header = headers.delete_at(pred_seq_ind)
+				pred_seq = seqs.delete_at(pred_seq_ind)
+				# add them again at first position
+				headers.unshift(pred_header)
+				seqs.unshift(pred_seq)
+			end
 		end
 
 		fh_dest = File.new(file_dest, 'w')
-		# QUICK-FIX to Lucullus-Bug
-		# write predicted seq at top and the end of alignment, to make sure it is displayed
-		fh_dest.puts( str2fasta("Prediction", seqs[headers.index(">Prediction")], true) )
 		fh_dest.puts( headers.zip(seqs).flatten.join("\n") )
+	# QUICK-FIX to Lucullus-Bug
+	# # write predicted seq at the end of alignment, to make sure no seq is missing (Prediction is already at the top)
+	# fh_dest.puts( str2fasta("Prediction", seqs[headers.index(">Prediction")], true) )
 		fh_dest.close
 		render :show_alignment
 	end
@@ -509,9 +516,9 @@ class PredictionsController < ApplicationController
 				stats["pred_ctg"] += val[:ctg_pos].size
 
 				# kind of preferential chemical properity leads to predited codon usage
-				all = val[:ref_chem].collect{|_,v| v[:transl]}
-				stats["ser"] += all.count("S") # predicted transl is Serine
-				stats["leu"] += all.count("L") # predicted transl is Leucine
+				arr = view_context.suggested_transl(val[:ref_chem], val[:ref_ctg], true) # true: return array containing alt_usage and std_usage
+				stats["ser"] += arr[0] # alt_usage: predicted transl is serine
+				stats["leu"] += arr[1] # std_usage: predicted transl is leucine
 			end
 			# if ! val[:ref_ctg].nil? && val[:ref_ctg].any?
 			# 	stats["ref_ctg"] += 1 if val[:ref_ctg].values.collect{|k, _| k[:ctg_num].to_f/val[:ref_seq_num] }.max >= 0.05
@@ -785,7 +792,8 @@ class PredictionsController < ApplicationController
 		else
 			start = start-500
 		end
-		stop = stop+500
+		stop = stop+500 # if stop is out of range, fastacmd will cause an error
+		# 1) try fastacmd with this stop value
 				# -d [DB] -p [PROTEIN] false -s [SEARCH STRING] -L [START,STOP]
 				# add 1000 nucleotides to start/stop 
 				# redirection: stderr to stdout (at this moment: screen), stdout to file file
@@ -794,6 +802,18 @@ class PredictionsController < ApplicationController
 		stdin.close
 		output = stdout_err.read
 		stdout_err.close
+
+		is_stop_outofrange = output.match(/From location cannot be greater than/)
+		# 2) stop was out of range, use 0 instead -> this will be evaluated as maximal value by fastacmd!
+		if is_stop_outofrange then
+			stop = 0 # evaluated as maximal value (by fastacmd)
+			stdin, stdout_err, wait_thr = Open3.popen2e(FASTACMD, "-d", genome_db, "-p", "F", "-s", seq_id, 
+				"-L", "#{start},#{stop}", "-S", strand.to_s, "-o", file)
+			stdin.close
+			output = stdout_err.read
+			stdout_err.close
+		end
+
 		if ! wait_thr.value.success? then
 			return false, "", "", "Cannot start gene prediction."
 		end

@@ -279,7 +279,7 @@ module PredictionsHelper
 	end
 
 
-	def suggested_transl(ref_chem, ref_ctg)
+	def suggested_transl(ref_chem, ref_ctg, simple_output=false)
 		res = []
 
 		# counts for aa distribution in reference data
@@ -309,7 +309,11 @@ module PredictionsHelper
 				# " suggest contrary codon usage based on distribution of amino acids and CTG usage in reference data."
 		end
 
-		return res.join("</br>").html_safe
+		if simple_output then
+			return [alt_usage, std_usage]
+		else
+			return res.join("</br>").html_safe
+		end
 	end
 
 end
