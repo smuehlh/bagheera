@@ -1827,48 +1827,51 @@ end
 		render :eval_ref_data, formats:[:js]
 	end
 
+
 	# number of CTG codons per protein and number of conserved CTG codons (occuring in min. 2 and min. 5 genes) per protein
 	# number of CTG codons broken down: number of genes vs. number of ctgs occuring in that many genes  
 	def stat_conserved_pos
 
-# TODO
-# falsche counts fuer die conservierten pos! speichere dazu alle fuer actin, kinesin, ... etc und vergleiche dann ob konserviert!
-# OK: arp1 pos5 und arp2 pos5 als zwei unterschiedliche zaehlen
 		file_in = "/fab8/smuehlh/data/cugusage/stats_2008/statistics_about_ref_data.txt"
 
 		out_conserved = "/fab8/smuehlh/data/cugusage/stats_2008/prot_conserved_pos.csv"
 		fh_out = File.new(out_conserved, "w")
-		fh_out.puts "Protein,#CTGs,#CTGs in min.2,#CTGs in min.5,#aa,#CTG=Ser"
+		fh_out.puts "Protein,#CTGs,#CTGs in min.2,#CTGs in min.5,#CTG je 1000 aa,#aa,#CTG=Ser"
 
-		out_broken_down = "/fab8/smuehlh/data/cugusage/stats_2008/prot_conserved_pos_detail.csv"
-		fh_out_detailed = File.new(out_broken_down, "w")
-		fh_out_detailed.puts "Protein"
-		fh_out_detailed.puts "#genes,#CTGs"
+		# out_more_det = "/fab8/smuehlh/data/cugusage/stats_2008/prot_conserved_pos_detail.csv"
+		# fh_out_detailed = File.new(out_more_det, "w")
+		# fh_out_detailed.puts "Protein"
+		# fh_out_detailed.puts "#genes,#CTGs"
 
 		prot = ""
 		n_ctg = 0
 		n_conserved = 0
 		n_conserved_in5 = 0
-		pos_n_genes = Hash.new(0) # use this hash to extract number of CTGs occuring in 1, 2, 3, ... genes (the detailed csv)
+		n_used_as_ser = 0
+		n_aas = 0
+		n_ctg_per_1000aa = 0 # = n_ctg/n_aas * 1000
+		# pos_n_genes = Hash.new(0) # use this hash to extract number of CTGs occuring in 1, 2, 3, ... genes (the detailed csv)
 
 		File.open(file_in).each do |line|
 			line.chomp!
 			parts = line.split("\t")
 			n_ctgs = parts[4]
+			ctg_usage = parts[3]
 
 			if ! line.include?(".") && ! line.include?("\t") && ! line.blank? then
 				# its a protein
 
-				# write data of last protein, if this is not the very first protein
+				# write data of last visited protein, if this is not the very first protein
 				if ! prot.blank? then
-					fh_out.puts prot + "," + n_ctg + "," + n_conserved.to_s + "," + n_conserved_in5.to_s 
+					n_ctg_per_1000aa = (n_ctg.to_i / n_aas.to_f * 1000).round
+					fh_out.puts prot + "," + n_ctg + "," + n_conserved.to_s + "," + n_conserved_in5.to_s + "," + n_ctg_per_1000aa.to_s + "," + n_aas.to_s + "," + n_used_as_ser.to_s
 
-					# write detailed output
-					fh_out_detailed.puts prot
-					pos_n_genes.keys.sort.each do |key|
-						fh_out_detailed.puts key.to_s + "," + pos_n_genes[key].to_s
-					end
-					fh_out_detailed.puts ""
+					# # write detailed output
+					# fh_out_detailed.puts prot
+					# pos_n_genes.keys.sort.each do |key|
+					# 	fh_out_detailed.puts key.to_s + "," + pos_n_genes[key].to_s
+					# end
+					# fh_out_detailed.puts ""
 
 				end
 
@@ -1878,7 +1881,17 @@ end
 				n_ctg = 0
 				n_conserved = 0
 				n_conserved_in5 = 0
-				pos_n_genes = Hash.new(0)
+				# pos_n_genes = Hash.new(0)
+				n_used_as_ser = 0
+				n_aas = 0
+				n_ctg_per_1000aa = 0
+
+				# total number of amino acids in ref data: parse alignment file
+				prot_mapped = prot.gsub(" ", "-").downcase
+				Dir.glob(BASE_PATH + prot_mapped + ".fasta") do |file|
+					headers, seqs = fasta2str(File.read(file))
+					n_aas = seqs.inject(0) {|sum, seq| sum += seq.gsub("-", "").length}
+				end
 
 			elsif line.include?("CTG positions.") 
 				# its the total number of CTG positions in this protein
@@ -1886,12 +1899,12 @@ end
 					puts line	
 			elsif ! n_ctgs.nil? 
 				# its a row with ctg usage data
-debugger
+
 				n_ctgs = n_ctgs.to_i # a string will be converted to zero, which is ok for now
 
 				if n_ctgs > 0 then
 					# number CTGs occuring in xx genes
-					pos_n_genes[n_ctgs] += 1
+					# pos_n_genes[n_ctgs] += 1
 				end
 
 				if n_ctgs > 1 then
@@ -1903,19 +1916,27 @@ debugger
 					# its also high conserved, as it occures in at least 5 prots
 					n_conserved_in5 += 1
 				end
+
+				# get number of CTG codons translated only as Serine
+				if ctg_usage =~ /S:\s?(\d+)/ then
+					n_used_as_ser += 1
+				end
+
 			end
 		end
 
 		# write data of last protein
-		fh_out.puts prot + "," + n_ctg + "," + n_conserved.to_s + "," + n_conserved_in5.to_s
+		n_ctg_per_1000aa = (n_ctg.to_i / n_aas.to_f * 1000).round
+		fh_out.puts prot + "," + n_ctg + "," + n_conserved.to_s + "," + n_conserved_in5.to_s + "," + n_ctg_per_1000aa.to_s + "," + n_aas.to_s + "," + n_used_as_ser.to_s
+	
 		# write detailed output
-		fh_out_detailed.puts prot
-		pos_n_genes.keys.sort.each do |key|
-			fh_out_detailed.puts key.to_s + "," + pos_n_genes[key].to_s
-		end
+		# fh_out_detailed.puts prot
+		# pos_n_genes.keys.sort.each do |key|
+		# 	fh_out_detailed.puts key.to_s + "," + pos_n_genes[key].to_s
+		# end
 
 		fh_out.close
-		fh_out_detailed.close
+		# fh_out_detailed.close
 
 		render :eval_ref_data, formats:[:js]
 	end

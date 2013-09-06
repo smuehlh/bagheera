@@ -1,5 +1,6 @@
 class CronjobController < ApplicationController
 	require 'open3'
+
 # debug me by calling "script/rails runner 'CronjobController.prepare_ref_data'" on command line and including a "debugger" anywhere
 	
 	def self.update_ref_data
@@ -94,6 +95,10 @@ puts "CAP done"
 			data.delete("Kinesin Class 4")
 			data.delete("Kinesin Class 16")
 
+			# remove common gaps from alignment
+			data.each do |prot, prot_data|
+				prot_data["alignment"] = remove_common_gaps(prot_data["alignment"])
+			end
 
 			# save updated reference data
 			puts "Saving updated reference data to file"
@@ -151,13 +156,14 @@ puts "CAP done"
 			data_no_ca_b.each do |prot, prot_data|
 				data_file = path_no_ca_b + prot.gsub(" ", "-").downcase + ".fasta"
 				fasta = prot_data["alignment"]
-
 				File.open(data_file, 'w'){|f| f.write(fasta)}
+
 				# check and correct length of each aligned sequence
 				is_true = ensure_length(data_file)
 				if ! is_true then
 					puts "\t #{prot}: Not all sequences were of same lenght. Now they are."
 				end
+
 				# check if mafft accepts them as aligned
 				is_true = ensure_mafft_is_fine(data_file)
 				if ! is_true then
@@ -188,7 +194,7 @@ puts "CAP done"
 				FileUtils.rm_rf Dir.glob(BASE_PATH + PATH_REF_WO_EXAMPLE), :verbose => true
 				FileUtils.mv Dir.glob(path_new_data + "*"), BASE_PATH, :verbose => true, :force => true
 				FileUtils.rm_rf path_new_data, :secure => true, :verbose => true
-				# FileUtils.rm_rf "/tmp/cug/new_alignment_gene_structure.json", :verbose => true
+				FileUtils.rm_rf "/tmp/cug/new_alignment_gene_structure.json", :verbose => true
 				puts "done."
 			rescue => e
 				puts "Could not move new files to place:"
@@ -320,6 +326,47 @@ end
 		
 	
 		return new_data
+	end
+
+	# remove common gaps. method is an (almost) exact copy of /fab8/db_scripts/alignment/edit.rb
+	def self.remove_common_gaps(fasta)
+		# prepare input
+		raw = fasta.split("\n")
+		align = {}
+		k = nil
+		raw.each do |l|
+			# key
+			if l[0].chr == ">" then
+				k = l[1..-1]
+			# sequence
+			else
+				align[k] = align[k].to_s + l
+			end
+		end
+  
+		seqs = align.values
+		max_len = seqs.collect do |s| s.length end.max
+		#look for gaps
+		gaps = []
+		max_len.times do |pos|
+			if (seqs.select do |s| (!s[pos] || s[pos].chr == "-") end.length == seqs.length) then
+				gaps << pos
+			end
+		end
+		gaps = gaps.reverse
+		#delete gaps
+		align.each_pair do |k, v|
+			v = v.split("")
+			gaps.each do |pos| v.delete_at(pos) end
+			v = v.join("")
+			align[k] = v
+		end
+
+		# output
+		fasta_out = ""
+		align.each_pair do |k, v| fasta_out << ">#{k}\n#{v}\n" end
+
+		return fasta_out
 	end
 
 	def self.ensure_length(file)
