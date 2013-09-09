@@ -20,8 +20,9 @@ Bagheera::Application.routes.draw do
   else
     scope '/bagheera' do
 
-      root to: 'predictions#search'
+      root to: 'static_pages#home'
 
+      match '/prediction', to: 'predictions#search', as: 'prediction', :via => [:get]
       match '/team', to: 'static_pages#team', as: 'team', :via => [:get]
       match '/help', to: 'static_pages#help', as: 'help', :via => [:get]
       match '/contact', to: 'static_pages#contact', as: 'contact', :via => [:get]
