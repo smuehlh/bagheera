@@ -19,157 +19,158 @@
 
     <% basename = prot_name.gsub(" ", "-").downcase %>
 
-    <% if @minor_error.find{|err| err.include?(key)} then %>
-        <%# no gene predicted, an error occured %>
-        <%# currently, display nothing in results section%>
-    <% else %>
-        <%= content_tag(:h3, "#{prot_name} (Hit #{value[:hit_shown]}/#{value[:n_hits]})") %>
+    <% next if @minor_error.join("").include?(key) # no results as prediction failed %>
+    <%= content_tag(:h3, "#{prot_name} (Hit #{value[:hit_shown]}/#{value[:n_hits]})") %>
 
-        <div class="pred_data_wrapper" id="pred_data_<%= basename %>" style="clear:both">
-        <%
+    <div class="pred_data_wrapper" id="pred_data_<%= basename %>" style="clear:both">
+    <%
 
-        ### this part is to prepare data
-            seq, seq_pos, aa_pct = format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
-            not_sign_pos = value[:ref_chem].collect{|k,v| ruby2human_counting(k) if ! v[:is_significant]}
+    ### this part is to prepare data
 
-            combined_res_table = ""
+        seq, seq_pos, aa_pct = format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
 
-        # check if protein profile was used for gene prediction
-        i_msg = value[:message].index{|msg| msg.include?("protein profile")}
-        if i_msg.nil? then
-            is_no_prot_profile = false
-        else
-            is_no_prot_profile = true
-            value[:message].delete_at(i_msg)
+        not_sign_pos = value[:ref_chem].collect{|k,v| ruby2human_counting(k) if ! v[:is_significant]}
+
+        combined_res_table = ""
+
+    # check if protein profile was used for gene prediction
+    i_msg = value[:message].index{|msg| msg.include?("protein profile")}
+    if i_msg.nil? then
+        is_no_prot_profile = false
+    else
+        is_no_prot_profile = true
+        value[:message].delete_at(i_msg)
+    end
+
+    ###  this part is to collect results from amino acid and CTG usage (to show them in one table)
+        if value[:ctg_pos].any? && value[:ref_chem].any? then
+            # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps) 
+            combined_res_table = draw_table2(ruby2human_counting(value[:ref_chem].keys), 
+                    aa_pct, value[:ref_chem].collect {|_, v| v[:aa_num]}, not_sign_pos, tab_aa)
+
+            # # display informative text in one row, with same font as throughout the page
+            # combined_res_table << content_tag(:tr, 
+            #     content_tag(:td, 
+            #         content_tag(:span, "Only amino acids accounting for more than 5% of the sequences at the respective position are shown.", :class => "normal_text"),
+            #         :colspan => 3)
+            #     ).html_safe
+
+        end 
+        if value[:ctg_pos].any? && value[:ref_ctg].any? then
+            # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps) 
+            combined_res_table += draw_table2(ruby2human_counting(value[:ref_ctg].keys), 
+                    format_ctg_stats(value[:ref_ctg]), 
+                    value[:ref_ctg].collect {|_, v| v[:ctg_num]}, [], tab_ctg).html_safe 
         end
+    %>
+    <%=    
 
-        ###  this part is to collect results from amino acid and CTG usage (to show them in one table)
-            if value[:ctg_pos].any? && value[:ref_chem].any? then
-                # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps) 
-                combined_res_table = draw_table2(ruby2human_counting(value[:ref_chem].keys), 
-                        aa_pct, value[:ref_chem].collect {|_, v| v[:aa_num]}, not_sign_pos, tab_aa)
+        if value[:ctg_pos].any? then   
 
-                # # display informative text in one row, with same font as throughout the page
-                # combined_res_table << content_tag(:tr, 
-                #     content_tag(:td, 
-                #         content_tag(:span, "Only amino acids accounting for more than 5% of the sequences at the respective position are shown.", :class => "normal_text"),
-                #         :colspan => 3)
-                #     ).html_safe
+            ### this part is to output info about missing data
+            content_tag(:i, "") + # no ouput, but needed to display rest correctly !
 
-            end 
-            if value[:ctg_pos].any? && value[:ref_ctg].any? then
-                # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps) 
-                combined_res_table += draw_table2(ruby2human_counting(value[:ref_ctg].keys), 
-                        format_ctg_stats(value[:ref_ctg]), 
-                        value[:ref_ctg].collect {|_, v| v[:ctg_num]}, [], tab_ctg).html_safe 
-            end
-        %>
-        <%=    
-
-            if value[:ctg_pos].any? then   
-
-                ### this part is to output info about missing data
-                content_tag(:i, "") + # no ouput, but needed to display rest correctly !
-
-                if value[:ref_chem].empty? then 
-                    # do not show results, this will be done elsewhere!
-                    content_tag(:p, 
-                        content_tag(:i, "No CTG position aligned with discriminative sites of reference data")
-                        )
-                end +
-
-                content_tag(:i, "") +
-
-                if value[:ref_ctg].empty? then
-                    # again: do not show results, this will be done elsewhere
-                    content_tag(:p, 
-                        content_tag(:i, "No CTG codons in reference data at same positions")
-                        )
-                end +
-
-                ### this part is only needed if any results (= aa distribution or CTG usage in refernce data) are there
-                ### it prints the table containing results (of both amino acid and CTG usage, if applicable)
-                ### it suggests a CTG usage
-                if value[:ref_chem].any? || value[:ref_ctg].any? then
-
-                    content_tag(:table, raw(combined_res_table), :class => "predTable") +
-
-                    if ! suggested_transl(value[:ref_chem], value[:ref_ctg]).blank? then
-                        content_tag(:p, suggested_transl(value[:ref_chem], value[:ref_ctg]), :class => "highlight_res" )
-                    end
-                end +
-
-                content_tag(:p, pluralize(value[:ref_seq_num].to_s, "sequence") << " in reference alignment")
-                
-            else
-                # no CTG positions
-                content_tag(:p, value[:message].join(" "), :class => "pred_nothing") 
+            if value[:ref_chem].empty? then 
+                # do not show results, this will be done elsewhere!
+                content_tag(:p, 
+                    content_tag(:i, "No CTG position aligned with discriminative sites of reference data")
+                    )
             end +
 
-            ### this part is for showing the table containing predicted sequence and CTG positions
-            content_tag(:normal, "Show predicted sequence ") +
-            image_tag("icons/down.png", 
-                :id => "#{basename}_#{value[:hit_shown]}_img", 
-                :title => "Show/hide predicted sequence", 
-                :onclick => "toggle_icon(this, $('#seq_#{basename}_#{value[:hit_shown]}'))"
-            ) +
-            content_tag(:div, 
-                draw_table(seq, seq_pos, tab_seq) +
-                draw_table(["Predicted sequence length", "Reference sequence length", "Reference species"],
-                    [value[:pred_prot].length.to_s + " amino acids", 
-                    value[:ref_prot].length.to_s + " amino acids", 
-                    value[:ref_species]], 
-                    tab_info
-                ) +
-                if is_no_prot_profile then
-                    content_tag(:p, "Sequence was predicted without additional information about the protein family.")
-                end ,
-                :class => "wrapper", 
-                :id => "seq_#{basename}_#{value[:hit_shown]}", 
-                :style => "display:none;"
-            ) +
+            content_tag(:i, "") +
 
-            tag(:br) +
-
-            ### this part is for showing the alignment
-            content_tag(:normal, "Show alignment ") +
-            link_to( 
-                image_tag("icons/down.png",
-                        id: "show_alignment_#{basename}_#{value[:hit_shown]}_img",
-                        :title => "Show/hide alignment",
-                        onclick: "toggle_icon(this, $('#alignment_#{basename}_#{value[:hit_shown]}'))"),
-                show_alignment_path(prot: prot_name, hit: value[:hit_shown]),
-                {:remote => true}
-            ) +
-            # button_to("Show alignment", show_alignment_path(prot: prot_name, hit: value[:hit_shown]), 
-            #    id: "show_alignment_button_#{basename}_#{value[:hit_shown]}", 
-            #    onclick: "hide_show_waiting('show');", remote: true, method: :get) + 
-            content_tag(:div, "", :id => "alignment_#{basename}_#{value[:hit_shown]}", :style => "display:none") + 
-            tag(:br) +
-
-            ### this part if for the predict more - button
-            if value[:hit_shown] < value[:n_hits] &&
-               (all_hit_list.blank? || value[:hit_shown] == all_hit_list.max) then
-               # show button if there are more hits than the shown ones and (in case of multiple hits per prot) if its the last shown hit
+            if value[:ref_ctg].empty? then
+                # again: do not show results, this will be done elsewhere
                 content_tag(:p, 
-                    content_tag(:normal, "Use next BLAST hits for gene prediction ", :class => "line") +
-                    link_to(
-                        image_tag("icons/down.png",
-                            # onclick: "img.src = this.src.replace('/down.png','/up.png');"
-                        ), 
-                        predict_more_path(prot: prot_name, hit: value[:hit_shown]), id: "pred_more_button", 
-                        onclick: "hide_show_waiting('show');", remote: true, method: :get,
-                    ),
-                    id: "pred_more_button",
-                )
+                    content_tag(:i, "No CTG codons in reference data at same positions")
+                    )
+            end +
 
-                # content_tag(:p,
-                #     button_to("Predict more", predict_more_path(prot: prot_name, hit: value[:hit_shown]), id: "pred_more_button", 
-                #         onclick: "hide_show_waiting('show');", remote: true, method: :get),
-                #     :class => "vertical_line"
-                # )
-            end
-        %>    
-        </div>
-    <% end %>
+            ### this part is only needed if any results (= aa distribution or CTG usage in refernce data) are there
+            ### it prints the table containing results (of both amino acid and CTG usage, if applicable)
+            ### it suggests a CTG usage
+            if value[:ref_chem].any? || value[:ref_ctg].any? then
+
+                content_tag(:table, raw(combined_res_table), :class => "predTable") +
+
+                if ! suggested_transl(value[:ref_chem], value[:ref_ctg]).blank? then
+                    content_tag(:p, suggested_transl(value[:ref_chem], value[:ref_ctg]), :class => "highlight_res" )
+                end
+            end +
+
+            content_tag(:p, pluralize(value[:ref_seq_num].to_s, "sequence") << " in reference alignment")
+            
+        else
+            # no CTG positions
+            content_tag(:p, value[:message].join(" "), :class => "pred_nothing") 
+        end +
+
+        ### this part is for showing the table containing predicted sequence and CTG positions
+        content_tag(:normal, "Show predicted sequence ") +
+        image_tag("icons/down.png", 
+            :id => "#{basename}_#{value[:hit_shown]}_img", 
+            :title => "Show/hide predicted sequence", 
+            :onclick => "toggle_icon(this, $('#seq_#{basename}_#{value[:hit_shown]}'))"
+        ) +
+        content_tag(:div, 
+            draw_table(seq, seq_pos, tab_seq) +
+            draw_table(["Predicted sequence length", "Reference sequence length", "Reference species"],
+                [value[:pred_prot].length.to_s + " amino acids", 
+                value[:ref_prot].length.to_s + " amino acids", 
+                value[:ref_species]], 
+                tab_info
+            ) +
+            if is_no_prot_profile then
+                content_tag(:p, "Sequence was predicted without additional information about the protein family.")
+            end ,
+            :class => "wrapper", 
+            :id => "seq_#{basename}_#{value[:hit_shown]}", 
+            :style => "display:none;"
+        ) +
+
+        tag(:br) +
+
+        ### this part is for showing the alignment
+        content_tag(:normal, "Show alignment ") +
+        link_to( 
+            image_tag("icons/down.png",
+                    id: "show_alignment_#{basename}_#{value[:hit_shown]}_img",
+                    :title => "Show/hide alignment",
+                    onclick: "toggle_icon(this, $('#alignment_#{basename}_#{value[:hit_shown]}'))"),
+            show_alignment_path(prot: prot_name, hit: value[:hit_shown]),
+            {:remote => true}
+        ) +
+        # button_to("Show alignment", show_alignment_path(prot: prot_name, hit: value[:hit_shown]), 
+        #    id: "show_alignment_button_#{basename}_#{value[:hit_shown]}", 
+        #    onclick: "hide_show_waiting('show');", remote: true, method: :get) + 
+        content_tag(:div, "", :id => "alignment_#{basename}_#{value[:hit_shown]}", :style => "display:none") + 
+        tag(:br) +
+
+        ### this part if for the predict more - button
+        if value[:hit_shown] < value[:n_hits] &&
+           (all_hit_list.blank? || value[:hit_shown] == all_hit_list.max) then
+           # show button if there are more hits than the shown ones and (in case of multiple hits per prot) if its the last shown hit
+            content_tag(:p, 
+                content_tag(:normal, "Use next BLAST hits for gene prediction ", :class => "line") +
+                link_to(
+                    image_tag("icons/down.png",
+                        # onclick: "img.src = this.src.replace('/down.png','/up.png');"
+                    ), 
+                    predict_more_path(
+                        prot: prot_name, hit: value[:hit_shown], algo: params[:algo], config: params[:config], blast: params[:blast]), 
+                    id: "pred_more_button", 
+                    onclick: "hide_show_waiting('show');", remote: true, method: :get,
+                ),
+                id: "pred_more_button",
+            )
+
+            # content_tag(:p,
+            #     button_to("Predict more", predict_more_path(prot: prot_name, hit: value[:hit_shown]), id: "pred_more_button", 
+            #         onclick: "hide_show_waiting('show');", remote: true, method: :get),
+            #     :class => "vertical_line"
+            # )
+        end
+    %>    
+    </div>
+
 <% end %> 

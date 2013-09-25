@@ -60,5 +60,5 @@ gem 'thin'
 gem 'debugger'
 gem "dalli"
 gem 'fancybox-rails'
-gem "peach"
+gem "parallel"
 gem 'whenever', :require => false

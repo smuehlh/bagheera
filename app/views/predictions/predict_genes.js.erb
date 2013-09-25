@@ -1,5 +1,5 @@
-stop_periodically_show_stat();
-// hide_show_waiting('hide');
+// stop_periodically_show_stat();
+hide_show_waiting('hide');
 
 <% if @fatal_error.any? then%>
 	show_error('<%=raw(@fatal_error.join("<br />"))%>');

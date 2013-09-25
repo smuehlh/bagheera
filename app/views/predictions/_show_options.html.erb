@@ -44,7 +44,8 @@
 		# comment if submit-tag should be used
 		submit_tag("Start prediction", #class: "nice_button", 
 			:id => "predict_button", 
-			onclick: "periodically_show_stat();",
+			onclick: "hide_show_waiting('show');",
+			# onclick: "periodically_show_stat();",
 			:disabled => true)
 	end
 %>
