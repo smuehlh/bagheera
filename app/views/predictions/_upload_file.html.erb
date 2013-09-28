@@ -1,33 +1,20 @@
-<!-- <div>
-	<div id="file_upload_field">
-  			  <%= file_field_tag(:uploaded_file, 
-			  	id: 	"ajax_upload_file",
-			  	class: 	"ajax_upload_field",
-				data: 	{url: upload_file_path}) 
-			  %>
-			  <small id="example_file_field"> or <%= link_to("load example", 
-			  	load_example_path,
-			    {:remote => true, :onclick => "hide_show_waiting('show');", 
-			    	:style => "text-decoration: underline;"})%>
-		      </small>
-  	</div>
-  	<div id="uploaded_files">No file uploaded</div>
-  	<div style="clear: both;"></div>
-</div> -->
 <%=
 content_tag(:div, 
 	file_field_tag(:uploaded_file, 
 	  	id: 	"ajax_upload_file",
 	  	class: 	"ajax_upload_field",
-		data: 	{url: upload_file_path}
+		data: 	{url: post_upload_file_path}
 	) +
 	tag(:br) + 
 	content_tag(:small, 
 		"or ".html_safe + 
 		link_to("load example", 
-			  	load_example_path,
-			    {:remote => true, :onclick => "hide_show_waiting('show');", 
-		    	:style => "text-decoration: underline;"}),
+		  	get_upload_file_path( is_example: true ),
+		    remote: true, 
+		    onclick: "hide_show_waiting('show');", 
+	    	style: "text-decoration: underline;",
+	    	method: :get
+    	),
 		:id => "example_file_field"
 	), 
 	:id => "file_upload_field"
@@ -37,3 +24,4 @@ content_tag(:div,
 	:id => "uploaded_files"
 )
 %>
+

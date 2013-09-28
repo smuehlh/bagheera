@@ -7,11 +7,11 @@ Bagheera::Application.routes.draw do
     match '/help', to: 'static_pages#help', as: 'help', :via => [:get]
     match '/contact', to: 'static_pages#contact', as: 'contact', :via => [:get]
 
-    match 'upload_file', to: 'predictions#upload_file', as: 'upload_file', :via => [:post]
+    match 'upload_file', to: 'predictions#upload_file', as: 'post/upload_file', :via => [:post]
+    match 'upload_file', to: 'predictions#upload_file', as: 'get/upload_file', :via => [:get]
     match 'predict_genes', to: 'predictions#predict_genes', as: 'predict_genes', :via => [:post]
-    match 'load_example', to: 'predictions#load_example', as: 'load_example', :via => [:get]
-    match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
     match 'predict_more', to: 'predictions#predict_more', as: 'predict_more', :via => [:get]
+    match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
     match 'calc_tree', to: 'tree#calc_tree', as: 'calc_tree', :via => [:post]
     match 'download', to: 'tree#download', as: 'download', :via => [:get]
 
@@ -26,11 +26,11 @@ Bagheera::Application.routes.draw do
       match '/help', to: 'static_pages#help', as: 'help', :via => [:get]
       match '/contact', to: 'static_pages#contact', as: 'contact', :via => [:get]
 
-      match 'upload_file', to: 'predictions#upload_file', as: 'upload_file', :via => [:post]
+      match 'upload_file', to: 'predictions#upload_file', as: 'post/upload_file', :via => [:post]
+      match 'upload_file', to: 'predictions#upload_file', as: 'get/upload_file', :via => [:get]
       match 'predict_genes', to: 'predictions#predict_genes', as: 'predict_genes', :via => [:post]
-      match 'load_example', to: 'predictions#load_example', as: 'load_example', :via => [:get]
-      match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
       match 'predict_more', to: 'predictions#predict_more', as: 'predict_more', :via => [:get]
+      match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
       match 'calc_tree', to: 'tree#calc_tree', as: 'calc_tree', :via => [:post]
       match 'download', to: 'tree#download', as: 'download', :via => [:get]
     end

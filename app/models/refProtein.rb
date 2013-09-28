@@ -54,12 +54,8 @@ class RefProtein < ProteinFamily
 			key = matched_genes.find do |key|
 				@ref_genes[key]["completeness"] == "complete"
 			end
-begin
 			key = matched_genes[0] if key.nil? || key.empty?
-rescue => err
-	debugger
-	puts "bla"
-end
+
 		elsif matched_genes.empty?
 			key = @ref_genes.keys[0]
 		end

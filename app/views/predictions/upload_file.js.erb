@@ -1,0 +1,33 @@
+<% if @fatal_error.blank? then %>
+	// file upload successful
+	hide_show_waiting('hide');
+	$('#uploaded_files').html('<%=session[:file][:name]%>');
+	// enable options section
+	$('#options_form').show();
+	$('#options_form').removeClass('disabled');
+	$('#species').removeAttr('disabled');
+	$('#algo').removeAttr('disabled');
+	$('#blast').removeAttr('disabled');
+	$('#predict_button').show();
+	$('#predict_button').removeAttr('disabled');
+	// hide results
+	$('#results_section').show();
+	$('#results_section').html('Start prediction first.');
+	$('#tree_section').show();
+	$('#tree_section').html('Start prediction first.');
+<% else%>
+	// error during file upload
+	$('#uploaded_files').html('No file uploaded');
+	// disable options section
+	$('#options_form').addClass('disabled');
+	$('#species').attr('disabled', 'disabled');
+	$('#algo').attr('disabled', 'disabled');
+	$('#blast').attr('disabled', 'disabled');
+	$('#predict_button').attr('disabled', 'disabled');
+	// hide results
+	$('#results_section').html('Start prediction first.');
+	$('#tree_section').html('Start prediction first.');
+	// side effect of show_error: hide_show_waiting('hide') is called!
+	show_error('<%=raw(@fatal_error.join("<br />"))%>');
+	$('#example_file_field').show();
+<% end%>

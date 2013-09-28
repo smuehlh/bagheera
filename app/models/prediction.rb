@@ -6,7 +6,7 @@ class Prediction
 	attr_reader :pred_cug, :pred_seq, :pred_dnaseq, :this_hit_nr, :n_blast_hits, :err_msg, :used_prfl
 	
 	@@align_method = "mafft"
-	@@align_config = ""
+	@@align_config = "tttt"
 	
 	def initialize(prot_obj, hit_nr=1, file_basename)
 		@protein = prot_obj
@@ -79,7 +79,7 @@ class Prediction
 	def run_fastacmd(seq_id, start, stop, strand)
 		@tmp_file = File.join(@file_basename, Helper.get_tmp_file)
 		is_success, output = ProgCall.fastacmd(@tmp_file, seq_id, start, stop, strand)
-		Helper.worked_or_throw_error(is_success, "Gene prediction failed.")
+		Helper.worked_or_throw_error(is_success, "Gene prediction (fastacmd) failed.")
 		return output
 	end
 
@@ -101,7 +101,7 @@ class Prediction
 			@used_prfl = false
 			is_success, exit_status = ProgCall.augustus(@f_augustus, @tmp_file)
 		end
-
+		
 		Helper.worked_or_throw_error(is_success, "Gene prediction failed.")
 	end
 
@@ -185,7 +185,9 @@ class Prediction
 		output = File.read(@f_augustus)
 		@pred_seq = output.match(/protein sequence = \[(.*)\]/m)[1].gsub("\n# ", "").upcase
 		@pred_dnaseq = output.match(/coding sequence = \[(.*?)\]/m)[1].gsub("\n# ", "").upcase
-		if ! @pred_seq || ! @pred_dnaseq then
+
+		if @pred_seq.blank? || @pred_dnaseq.blank? then
+			puts "parse_augustus -> something blank?"
 			Helper.worked_or_throw_error(false, "AUGUSTUS failed.")
 		end
 	end
@@ -271,6 +273,7 @@ class Prediction
 		ref_codons = []
 
 		ctg_pos.each do |pos|
+
 			pred_apos = Helper::Sequence.sequence_pos2alignment_pos(pos, @predseq_aligned)
 			if @refseq_aligned[pred_apos] == "-" then
 				ref_pos << nil
@@ -291,6 +294,7 @@ class Prediction
 			col = []
 			codons = []
 			@protein.ref_alignment.each do |cymo_header, cymo_prot|
+
 				col << cymo_prot[ref_cymopos]
 				if cymo_prot[ref_cymopos] == "-" then
 					codons << nil
@@ -298,11 +302,14 @@ class Prediction
 					spos = Helper::Sequence.alignment_pos2sequence_pos(ref_cymopos, cymo_prot) # position in sequece without gaps
 					codons << Helper::Sequence.split_cdna_into_codons(@protein.ref_genes[cymo_header]["gene"], spos)
 				end
+
 			end
 			ref_pos << ref_cymopos
 			ref_cols << col
 			ref_codons << codons.compact
+
 		end
+
 		return ref_pos, ref_cols, ref_codons
 	end
 
@@ -376,37 +383,22 @@ class Prediction
 	end
 
 
-	def save(results, key=@protein.prot)
-		results[key] = {
-			ref_species: "", ref_prot: "", ref_seq_num: "", 
-			pred_prot: "", 
-			n_hits: "", hit_shown: "", 
-			message: [], 
-			ctg_pos: [], ref_chem: {}, ref_ctg: {}
-		}
-
-		results[key][:ref_species] = @protein.ref_species
-		results[key][:ref_prot] = @protein.ref_seq
-		results[key][:ref_seq_num] = @protein.ref_alignment.keys.size
-		results[key][:n_hits] = @n_blast_hits
-		results[key][:hit_shown] = @this_hit_nr
-		results[key][:pred_prot] = @pred_seq
+	def save(results)
+		# "fail-save" save only if new values are not nil 
+		results[:ref_species] = @protein.ref_species if @protein.ref_species
+		results[:ref_prot] = @protein.ref_seq if @protein.ref_seq
+		results[:ref_seq_num] = @protein.ref_alignment.keys.size if @protein.ref_alignment.keys
+		results[:n_hits] = @n_blast_hits if @n_blast_hits
+		results[:hit_shown] = @this_hit_nr if @this_hit_nr
+		results[:pred_prot] = @pred_seq if @pred_seq
 
 		if @pred_cug then
-			results[key].merge!(@pred_cug)
+			results.merge!(@pred_cug)
 		end
-
-		return results
 	end
 
-	def save_message(results, key=@protein.prot, *msg)
-		if msg.any? then
-			results[key][:message] |= [msg]
-		else
-			results[key][:message] |= [@err_msg] if ! @err_msg.blank?
-		end
-
-		return results
+	def save_message(results, msg=@err_msg)
+		results[:message] |= [@err_msg] if ! @err_msg.blank?
 	end
 
 end

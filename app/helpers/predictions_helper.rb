@@ -263,4 +263,44 @@ module PredictionsHelper
 		end
 	end
 
+
+	# methods to parse [:message]
+	def has_fatal_error(errs)
+		ind = errs.find {|err| err.include?("fail")}
+		if ind then
+			return true
+		end
+		return false		
+	end
+
+   def find_and_del_no_prfl(errs)
+	    i_msg = errs.index{|msg| msg.include?("protein profile")}
+	    if i_msg.nil? then
+	        is_no_prot_profile = false
+	    else
+	        is_no_prot_profile = true
+	        errs.delete_at(i_msg)
+	    end
+	    return is_no_prot_profile
+	end
+
+	# method to convert key into protein name
+	def get_prot_name(key,detailed=false)
+		prot = ""
+		# key =~ /(.+)_\d+$/ ? $1 : key
+		parts = key.match(/(.+)_(\d+)$/)
+
+		if parts then
+			prot = parts[1]
+			if detailed then
+				prot += " (Hit #{parts[2]})"
+			end
+		else
+			prot = key
+		end
+
+		return prot
+	end
+	
+
 end

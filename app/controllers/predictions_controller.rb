@@ -7,67 +7,93 @@ class PredictionsController < ApplicationController
 
 	# Render start page for prediction
 	def search
-		delete_old_data # delete old uploaded genome files
 		prepare_new_session # a fresh session
 	end
 
-	# Handel uploaded genome file: 
+	# Handel uploaded genome file and request to load example 
 	# store it in /tmp/cug and add its id(new file name), original filename and path to the session
 	# render partial showing the uploaded file
 	# accessible params: @fatal_error [Array] Errors occured during file load
 	def upload_file
-		@fatal_error = []
-		is_success = system("fromdos", params[:uploaded_file].path)
-		@fatal_error << "Fatal error." << "Cannot load genome data. Please contact us!" if ! is_success
-		# is the file too big? maybe jquery-check did not work, so better check again
-		filesize = params[:uploaded_file].size
-		@fatal_error |= check_filesize(filesize)
-		# check content, only if file is not too big
-		check_cug = (filesize < 5120 ) ? true : false  # 5 KB
-		@fatal_error |= check_fasta(params[:uploaded_file], check_cug) if @fatal_error.blank?
-		if @fatal_error.blank? then
-			# rename and save file
-			file_id = rand(1000000000).to_s
-			file_name = File.basename(params[:uploaded_file].original_filename)
-			file_path = File.join(BASE_PATH, file_id, "query.fasta")
-			begin
-				FileUtils.mkdir(BASE_PATH + file_id, :mode => 0775)
-				FileUtils.mv(params[:uploaded_file].path, file_path)
-			rescue
-				@fatal_error << "Cannot upload file."
+
+		@fatal_error = catch(:error) {
+
+			id = Helper.make_new_tmp_dir(BASE_PATH)
+			f_dest = File.join(BASE_PATH, id, "query.fasta")
+
+			if params.has_key?(:is_example) then
+				# request to load example:
+
+				example = "Candida_albicans_WO_1.fasta"
+				f_scr = File.join(Rails.root + "lib/", example)
+
+				Helper.move_or_copy_file(f_scr, f_dest,"0444","copy")
+
+				basename = example.gsub(".fasta","")
+
+			else
+				# genome file uploaded:
+
+				# check file size
+				Helper.filesize_below_limit(params[:uploaded_file], MAX_SIZE)
+
+				# store file in place (i.e. an new folder for this session)
+				Helper.mkdir_or_die( File.join(BASE_PATH,id) )
+				Helper.move_or_copy_file(params[:uploaded_file].path,f_dest,"0444","move") 
+
+				# call fromdos
+				is_sucess = system("fromdos",f_dest)
+				throw :error, ["Cannot upload file", "Please contact us."] if ! is_sucess
+
+				basename = File.basename(params[:uploaded_file].original_filename)
+
 			end
-			session[:file] = { id: file_id, name: file_name, path: file_path }
-		end
-		render :upload_file_ajax, formats: [:js]
+			# same for example/ uploaded file:
+
+			# save in session
+			session[:file] = { id: id, name: basename, path: f_dest}
+
+			[] # default for @fatal_error: if file size is ok, @fatal_error should be empty array
+		}
+
+	rescue RuntimeError => exp
+		@fatal_error = [exp.message]
+
+	rescue NoMethodError, TypeError, NameError => exp
+		@fatal_error = ["Cannot load file.", "Please contact us."]
+
+	ensure
+		render :upload_file, formats: [:js]
+
 	end
 
-	# Handel loading the example genome:
-	# store it in /tmp/cug and add its id(new file name), original filename and path to the session
-	# render partial showing the uploaded file
-	# accessible params: @fatal_error [Array] Errors occured during file load
-	def load_example
-		example_file = "Candida_albicans_WO_1.fasta"
-		example_path = Rails.root + "lib/" + example_file
-		@fatal_error = []
-		if File.exist?(example_path) then
-			# do not check content, but check file size, just to be sure
-			@fatal_error |= check_filesize(File.size(example_path))
-			if @fatal_error.blank? then
-				file_id = rand(1000000000).to_s
-				file_path = File.join(BASE_PATH, file_id, "query.fasta")
-				begin
-					FileUtils.mkdir(BASE_PATH + file_id, :mode => 0775)
-					FileUtils.cp(example_path, file_path)
-				rescue
-					@fatal_error << "Cannot upload file."
-				end
-				session[:file] = { id: file_id, name: example_file, path: file_path }
-			end
-		else
-			@fatal_error << "Cannot upload file."
-		end
-		render :upload_file_ajax, formats: [:js]
-	end
+	# # Handel loading the example genome:
+	# # store it in /tmp/cug and add its id(new file name), original filename and path to the session
+	# # render partial showing the uploaded file
+	# # accessible params: @fatal_error [Array] Errors occured during file load
+	# def load_example
+	# 	example_file = "Candida_albicans_WO_1.fasta"
+	# 	example_path = Rails.root + "lib/" + example_file
+	# 	@fatal_error = []
+	# 	if File.exist?(example_path) then
+	# 		# do not check content, but check file size, just to be sure
+	# 		@fatal_error |= check_filesize(File.size(example_path))
+	# 		if @fatal_error.blank? then
+	# 			file_id = rand(1000000000).to_s
+	# 			file_path = File.join(BASE_PATH, file_id, "query.fasta")
+	# 			begin
+	# 				FileUtils.mkdir(BASE_PATH + file_id, :mode => 0775)
+	# 				FileUtils.cp(example_path, file_path)
+	# 			rescue
+	# 				@fatal_error << "Cannot upload file."
+	# 			end
+	# 			session[:file] = { id: file_id, name: example_file, path: file_path }
+	# 		end
+	# 	else
+	# 		@fatal_error << "Cannot upload file."
+	# 	end
+	# 	render :upload_file_ajax, formats: [:js]
+	# end
 
 # uncomment if alignment options should get an own submit-button instead of the big "Predict button"
 	# def set_alignment_options
@@ -88,11 +114,14 @@ class PredictionsController < ApplicationController
 
 		@file_id = "cug" + session[:file][:id] + rand(1000000000).to_s
 		# set correct file extension for dialign/ seqan files
-		file_scr = BASE_PATH + session[:file][:id] + "/" + prot + "-" + hit.to_s + "-aligned.fasta"
-		file_dest = Dir::tmpdir + "/cymobase_alignment_" + @file_id + ".fasta"
+
+		file_scr = File.join(BASE_PATH, session[:file][:id], "#{prot}-#{hit.to_s}-aligned.fasta")
+		file_dest = File.join(Dir::tmpdir, "cymobase_alignment_#{@file_id}.fasta")
+
+		Helper.file_exist_or_die(file_scr)
 
 		# write data again to file, leave line breaks after 80 chars out (lucullus will be much faster this way)
-		headers, seqs = fasta2str(File.read(file_scr))
+		headers, seqs = Helper::Sequence.fasta2str(File.read(file_scr))
 		headers.map!{ |e| ">" << e } # add ">" again to make it a valid header
 		pred_seq_ind = headers.index(">Prediction")
 
@@ -114,6 +143,14 @@ class PredictionsController < ApplicationController
 	# # write predicted seq at the end of alignment, to make sure no seq is missing (Prediction is already at the top)
 	# fh_dest.puts( str2fasta("Prediction", seqs[headers.index(">Prediction")], true) )
 		fh_dest.close
+
+	rescue RuntimeError => exp
+		@fatal_error = [exp.message]
+
+	rescue NoMethodError, TypeError, NameError => exp
+		@fatal_error = ["Cannot load file.", "Please contact us."]
+
+	ensure
 		render :show_alignment
 	end
 
@@ -145,8 +182,8 @@ class PredictionsController < ApplicationController
 
 		# add options to this session
 		ProgCall.blast_filtering = "m S" if params.has_key?(:blast) # use low complexity filter
-		Prediction.class_variable_set(:@@align_method, params[:algo])
-		Prediction.class_variable_set(:@@align_config, params[:config])
+		Prediction.class_variable_set(:@@align_method, params[:algo]) if params.has_key?(:algo)
+		Prediction.class_variable_set(:@@align_config, params[:config]) if params.has_key?(:config)
 
 		if session[:file][:name] == "Candida_albicans_WO_1.fasta" then
 			ProteinFamily.class_variable_set(:@@ref_data_path, File.join(BASE_PATH,PATH_REF_WO_EXAMPLE) )
@@ -156,8 +193,7 @@ class PredictionsController < ApplicationController
 
 		# initialize "results" variables
 		@fatal_error = []
-		@minor_error = []
-		@predicted_prots = {} # Hash of hashes
+		@predicted_prots = Hash.new() # will become Hash of hashes
 		@stats = Hash.new(0)
 
 		ref_data = Helper.load_ref_data
@@ -169,15 +205,20 @@ class PredictionsController < ApplicationController
 		ProgCall.create_blast_db(session[:file][:path])
 
 		# predict genes for every protein
-
 		sorted_ref_prots = ref_data.keys.sort_by {|key| key.to_s.naturalized}
-		# Important: do NOT use in_processes here, as then @stats and @predicted_prots will be lost
-
-		Parallel.each( sorted_ref_prots, :in_threads => 10 ) do |prot|
+		# Alternative: use in_threads here, then rewrite "storage" of results
+		results = Parallel.map( sorted_ref_prots, :in_processes => 0 ) do |prot|
 
 			# initialize 
 			all_prot_data = ref_data[prot]
-
+			this_results = {
+				ref_species: "", ref_prot: "", ref_seq_num: "", 
+				pred_prot: "", 
+				n_hits: "", hit_shown: "", 
+				message: [], 
+				ctg_pos: [], ref_chem: {}, ref_ctg: {}
+			}
+			
 			begin
 				prot_obj = RefProtein.new(prot, all_prot_data, file_basename)
 			rescue RuntimeError => exp
@@ -190,27 +231,27 @@ class PredictionsController < ApplicationController
 			pred_obj.predict
 
 			# save results
-			pred_obj.save(@predicted_prots)
+			pred_obj.save(this_results)
 
 			# save error messages
 			if ! pred_obj.err_msg.blank? then
-				if pred_obj.err_msg.include?("failed") then
-					# messages like program failures go into @minor_error
-					write_minor_error(prot, pred_obj.err_msg)
-				else
-					# messages concerning prediction itself go into :message
-					pred_obj.save_message(@predicted_prots)
-				end
+				pred_obj.save_message(this_results)
 			end
 
 			if ! pred_obj.used_prfl then
-				pred_obj.save_message(@predicted_prots, "No protein profile available for gene prediction." )
+				pred_obj.save_message(this_results, "No protein profile available for gene prediction." )
 			end
 
-			Status.update(@predicted_prots[prot], @stats)
+			# Status.update(@predicted_prots[prot], @stats)
+			Status.update(this_results, @stats)
+
+			# repeat variables which should be catched by map
+			[prot, this_results]
 
 		end # Parallel
 
+		# convert mapped results to @predicted_prots (accessible in view)
+		@predicted_prots = Hash[results.flatten.each_slice(2).to_a]
 		# save status to use it again in predict_more
 		f_stats = File.join(file_basename, "stat")
 		Status.save(f_stats, @stats)
@@ -218,9 +259,9 @@ class PredictionsController < ApplicationController
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]
 
-	rescue NoMethodError, TypeError => exp
+	rescue NoMethodError, TypeError, NameError => exp
 		@fatal_error = ["Sorry, an error occured. Please contact us."]
-
+	ensure
 		render :predict_genes, formats: [:js]
 	end
 
@@ -259,8 +300,7 @@ class PredictionsController < ApplicationController
 
 		# initialize "results" variables
 		@fatal_error = []
-		@minor_error = []
-		@predicted_prots = {} # Hash of hashes
+		@predicted_prots = Hash.new() # will become Hash of hashes
 		@stats = Hash.new(0)
 
 		# initialize reference data
@@ -281,37 +321,42 @@ class PredictionsController < ApplicationController
 		hit_stop = hit_start == 2 ? [10, n_hits].min : [hit_start+9, n_hits].min # go in steps of 10, or to last hit
 
 		# predict genes for every blast hit
-
-		# Important: do NOT use in_processes here, as then @stats and @predicted_prots will be lost
-		Parallel.each( (hit_start..hit_stop), :in_threads => 10 ) do |n_hit|
+		results = Parallel.map( (hit_start..hit_stop) ) do |n_hit|
 			# initialize 
 			key = @prot + "_" + n_hit.to_s
+			this_results = {
+				ref_species: "", ref_prot: "", ref_seq_num: "", 
+				pred_prot: "", 
+				n_hits: "", hit_shown: "", 
+				message: [], 
+				ctg_pos: [], ref_chem: {}, ref_ctg: {}
+			}
 
 			pred_obj = Prediction.new(prot_obj, n_hit, file_basename) 
 
 			pred_obj.predict
 
 			# save results
-			pred_obj.save(@predicted_prots, key)
+			pred_obj.save(this_results)
 
 			# save error messages
 			if ! pred_obj.err_msg.blank? then
-				if pred_obj.err_msg.include?("failed") then
-					# messages like program failures go into @minor_error
-					write_minor_error(key, pred_obj.err_msg)
-				else
-					# messages concerning prediction itself go into :message
-					pred_obj.save_message(@predicted_prots, key)
-				end
+				pred_obj.save_message(this_results)
 			end
 
 			if ! pred_obj.used_prfl then
-				pred_obj.save_message(@predicted_prots, key, "No protein profile available for gene prediction." )
+				pred_obj.save_message(this_results, "No protein profile available for gene prediction." )
 			end
 
-			Status.update(@predicted_prots[key], @stats)
+			Status.update(this_results, @stats)
+
+			# repeat variables which should be catched by map
+			[key, this_results]
 
 		end # Parallel
+
+		# convert mapped results to @predicted_prots (accessible in view)
+		@predicted_prots = Hash[results.flatten.each_slice(2).to_a]
 
 		# save status to use it again in predict_more
 		f_stats = File.join(file_basename, "stat")
@@ -320,9 +365,10 @@ class PredictionsController < ApplicationController
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]
 
-	rescue NoMethodError, TypeError => exp
+	rescue NoMethodError, TypeError, NameError => exp
 		@fatal_error = ["Sorry, an error occured. Please contact us."]
 
+	ensure
 		render :predict_more, formats: [:js]
 
 	end
@@ -331,29 +377,16 @@ class PredictionsController < ApplicationController
 	def prepare_new_session
 		reset_session
 	    session[:file] = {} 		# uploaded genome described by keys: :name, :id, :path
-	    # session[:align] = {}		# alignment options for seqan: pair_align or DIALIGN
-	    # session[:augustus] = {}		# options for augustus gene prediction
 	end
 
-	# delete old data in /tmp/cug/ and /tmp/cymobase_alignment_cug*
-	# data from old predictions and show_alignment requests
-	def delete_old_data(days = 1)
-		# delete all files older than one day except file "alignment_gene_structure.json" and logfile
-		# system("find", BASE_PATH, "-type", "f", "-not", "-name", REF_DATA, "-mtime", "+#{days}", "-delete")
-		begin
-			Dir.glob(BASE_PATH + "**/") do |dir|
-				if dir == BASE_PATH then
-					next
-				elsif dir == BASE_PATH + PATH_REF_WO_EXAMPLE 
-					next
-				elsif File.mtime(dir) <= days.day.ago
-					FileUtils.rm_rf(dir, :secure=>true)
-				end
-			end
-			# delete alignment file for show-alignment function
-			FileUtils.rm Dir.glob(Dir::tmpdir + '/cymobase_alignment_cug*')
-		rescue
-		end
+	# build up @minor_error [Array] Error messages
+	# non-fatal errors, affecting only a single protein
+	# on fab8, verbose error messages will be printed, outside non-verbose ones
+	# @param prot [String] Protein for which gene prediction failed
+	# @param message [String] More detailed information about the error
+	def write_minor_error (err, prot, message)
+		err.push( prot + ": " + message )
+		return err
 	end
 
 	# def write_status(done, total, final=false)
@@ -364,95 +397,72 @@ class PredictionsController < ApplicationController
 	# end
 
 
-	# compare uploadedfile-size with maximal size (50MB)
-	# @param size [Fixnum] File size 
-	# @return [Array] Error message if size exceeds MAX_SIZE
-	def check_filesize(size)
-		errors = []
-		if size > MAX_SIZE then
-			errors << "Fatal error."
-			errors << "File must be less than 25 MB."
-			errors << "Please contact us to upload larger files."
-		end
-		return errors
-	end
+	# # Read fasta and test if it is fasta-formatted genome file and contains an CTG codon
+	# # @param file [String] File handle
+	# # @param check_cug [Boolean] Determine to check for presence of CUG codons too (only for really small files)
+	# # @return [Array] Error messages if invalid file
+	# def check_fasta(file, check_cug)
+	# 	errors = []
+	# 	is_fasta = true
+	# 	contains_ctg = false
+	# 	is_first_line = true
+	# 	last_nucleotides = "" # need to store 2 last nts of each line to check for ctg!
+	# 	counter = 0 # if a simple check for fasta needs, read only first 100 lines
+	# 	# read file line by line, since it might be large
+	# 	IO.foreach(file.path) do |line|
+	# 		line.chomp!
+	# 		counter += 1
+	# 		break if counter > 100 && ! check_cug # simple check is done
+	# 		if is_first_line then
+	# 			# expect very first line to be fasta header
+	# 			if ! line.starts_with?('>') then
+	# 				is_fasta = false
+	# 				# test failed, stop reading file!
+	# 				break
+	# 			end
+	# 			is_first_line = false
+	# 		else
+	# 			# it's not the very first line, might be header, comment or sequence
+	# 			if line.starts_with?('>') then
+	# 				# a new header
+	# 				# the quick check for fasta format is done
+	# 				break unless check_cug
+	# 				# continue only if check for cug - codon also needed: clear last_nucleotides-buffer
+	# 				last_nucleotides = ""
+	# 			elsif line.starts_with?(';')
+	# 				# comment line, simply skip
+	# 				next
+	# 			elsif line =~ /[^ACGTURYMKSWBDHVN]/i
+	# 				# a sequence line, but containing charaters not part of iupac nucleotide definition
+	# 				# test failed, stop reading file!
+	# 				is_fasta = false
+	# 				break
+	# 			else
+	# 				# a sequence line, valid content
+	# 				# ctg might be splitted into 2 lines
+	# 				contains_ctg = true if (last_nucleotides + line).upcase.include?("CTG")
+	# 				if line.length >=2 then
+	# 					last_nucleotides = line[-2,2]
+	# 				else
+	# 					last_nucleotides = line
+	# 				end
+	# 			end
+	# 		end
+	# 	end
 
-
-	# Read fasta and test if it is fasta-formatted genome file and contains an CTG codon
-	# @param file [String] File handle
-	# @param check_cug [Boolean] Determine to check for presence of CUG codons too (only for really small files)
-	# @return [Array] Error messages if invalid file
-	def check_fasta(file, check_cug)
-		errors = []
-		is_fasta = true
-		contains_ctg = false
-		is_first_line = true
-		last_nucleotides = "" # need to store 2 last nts of each line to check for ctg!
-		counter = 0 # if a simple check for fasta needs, read only first 100 lines
-		# read file line by line, since it might be large
-		IO.foreach(file.path) do |line|
-			line.chomp!
-			counter += 1
-			break if counter > 100 && ! check_cug # simple check is done
-			if is_first_line then
-				# expect very first line to be fasta header
-				if ! line.starts_with?('>') then
-					is_fasta = false
-					# test failed, stop reading file!
-					break
-				end
-				is_first_line = false
-			else
-				# it's not the very first line, might be header, comment or sequence
-				if line.starts_with?('>') then
-					# a new header
-					# the quick check for fasta format is done
-					break unless check_cug
-					# continue only if check for cug - codon also needed: clear last_nucleotides-buffer
-					last_nucleotides = ""
-				elsif line.starts_with?(';')
-					# comment line, simply skip
-					next
-				elsif line =~ /[^ACGTURYMKSWBDHVN]/i
-					# a sequence line, but containing charaters not part of iupac nucleotide definition
-					# test failed, stop reading file!
-					is_fasta = false
-					break
-				else
-					# a sequence line, valid content
-					# ctg might be splitted into 2 lines
-					contains_ctg = true if (last_nucleotides + line).upcase.include?("CTG")
-					if line.length >=2 then
-						last_nucleotides = line[-2,2]
-					else
-						last_nucleotides = line
-					end
-				end
-			end
-		end
-
-		# file read, check what happend
-		if ! is_fasta then
-			errors << "Fatal error."
-			errors << "Invalid input."
-			errors << "Expected fasta formatted genome file."
-		end
-		if  is_fasta && (! contains_ctg) then
-			errors << "Fatal error."
-			errors << "Genome sequence contains no \'CTG\'."
-			errors << "Cannot predict codon usage."
-		end
-		return errors
-	end
-
-	# build up @minor_error [Array] Error messages
-	# non-fatal errors, affecting only a single protein
-	# on fab8, verbose error messages will be printed, outside non-verbose ones
-	# @param prot [String] Protein for which gene prediction failed
-	# @param message [String] More detailed information about the error
-	def write_minor_error (prot, message)
-		@minor_error << prot + ": " + message
-	end
+	# 	# file read, check what happend
+	# 	if ! is_fasta then
+	# 		errors << "Fatal error."
+	# 		errors << "Invalid input."
+	# 		errors << "Expected fasta formatted genome file."
+	# 	end
+	# 	if  is_fasta && (! contains_ctg) then
+	# 		errors << "Fatal error."
+	# 		errors << "Genome sequence contains no \'CTG\'."
+	# 		errors << "Cannot predict codon usage."
+	# 	end
+	# 	return errors
+	# end
 
 
 end

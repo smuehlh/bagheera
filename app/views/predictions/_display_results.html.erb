@@ -1,7 +1,7 @@
 <%# natural sort %>
 <%# @predicted_prots.keys.sort_by{|ele| ele.split("_")[1].to_i }.each do |key| %>
 <% @predicted_prots.keys.sort_by { |key| key.to_s.naturalized }.each do |key| %>
-    <% prot_name = key =~ /(.+)_\d+$/ ? $1 : key # extract protein name %>
+    <% prot_name = get_prot_name(key) # extract protein name %>
     <% value = @predicted_prots[key] %>
 <%# all_hit_list = @predicted_prots.keys.grep(/_\d+$/) {|v| v.gsub(/[^\d]/, '').to_i} %>
     <% all_hit_list = @predicted_prots.keys.collect{|k| k.split("_")[1].to_i if k.include?("_")}.compact %>
@@ -19,14 +19,18 @@
 
     <% basename = prot_name.gsub(" ", "-").downcase %>
 
-    <% next if @minor_error.join("").include?(key) # no results as prediction failed %>
+    <% 
+    if has_fatal_error(value[:message]) || value[:pred_prot].blank? then
+        # prediction failed; do not show anything 
+        next
+    end
+    %>
     <%= content_tag(:h3, "#{prot_name} (Hit #{value[:hit_shown]}/#{value[:n_hits]})") %>
 
     <div class="pred_data_wrapper" id="pred_data_<%= basename %>" style="clear:both">
     <%
 
     ### this part is to prepare data
-
         seq, seq_pos, aa_pct = format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
 
         not_sign_pos = value[:ref_chem].collect{|k,v| ruby2human_counting(k) if ! v[:is_significant]}
@@ -34,13 +38,8 @@
         combined_res_table = ""
 
     # check if protein profile was used for gene prediction
-    i_msg = value[:message].index{|msg| msg.include?("protein profile")}
-    if i_msg.nil? then
-        is_no_prot_profile = false
-    else
-        is_no_prot_profile = true
-        value[:message].delete_at(i_msg)
-    end
+    # true if no protein profile
+    is_no_prot_profile = find_and_del_no_prfl(value[:message])
 
     ###  this part is to collect results from amino acid and CTG usage (to show them in one table)
         if value[:ctg_pos].any? && value[:ref_chem].any? then

@@ -1,114 +1,61 @@
 class TreeController < ApplicationController
 
-
-# TODO
-
-# 2) vllt proteine ausschliessen, von denen es zu wenig referenz-seqs gibt
-# 3) abbr durch speziesnamen ersetzen in concat.fasta 
-# -> nur falls gblocks, fasttree und lucullus mit den leerzeichen klarkommen
-# 4) capture variants?
-# 5) nimm # dateien falls #datein < 5 oder < 10
-
 	def calc_tree
 
 		@selected_prots = {}
 		@error = ""
-		@minor_error = []
-		@id = ""
+		@id = "cugtree" + rand(1000000000).to_s # for lucullus
 
-		f_out = "#{BASE_PATH}#{session[:file][:id]}/concat.fasta"
-		concat_seqs = {}
-		max_length = []
-
+		path = File.join(BASE_PATH, session[:file][:id])
 
 		# if mafft was not used to create the alignment, files will contain only predicted seq and one reference seq
 		# => useless for tree calucation
-		if session[:align][:algo] == "mafft" then
+		if params[:algo] == "mafft" then
+			# will use first prediction (more if predict_more was called)
+			tree_obj = Tree.new(params[:n_prot].to_i, path)
 
-			# if predict_more was used, there will be more than one alignment for same class/family
-			# -> use always first prediction (-1-aligned.fasta)
-			file_list = Dir.glob("/tmp/cug/#{session[:file][:id]}/*-1-aligned.fasta")
-			# random collection of files
-			selected_files = file_list.sample(params[:n_prot].to_i)
+			# collect sequences, concatenate them, reduce with gblocks and finally calculate tree
+			tree_obj.calc_tree
 
-			selected_files.each_with_index do |file, i_file|
+			if tree_obj.f_tree then
+				session[:tree] = tree_obj.f_tree
+			end
+			if tree_obj.prots then
+				@selected_prots = tree_obj.prots
+			end
 
-				headers, seqs = PredictionsController.new.fasta2str(File.read(file))
+			if tree_obj.err_msg.blank? then
 
-				sp_abbrs = headers.collect{ |he| he.match(/
-					(Prediction|[A-Z][_a-z]+) # match Prediction OR species abbreviation -- everything until the 2. uppercase char
-					([A-Z][\w]+|) # match protein class and variant -- everything after 2. uppercase char OR nothing -- if Prediction was matched before
-					/x)[1] }
+				# everything worked, move tree file to location where it is accessible to lucullus
+				# TODO do not do this if lucullus does not work!
+				f_lucullus = File.join(Dir::tmpdir, "cymobase_alignment_" + @id + ".fasta")
+				Helper.move_or_copy_file(tree_obj.f_tree, f_lucullus, "0444", "copy")
 
-				# find new species abbreviations and prepare concat_seqs entry
-				new_sp_abbrs = sp_abbrs.uniq - concat_seqs.keys
-				new_sp_abbrs.each do |abbr|
-					# puts "new sp_abbr: #{abbr}"
-					concat_seqs[abbr] = []
-					i_file.times { concat_seqs[abbr].push("") }
-					# puts concat_seqs.values.first.length
-					# puts concat_seqs[abbr].length
-				end
-
-				# collect sequences
-				concat_seqs.each do |sp, seq_arr|
-					ind = headers.index { |he| he =~ /#{sp}([A-Z]\w+|)$/ }
-					if ind.nil? then 
-						# protein not encoded in this species
-						# add gap 
-						concat_seqs[sp].push("")
-						# puts "Not found: #{sp} in #{headers.sort.join(", ")}"
-					else
-						# protein is encoded
-						# add sequence
-						concat_seqs[sp].push(seqs[ind])
-						# puts "#{sp} => #{headers[ind]}"
-					end
-				end
-				
-				# store maximal sequence length for every file
-				max_length.push seqs.collect {|s| s.length}.max
-
-				# add prot name + number of sequences to info - hash
-				prot_name = filename2protname(file)
-				@selected_prots[prot_name] = sp_abbrs.uniq.size
-			end # selected_files.each_with_index
-
-			# concatenate sequences
-			is_success = concat_seqs(concat_seqs, max_length, f_out)
-			if is_success then
-				# reduce alignment with gblocks
-				is_success = gblocks(f_out)
-				if is_success then
-					# calculate tree
-					f_gb = f_out + "-gb"
-					# TODO clean up if lucullus does not work! use /tmp/cug/session/concat.phb then instead
-					@id = "cugtree" + rand(1000000000).to_s
-					f_tree = Dir::tmpdir + "/cymobase_alignment_" + @id + ".fasta"
-					session[:tree] = f_tree
-puts "---"
-puts f_tree
-					is_success = fasttree(f_gb, f_tree)
-					if ! is_success then
-						@error = "FastTree failed."
-					end # is_success fasttree
-				else
-					@error = "Gblocks failed."
-				end # is_success gblocks
 			else
-				@error = "Sequence concatenation failed."
-			end # is_success concat_seqs
+				@error = tree_obj.err_msg
+			end
 
 		else
 			@error = "Cannot calculate tree. Please restart gene prediction with MAFFT selected."
-		end	
+		end
+
+	rescue NoMethodError, TypeError, NameError, RuntimeError
+		@error = "Cannot calculate tree."
+
+	ensure
 		render :show_tree, formats: [:js]
 	end
 
 	def download
 		file = Tempfile.new(['tree', '.phb'], 'tmp') # locate file in tmp dir of this rails app
-		FileUtils.cp session[:tree], file
+		# FileUtils.cp session[:tree], file
+		Helper.move_or_copy_file(session[:tree], file,"0444","copy")
 		send_file file, :x_sendfile=>true
+
+	rescue RuntimeError => exc
+		# sufficient to initialize @error for template :show_tree, because if this is not empty, only error message will be shown
+		@error = "Cannot prepare file for download."
+		render :show_tree, formats: [:js]
 	end
 
 	def gblocks(file)
@@ -181,84 +128,94 @@ puts f_tree
 	end
 
 
-# 		def calc_tree_alt
-# 		@selected_prots = []
+# 	def calc_tree_alt
+
+# 		@selected_prots = {}
 # 		@error = ""
 # 		@minor_error = []
+# 		@id = ""
 
-# 		f_out = "#{BASE_PATH}#{session[:file][:id]}/concat.fasta"
-# TODO
-# # 1) concat funktioniert nicht: meistens nicht fuer jedes prot eine sequenz!
-# # -> doch die concat methode aus concat_neu verwenden?
-# # 2) vllt proteine ausschliessen, von denen es zu wenig referenz-seqs gibt
-# # -> auf jeden fall die anzahl ref sequenzen in view auflisten!
-# # 3) abbr durch speziesnamen ersetzen in concat.fasta 
-# # -> nur falls gblocks, fasttree und lucullus mit den leerzeichen klarkommen
+# 		f_out = File.join(BASE_PATH, session[:file][:id], "concat.fasta")
+# 		concat_seqs = {}
+# 		max_length = []
+
 
 # 		# if mafft was not used to create the alignment, files will contain only predicted seq and one reference seq
 # 		# => useless for tree calucation
 # 		if session[:align][:algo] == "mafft" then
+
 # 			# if predict_more was used, there will be more than one alignment for same class/family
 # 			# -> use always first prediction (-1-aligned.fasta)
 # 			file_list = Dir.glob("/tmp/cug/#{session[:file][:id]}/*-1-aligned.fasta")
-# 			@selected_prots = file_list.sample(params[:n_prot].to_i)
+# 			# random collection of files
+# 			selected_files = file_list.sample(params[:n_prot].to_i)
 
-# 			# concatenate sequences
-# 			# 1) get and order all sequences for all species
-# 			all_sp_abbrs = []
-# 			seqs_unstruct = {}
-# 			max_length = [] # maximal sequence length for each protein
+# 			selected_files.each_with_index do |file, i_file|
 
-# 			@selected_prots.each_with_index do |file, i_file|
-# puts file
 # 				headers, seqs = PredictionsController.new.fasta2str(File.read(file))
 
 # 				sp_abbrs = headers.collect{ |he| he.match(/
 # 					(Prediction|[A-Z][_a-z]+) # match Prediction OR species abbreviation -- everything until the 2. uppercase char
 # 					([A-Z][\w]+|) # match protein class and variant -- everything after 2. uppercase char OR nothing -- if Prediction was matched before
 # 					/x)[1] }
-# 				all_sp_abbrs |= sp_abbrs
 
-# 				max_length << seqs.collect {|s| s.length}.max
+# 				# find new species abbreviations and prepare concat_seqs entry
+# 				new_sp_abbrs = sp_abbrs.uniq - concat_seqs.keys
+# 				new_sp_abbrs.each do |abbr|
+# 					# puts "new sp_abbr: #{abbr}"
+# 					concat_seqs[abbr] = []
+# 					i_file.times { concat_seqs[abbr].push("") }
+# 					# puts concat_seqs.values.first.length
+# 					# puts concat_seqs[abbr].length
+# 				end
 
-# 				# iterate over all species found so far to ensure missing seqs in fasta can be handeled
-# debugger
-# 				all_sp_abbrs.each do |abbr|
-# 					# match abbr to headers to find correct sequence
-
-# 					i_seq = headers.index{ |he| he =~ /#{abbr}([A-Z]\w+|)$/ }
-
-# 					if i_seq.nil? then
-# puts "not found #{abbr} in #{headers.sort.join(", ")}"
-# 						prot_name = filename2protname(file)
-# 						@minor_error |= ["Error while processing #{prot_name}"]
-# 						next
+# 				# collect sequences
+# 				concat_seqs.each do |sp, seq_arr|
+# 					ind = headers.index { |he| he =~ /#{sp}([A-Z]\w+|)$/ }
+# 					if ind.nil? then 
+# 						# protein not encoded in this species
+# 						# add gap 
+# 						concat_seqs[sp].push("")
+# 						# puts "Not found: #{sp} in #{headers.sort.join(", ")}"
+# 					else
+# 						# protein is encoded
+# 						# add sequence
+# 						concat_seqs[sp].push(seqs[ind])
+# 						# puts "#{sp} => #{headers[ind]}"
 # 					end
-# puts i_seq
-# 					# add sequence to "results" hash
-# 					if ! seqs_unstruct.has_key?(abbr) then
-# puts "Case 1: add key #{abbr}"
-# 						# (this abbr was not seen before, but it is seen this time)
-# 						# first, prepare "results" and fill up with placeholder(s)
-# 						seqs_unstruct[abbr] = []
-# 						i_file.times { seqs_unstruct[abbr] << "" }
-# 						seqs_unstruct[abbr] << seqs[i_seq]
-# 					end
-# puts "Case 2: abbr was seen before and this time"
-# # puts "#{abbr} => #{headers[i_seq]}"
+# 				end
+				
+# 				# store maximal sequence length for every file
+# 				max_length.push seqs.collect {|s| s.length}.max
 
-# puts seqs_unstruct[abbr].size
-# 					seqs_unstruct[abbr] << seqs[i_seq]	
+# 				# add prot name + number of sequences to info - hash
+# 				prot_name = filename2protname(file)
+# 				@selected_prots[prot_name] = sp_abbrs.uniq.size
+# 			end # selected_files.each_with_index
 
-# 					# end # if new_keys.include?(abbr)
-# 				end # all_sp_abbrs.each
-# 			end # @selected_prots.each_with_index
-# debugger
-# 			# concatenate sequences from files for every species
-# 			is_success = concat_seqs(seqs_unstruct, max_length, f_out)
+# 			# concatenate sequences
+# 			is_success = concat_seqs(concat_seqs, max_length, f_out)
 # 			if is_success then
 # 				# reduce alignment with gblocks
-# 				is_success = gblocks(file)
+# 				is_success = gblocks(f_out)
+# 				if is_success then
+# 					# calculate tree
+# 					f_gb = f_out + "-gb"
+# 					# TODO clean up if lucullus does not work! use /tmp/cug/session/concat.phb then instead
+# 					@id = "cugtree" + rand(1000000000).to_s
+# 					f_tree = Dir::tmpdir + "/cymobase_alignment_" + @id + ".fasta"
+# 					session[:tree] = f_tree
+# puts "---"
+# puts f_tree
+# 					is_success = fasttree(f_gb, f_tree)
+# 					if ! is_success then
+# 						@error = "FastTree failed."
+# 					end # is_success fasttree
+# 				else
+# 					@error = "Gblocks failed."
+# 				end # is_success gblocks
+# 			else
+# 				@error = "Sequence concatenation failed."
 # 			end # is_success concat_seqs
 
 # 		else
@@ -266,5 +223,6 @@ puts f_tree
 # 		end	
 # 		render :show_tree, formats: [:js]
 # 	end
+
 
 end

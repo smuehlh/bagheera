@@ -1,7 +1,7 @@
 module ProgCall
 	extend self
 
-	attr_accessor :augustus_config_path, :augustus_species, :blosum62_path, :genome_db
+	attr_accessor :augustus_config_path, :augustus_species, :blosum62_path, :genome_db, :blast_filtering
 
 	@augustus_species = "candida_albicans"
 	@augustus_config_path = "/usr/local/bin/augustus/config/"

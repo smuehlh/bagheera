@@ -16,7 +16,6 @@ module Helper
 	def worked_or_throw_error(is_success, msg)
 		if ! is_success then
 			throw :problem, msg
-			# Prediction.err_msg = msg
 		end
 		is_success
 	end
@@ -51,6 +50,30 @@ module Helper
 		end
 	end
 
+	def move_or_copy_file(f_scr,f_dest,mode,operation)
+		file_exist_or_die(f_scr)
+		case operation
+		when "copy"
+			FileUtils.cp(f_scr, f_dest)
+		when "move"
+			FileUtils.mv(f_scr, f_dest)
+		end
+		FileUtils.chmod(mode.to_i, f_dest)
+	rescue
+		raise_runtime_error "Error during setup. Please contact us."
+	end
+
+	# expecting a [params] file 
+	def filesize_below_limit(file, max_size)
+		if file.size > max_size then
+			msg = []
+			msg << "File must be less than #{(max_size/1024)/1024} MB"
+			msg << "Please contact us to upload larger files."
+			throw :error, msg
+		end
+		true
+	end
+
 	# load reference data from file alignment_gene_structure.json
 	# @return [Hash] reference data
 	# @return [Array] Errors occured during file load
@@ -62,6 +85,13 @@ module Helper
 
 	def get_tmp_file(extension="fasta")
 		rand(1000000).to_s + "." + extension
+	end
+
+	def make_new_tmp_dir(base_path)
+		id = rand(1000000000).to_s
+		path = File.join(base_path, id)
+		mkdir_or_die(path)
+		return id
 	end
 
 
