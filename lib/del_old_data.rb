@@ -31,7 +31,7 @@ end
 # delete also alignments for lucullus
 path = File.join("/tmp","cymobase_alignment_cug*")
 Dir.glob(path) do |file|
-	if File.mtime <= max_days.days.ago
+	if File.mtime(file) <= max_days.days.ago
 		begin
 			File.rm(file)
 		rescue => err

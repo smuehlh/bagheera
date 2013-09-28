@@ -114,6 +114,7 @@ class Tree
 			fh.puts Helper::Sequence.str2fasta(abbr, conatenated, true) # true: no linebreaks after 80 chars
 		end
 		fh.close
+		File.chmod(0755, @f_fasta)
 		rescue => exc
 			Helper.worked_or_throw_error(false, "Sequence concatenation failed.")
 		end
