@@ -50,7 +50,7 @@ module Helper
 		end
 	end
 
-	def move_or_copy_file(f_scr,f_dest,mode,operation)
+	def move_or_copy_file(f_scr,f_dest,operation)
 		file_exist_or_die(f_scr)
 		case operation
 		when "copy"
@@ -58,7 +58,12 @@ module Helper
 		when "move"
 			FileUtils.mv(f_scr, f_dest)
 		end
-		FileUtils.chmod(mode.to_i, f_dest)
+	rescue
+		raise_runtime_error "Error during setup. Please contact us."
+	end
+
+	def chmod(f_dest, mode)
+		File.chmod(mode, f_dest)
 	rescue
 		raise_runtime_error "Error during setup. Please contact us."
 	end

@@ -52,7 +52,7 @@ end
 # gem 'unicorn'
 
 # Deploy with Capistrano
-# gem 'capistrano'
+# gem "capistrano", "~> 2.15.5"
 
 gem 'thin'
 # gem 'delayed_job_active_record'

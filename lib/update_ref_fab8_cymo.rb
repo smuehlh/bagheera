@@ -1,6 +1,6 @@
 #!/usr/local/bin/ruby
 
-### Update Bagheeras reference data on fab8 and cymo
+### Update Bagheeras reference data on fab8
 ### Called monthly in crontab
 
 # 00 04 1 * * ruby /fab8/server/bagheera/lib/update_ref_fab8_cymo.rb
@@ -434,4 +434,3 @@ Helper.del_file_or_dir( Dir.glob(File.join(Base_path, "*.prfl")) )
 Helper.del_file_or_dir( File.join(Base_path, Without_ca_b) )
 FileUtils.mv Dir.glob(new_data_path + "/*"), Base_path, :force => true
 Helper.del_file_or_dir(new_data_path)
-

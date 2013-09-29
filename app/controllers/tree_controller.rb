@@ -29,7 +29,7 @@ class TreeController < ApplicationController
 				# everything worked, move tree file to location where it is accessible to lucullus
 				# TODO do not do this if lucullus does not work!
 				f_lucullus = File.join(Dir::tmpdir, "cymobase_alignment_" + @id + ".fasta")
-				Helper.move_or_copy_file(tree_obj.f_tree, f_lucullus, "0444", "copy")
+				Helper.move_or_copy_file(tree_obj.f_tree, f_lucullus, "copy")
 
 			else
 				@error = tree_obj.err_msg
@@ -49,7 +49,7 @@ class TreeController < ApplicationController
 	def download
 		file = Tempfile.new(['tree', '.phb'], 'tmp') # locate file in tmp dir of this rails app
 		# FileUtils.cp session[:tree], file
-		Helper.move_or_copy_file(session[:tree], file,"0444","copy")
+		Helper.move_or_copy_file(session[:tree], file, "copy")
 		send_file file, :x_sendfile=>true
 
 	rescue RuntimeError => exc

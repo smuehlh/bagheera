@@ -4,6 +4,8 @@
 ### Called dayly in crontab
 
 # 00 23 * * * ruby /fab8/server/bagheera/lib/del_old_data.rb
+require 'ruby-debug'
+require 'fileutils'
 
 class Fixnum
 	SECONDS_IN_DAY = 24 * 60 * 60
@@ -20,7 +22,8 @@ max_days = 2
 # delete all session directories (only numbers) older than 2 days
 path = File.join("/tmp/cug","**[0-9]")
 Dir.glob(path) do |dir|
-	if File.mtime(dir) <= max_days.days.ago 
+	# day: do not care about minute/hour, match of day is sufficient
+	if File.mtime(dir).day <= max_days.days.ago.day 
 		begin
 			FileUtils.rm_rf(dir)
 		rescue => err
@@ -31,9 +34,10 @@ end
 # delete also alignments for lucullus
 path = File.join("/tmp","cymobase_alignment_cug*")
 Dir.glob(path) do |file|
-	if File.mtime(file) <= max_days.days.ago
+	# day: do not care about minute/hour, match of day is sufficient
+	if File.mtime(file).day <= max_days.days.ago.day
 		begin
-			File.rm(file)
+			FileUtils.rm(file)
 		rescue => err
 		end
 	end

@@ -20,6 +20,7 @@ class PredictionsController < ApplicationController
 
 			id = Helper.make_new_tmp_dir(BASE_PATH)
 			f_dest = File.join(BASE_PATH, id, "query.fasta")
+			f_mode = 0444
 
 			if params.has_key?(:is_example) then
 				# request to load example:
@@ -27,7 +28,8 @@ class PredictionsController < ApplicationController
 				example = "Candida_albicans_WO_1.fasta"
 				f_scr = File.join(Rails.root + "lib/", example)
 
-				Helper.move_or_copy_file(f_scr, f_dest,"0444","copy")
+				Helper.move_or_copy_file(f_scr, f_dest,"copy")
+				Helper.chmod(f_dest, f_mode)
 
 				basename = example.gsub(".fasta","")
 
@@ -39,7 +41,8 @@ class PredictionsController < ApplicationController
 
 				# store file in place (i.e. an new folder for this session)
 				Helper.mkdir_or_die( File.join(BASE_PATH,id) )
-				Helper.move_or_copy_file(params[:uploaded_file].path,f_dest,"0444","move") 
+				Helper.move_or_copy_file(params[:uploaded_file].path,f_dest,"move") 
+				Helper.chmod(f_dest, f_mode)
 
 				# call fromdos
 				is_sucess = system("fromdos",f_dest)

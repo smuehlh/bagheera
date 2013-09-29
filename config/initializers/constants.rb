@@ -6,7 +6,7 @@ FORMATDB = "/usr/bin/formatdb"
 BLASTALL = "/usr/bin/blastall"
 FASTACMD = "/usr/bin/fastacmd"
 AUGUSTUS = "/usr/local/bin/augustus/src/augustus"
-DIALIGN2 = "/usr/local/bin/dialign_package/src/dialign2-2"
+# DIALIGN2 = "/usr/local/bin/dialign_package/src/dialign2-2"
 MAFFT = "/usr/local/bin/mafft"
 FastTree = "/usr/local/bin/FastTree"
 
