@@ -62,7 +62,7 @@ class PredictionsController < ApplicationController
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]
 
-	rescue NoMethodError, TypeError, NameError => exp
+	rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
 		@fatal_error = ["Cannot load file.", "Please contact us."]
 
 	ensure
@@ -150,7 +150,7 @@ class PredictionsController < ApplicationController
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]
 
-	rescue NoMethodError, TypeError, NameError => exp
+	rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
 		@fatal_error = ["Cannot load file.", "Please contact us."]
 
 	ensure
@@ -262,7 +262,7 @@ class PredictionsController < ApplicationController
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]
 
-	rescue NoMethodError, TypeError, NameError => exp
+	rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
 		@fatal_error = ["Sorry, an error occured. Please contact us."]
 	ensure
 		render :predict_genes, formats: [:js]
@@ -368,7 +368,7 @@ class PredictionsController < ApplicationController
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]
 
-	rescue NoMethodError, TypeError, NameError => exp
+	rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
 		@fatal_error = ["Sorry, an error occured. Please contact us."]
 
 	ensure

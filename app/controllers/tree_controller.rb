@@ -39,7 +39,7 @@ class TreeController < ApplicationController
 			@error = "Cannot calculate tree. Please restart gene prediction with MAFFT selected."
 		end
 
-	rescue NoMethodError, TypeError, NameError, RuntimeError
+	rescue NoMethodError, TypeError, NameError, RuntimeError, Errno::ENOENT
 		@error = "Cannot calculate tree."
 
 	ensure
@@ -52,80 +52,80 @@ class TreeController < ApplicationController
 		Helper.move_or_copy_file(session[:tree], file, "copy")
 		send_file file, :x_sendfile=>true
 
-	rescue RuntimeError => exc
+	rescue RuntimeError, Errno::ENOENT => exc
 		# sufficient to initialize @error for template :show_tree, because if this is not empty, only error message will be shown
 		@error = "Cannot prepare file for download."
 		render :show_tree, formats: [:js]
 	end
 
-	def gblocks(file)
-		stdout = IO.popen([GBLOCKS, file, "-b5=h", "-p=n"])
-		output = stdout.read
-		stdout.close
-		# return value is always false, so parse output to find out if it was successful
-		if output.include?("selected block(s)") then
-			return true
-		else
-			return false
-		end
-	end
+	# def gblocks(file)
+	# 	stdout = IO.popen([GBLOCKS, file, "-b5=h", "-p=n"])
+	# 	output = stdout.read
+	# 	stdout.close
+	# 	# return value is always false, so parse output to find out if it was successful
+	# 	if output.include?("selected block(s)") then
+	# 		return true
+	# 	else
+	# 		return false
+	# 	end
+	# end
 
-	def fasttree(file_in, file_out)
-		is_success = system(FastTree, "-out", file_out, file_in)
-		return is_success
-	end
+	# def fasttree(file_in, file_out)
+	# 	is_success = system(FastTree, "-out", file_out, file_in)
+	# 	return is_success
+	# end
 
-	def concat_seqs(concat_seqs, max_length, file)
-		# concatenate sequences from files for every species
-		fh = File.new(file, "w")
+	# def concat_seqs(concat_seqs, max_length, file)
+	# 	# concatenate sequences from files for every species
+	# 	fh = File.new(file, "w")
 
-		concat_seqs.each do |abbr, seqs|
-			conatenated = ""
+	# 	concat_seqs.each do |abbr, seqs|
+	# 		conatenated = ""
 
-			# double check that for every protein a sequence/ placeholder was collected
-			if seqs.size != params[:n_prot].to_i then
-				@error = "Internal error. Concatenate sequences failed."
-				return false
-			end
+	# 		# double check that for every protein a sequence/ placeholder was collected
+	# 		if seqs.size != params[:n_prot].to_i then
+	# 			@error = "Internal error. Concatenate sequences failed."
+	# 			return false
+	# 		end
 
-			# actual concatenation
-			seqs.each_with_index do |seq, ind|
-				if seq.length < max_length[ind] then
-					# ensure lenght, fill up with gaps if neccessary
-					seq = seq + "-" * (max_length[ind] - seq.length)
-				end
-				# concatenate
-				conatenated += seq
-			end
+	# 		# actual concatenation
+	# 		seqs.each_with_index do |seq, ind|
+	# 			if seq.length < max_length[ind] then
+	# 				# ensure lenght, fill up with gaps if neccessary
+	# 				seq = seq + "-" * (max_length[ind] - seq.length)
+	# 			end
+	# 			# concatenate
+	# 			conatenated += seq
+	# 		end
 
-			# save concatenated sequences
-			fh.puts PredictionsController.new.str2fasta(abbr, conatenated, true) # true: no linebreaks after 80 chars
-		end
-		fh.close
-		return true
-	end
+	# 		# save concatenated sequences
+	# 		fh.puts PredictionsController.new.str2fasta(abbr, conatenated, true) # true: no linebreaks after 80 chars
+	# 	end
+	# 	fh.close
+	# 	return true
+	# end
 
-	def filename2protname(file)
-		basename = file =~ /.+\/([-a-z0-9]+)-[0-9]+-aligned.fasta$/ ? $1 : file
-		prot_name = basename.gsub("-", " ").titleize
-	end
+	# def filename2protname(file)
+	# 	basename = file =~ /.+\/([-a-z0-9]+)-[0-9]+-aligned.fasta$/ ? $1 : file
+	# 	prot_name = basename.gsub("-", " ").titleize
+	# end
 
-	def sp_abbr2sp_name
-		ref_data, fatal_error = load_ref_data
-		list = {}
-		if fatal_error.empty? then
-			ref_data.keys.each do |prot|
-				ref_data[prot]["genes"].keys.each do |k|
-					org = ref_data[prot]["genes"][k]["species"]
-					if ! list.has_key?(org) then
-						# puts k
-						list[org] = k.match(/([A-Z][_a-z]+)[A-Z]\w*/)[1]
-					end # ! list.has_key?(org)
-				end # ref_data[prot]["genes"].each
-			end # ref_data.each
-		end # if fatal_error.empty?
-		return list
-	end
+	# def sp_abbr2sp_name
+	# 	ref_data, fatal_error = load_ref_data
+	# 	list = {}
+	# 	if fatal_error.empty? then
+	# 		ref_data.keys.each do |prot|
+	# 			ref_data[prot]["genes"].keys.each do |k|
+	# 				org = ref_data[prot]["genes"][k]["species"]
+	# 				if ! list.has_key?(org) then
+	# 					# puts k
+	# 					list[org] = k.match(/([A-Z][_a-z]+)[A-Z]\w*/)[1]
+	# 				end # ! list.has_key?(org)
+	# 			end # ref_data[prot]["genes"].each
+	# 		end # ref_data.each
+	# 	end # if fatal_error.empty?
+	# 	return list
+	# end
 
 
 # 	def calc_tree_alt
