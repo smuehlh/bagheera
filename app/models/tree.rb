@@ -126,6 +126,9 @@ class Tree
 
 	def run_gblocks
 		is_success = ProgCall.gblocks(@f_fasta)
+	rescue Errno::EACCES
+		is_success = false
+	ensure
 		Helper.worked_or_throw_error(is_success, "Gblocks failed.")
 	end
 

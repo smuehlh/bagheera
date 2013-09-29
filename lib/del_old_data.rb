@@ -4,7 +4,7 @@
 ### Called dayly in crontab
 
 # 00 23 * * * ruby /fab8/server/bagheera/lib/del_old_data.rb
-require 'ruby-debug'
+
 require 'fileutils'
 
 class Fixnum

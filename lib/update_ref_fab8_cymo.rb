@@ -4,7 +4,7 @@
 ### Called monthly in crontab
 
 # 00 04 1 * * ruby /fab8/server/bagheera/lib/update_ref_fab8_cymo.rb
-require 'ruby-debug'
+# require 'ruby-debug'
 require 'timeout'
 require 'fileutils'
 require 'json'
