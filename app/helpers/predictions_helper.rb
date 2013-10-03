@@ -233,8 +233,8 @@ module PredictionsHelper
 		pos_ser = ref_chem.collect{|k,v| k if v[:transl] == "S"}
 		pos_leu = ref_chem.collect{|k,v| k if v[:transl] == "L"}
 		# add counts for ctg usage in reference data
-		pos_ser |= pos_ser + ref_ctg.collect{|k,v| k if v[:transl] == "S"} # set union
-		pos_leu |= ref_ctg.collect{|k,v| k if v[:transl] == "L"} # set union
+		pos_ser = pos_ser | ref_ctg.collect{|k,v| k if v[:transl] == "S"} # set union
+		pos_leu = pos_leu | ref_ctg.collect{|k,v| k if v[:transl] == "L"} # set union
 
 		pos_ser.compact!
 		pos_leu.compact!

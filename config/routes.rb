@@ -6,6 +6,7 @@ Bagheera::Application.routes.draw do
     match '/team', to: 'static_pages#team', as: 'team', :via => [:get]
     match '/help', to: 'static_pages#help', as: 'help', :via => [:get]
     match '/contact', to: 'static_pages#contact', as: 'contact', :via => [:get]
+    match '/specieslist', to: 'static_pages#specieslist', as: 'specieslist', :via => [:get]
 
     match 'upload_file', to: 'predictions#upload_file', as: 'post/upload_file', :via => [:post]
     match 'upload_file', to: 'predictions#upload_file', as: 'get/upload_file', :via => [:get]
@@ -25,6 +26,7 @@ Bagheera::Application.routes.draw do
       match '/team', to: 'static_pages#team', as: 'team', :via => [:get]
       match '/help', to: 'static_pages#help', as: 'help', :via => [:get]
       match '/contact', to: 'static_pages#contact', as: 'contact', :via => [:get]
+      match '/specieslist', to: 'static_pages#specieslist', as: 'specieslist', :via => [:get]
 
       match 'upload_file', to: 'predictions#upload_file', as: 'post/upload_file', :via => [:post]
       match 'upload_file', to: 'predictions#upload_file', as: 'get/upload_file', :via => [:get]

@@ -10,4 +10,9 @@ class StaticPagesController < ApplicationController
   # contact page
   def contact
   end
+
+  # species abbr to species names 
+  def specieslist
+  end
+
 end

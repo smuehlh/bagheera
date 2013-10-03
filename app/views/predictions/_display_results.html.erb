@@ -57,9 +57,11 @@
         end 
         if value[:ctg_pos].any? && value[:ref_ctg].any? then
             # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps) 
+            not_sign_pos = value[:ref_ctg].collect{|k,v| ruby2human_counting(k) if ! v[:is_significant]}
+            
             combined_res_table += draw_table2(ruby2human_counting(value[:ref_ctg].keys), 
                     format_ctg_stats(value[:ref_ctg]), 
-                    value[:ref_ctg].collect {|_, v| v[:ctg_num]}, [], tab_ctg).html_safe 
+                    value[:ref_ctg].collect {|_, v| v[:ctg_num]}, not_sign_pos, tab_ctg).html_safe 
         end
     %>
     <%=    

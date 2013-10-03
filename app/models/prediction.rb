@@ -204,7 +204,7 @@ class Prediction
 			run_mafft(f_in)
 		else
 			# add ref seq to f_in: it must contain both seqs
-			File.open(f_in, 'a') {|f| f.write("\n" + Helper::Sequence.str2fasta("Prediction", @protein.ref_seq, true) )}
+			File.open(f_in, 'a') {|f| f.write("\n" + Helper::Sequence.str2fasta(@protein.ref_key, @protein.ref_seq, true) )}
 			run_pairalign(f_in)
 		end
 
@@ -294,18 +294,33 @@ class Prediction
 			col = []
 			codons = []
 			@protein.ref_alignment.each do |cymo_header, cymo_prot|
-
-				col << cymo_prot[ref_cymopos]
+				
 				if cymo_prot[ref_cymopos] == "-" then
+					col << nil
 					codons << nil
 				else
+					# save codon and translation
+					# col << cymo_prot[ref_cymopos]
 					spos = Helper::Sequence.alignment_pos2sequence_pos(ref_cymopos, cymo_prot) # position in sequece without gaps
-					codons << Helper::Sequence.split_cdna_into_codons(@protein.ref_genes[cymo_header]["gene"], spos)
+					# get codon translation from yaml, not from alignment to avoid wrong data in alignments!
+					this_gene = @protein.ref_genes[cymo_header]["gene"]
+					this_aa = nil
+					this_codon = nil
+					begin
+						this_aa = Helper::Sequence.extract_translation(this_gene)[spos]
+						this_codon = Helper::Sequence.split_cdna_into_codons(this_gene, spos)
+					rescue
+						this_aa = nil
+						this_codon = nil
+					ensure
+						col << this_aa
+						codons << this_codon
+					end
 				end
 
 			end
 			ref_pos << ref_cymopos
-			ref_cols << col
+			ref_cols << col.compact
 			ref_codons << codons.compact
 
 		end
@@ -330,8 +345,8 @@ class Prediction
 		end
 
 		num_aas = aa_freq.inject(0) {|sum, (_,val)| sum + val} # total number of amino acids
-		pol_aas = POLAR_AAS.collect{|aa| aa_freq[aa]}.sum # polar amino acids
-		hyd_aas = HYDORPHOBIC_AAS.collect{|aa| aa_freq[aa]}.sum # hydrophobic amino acids
+		pol_aas = POLAR_AAS.collect{|aa| aa_freq[aa]}.compact.sum # polar amino acids
+		hyd_aas = HYDORPHOBIC_AAS.collect{|aa| aa_freq[aa]}.compact.sum # hydrophobic amino acids
 		pct_pol = pol_aas/num_aas.to_f
 		pct_hyd = hyd_aas/num_aas.to_f
 		# requirements for a discriminative position:
@@ -351,23 +366,23 @@ class Prediction
 
 	def ref_ctg_usage(codons, aas, ctg_pos)
 		counts = {}
+
 		codons.each_with_index do |codons_thiscol, ind|
 			indices = codons_thiscol.find_each_index("CTG")
 			ctg_num = indices.size
 			if ctg_num > 0 then
-				counts[ctg_pos[ind]] = {ctg_usage: Hash.new(0), ctg_num: ctg_num} 
+
+				counts[ctg_pos[ind]] = {ctg_usage: Hash.new(), ctg_num: ctg_num} 
 				counts[ctg_pos[ind]][:ctg_usage]["S"] = 0
 				counts[ctg_pos[ind]][:ctg_usage]["L"] = 0
-				aa_thiscol = aas[ind].reject{|ele| ele == "-"}
-				indices.each do |i| 
-					if aa_thiscol[i] == "S" then
-						counts[ctg_pos[ind]][:ctg_usage]["S"] += 1
-					elsif aa_thiscol[i] == "L"
-						counts[ctg_pos[ind]][:ctg_usage]["L"] += 1
-					end
-				end
-				pct_ser = counts[ctg_pos[ind]][:ctg_usage]["S"] / counts[ctg_pos[ind]][:ctg_num].to_f
-				pct_leu = counts[ctg_pos[ind]][:ctg_usage]["L"] / counts[ctg_pos[ind]][:ctg_num].to_f
+
+				ctg_translations = indices.collect {|x| aas[ind][x]}
+				n_ser = ctg_translations.count("S")
+				n_leu = ctg_translations.count("L")
+
+				pct_ser = n_ser / ctg_num.to_f
+				pct_leu = n_leu / ctg_num.to_f
+
 				counts[ctg_pos[ind]][:ctg_usage]["S"] = pct_ser
 				counts[ctg_pos[ind]][:ctg_usage]["L"] = pct_leu
 
@@ -375,7 +390,8 @@ class Prediction
 					counts[ctg_pos[ind]][:transl] = "???"
 					next
 				end
-				is_discrim, counts[ctg_pos[ind]][:transl] = predict_translation(counts[ctg_pos[ind]][:ctg_usage])
+
+				counts[ctg_pos[ind]][:is_significant], counts[ctg_pos[ind]][:transl] = predict_translation(counts[ctg_pos[ind]][:ctg_usage])
 
 			end # if ctg_num
 		end # codons.each_with_index

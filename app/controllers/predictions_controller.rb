@@ -255,6 +255,8 @@ class PredictionsController < ApplicationController
 
 		# convert mapped results to @predicted_prots (accessible in view)
 		@predicted_prots = Hash[results.flatten.each_slice(2).to_a]
+		fix_actin_proteinname
+
 		# save status to use it again in predict_more
 		f_stats = File.join(file_basename, "stat")
 		Status.save(f_stats, @stats)
@@ -360,6 +362,7 @@ class PredictionsController < ApplicationController
 
 		# convert mapped results to @predicted_prots (accessible in view)
 		@predicted_prots = Hash[results.flatten.each_slice(2).to_a]
+		fix_actin_proteinname
 
 		# save status to use it again in predict_more
 		f_stats = File.join(file_basename, "stat")
@@ -390,6 +393,14 @@ class PredictionsController < ApplicationController
 	def write_minor_error (err, prot, message)
 		err.push( prot + ": " + message )
 		return err
+	end
+
+	# actin itself is listed in reference data as "Actin related protein"
+	# fix this for the view
+	# (in reference data, the old name is ok to count it together with all "actin related" proteins)
+	def fix_actin_proteinname
+		@predicted_prots["Actin"] = @predicted_prots["Actin related protein"]
+		@predicted_prots.delete("Actin related protein")
 	end
 
 	# def write_status(done, total, final=false)

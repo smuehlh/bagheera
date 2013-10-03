@@ -391,6 +391,9 @@ puts prot
 	f_prfl = f_out.sub("fasta", "prfl")
 	Helper.calc_protein_profile(f_out, f_prfl)
 
+	# save genes and alignments (without common gaps!) back to ref_data
+	ref_data[prot]["genes"] = prot_fam_obj.ref_genes
+	ref_data[prot]["alignment"] = prot_fam_obj.ref_alignment.map{|k,v| ">#{k}\n#{v}"}.join("\n") + "\n"
 end
 
 # save json
@@ -421,7 +424,7 @@ ref_data.each do |prot, all_prot_data|
 
 	# save genes and alignment to ref_data
 	ref_data[prot]["genes"] = prot_fam_obj.ref_genes
-	ref_data[prot]["alignment"] = prot_fam_obj.ref_alignment.map{|k,v| "#{k}\n#{v}"}.join("\n") + "\n"
+	ref_data[prot]["alignment"] = prot_fam_obj.ref_alignment.map{|k,v| ">#{k}\n#{v}"}.join("\n") + "\n"
 end
 
 puts "Save updated reference data (without Ca_b) to file"
