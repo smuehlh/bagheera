@@ -262,7 +262,7 @@ class Prediction
 			results[:ref_ctg] = ref_ctg_usage(ref_codons, ref_alignment_cols, ctg_pos)
 
 		else 
-			Helper.worked_or_throw_error(false, "Cannot match CTG position")
+			Helper.worked_or_throw_error(false, "No CTG position in predicted gene aligned with reference sequences")
 		end
 		return results
 	end
@@ -303,7 +303,12 @@ class Prediction
 					# col << cymo_prot[ref_cymopos]
 					spos = Helper::Sequence.alignment_pos2sequence_pos(ref_cymopos, cymo_prot) # position in sequece without gaps
 					# get codon translation from yaml, not from alignment to avoid wrong data in alignments!
-					this_gene = @protein.ref_genes[cymo_header]["gene"]
+					this_gene = nil
+					if @protein.ref_genes[cymo_header] then
+						# gene does exist (so it is not a partial)
+						this_gene = @protein.ref_genes[cymo_header]["gene"]
+					end
+
 					this_aa = nil
 					this_codon = nil
 					begin

@@ -14,7 +14,7 @@ class Fixnum
 	end
 	def ago
 		Time.now - self
-		end
+	end
 end
 
 max_days = 2
@@ -22,11 +22,11 @@ max_days = 2
 # delete all session directories (only numbers) older than 2 days
 path = File.join("/tmp/cug","**[0-9]")
 Dir.glob(path) do |dir|
-	# day: do not care about minute/hour, match of day is sufficient
-	if File.mtime(dir).day <= max_days.days.ago.day 
+	if File.mtime(dir) <= max_days.days.ago
 		begin
 			FileUtils.rm_rf(dir)
 		rescue => err
+			puts err
 		end
 	end
 end
@@ -35,10 +35,11 @@ end
 path = File.join("/tmp","cymobase_alignment_cug*")
 Dir.glob(path) do |file|
 	# day: do not care about minute/hour, match of day is sufficient
-	if File.mtime(file).day <= max_days.days.ago.day
+	if File.mtime(file) <= max_days.days.ago
 		begin
 			FileUtils.rm(file)
 		rescue => err
+			puts err
 		end
 	end
 end

@@ -110,17 +110,18 @@ class PredictionsController < ApplicationController
 	# accessible params in view: @frame_id [Array] Identify the right div
 	# accessible params in view: @file_id [Array] Part of file path, for lucullus
 	def show_alignment
-		prot = params[:prot].gsub(" ", "-").downcase
+		prot = params[:prot]
 		hit = params[:hit].to_s
-		@frame_id = prot + "_" + hit
-		# copy file to /tmp/cymo_alignment_
+		@frame_id = prot.gsub(" ", "-").downcase + "_" + hit
 
+		# fix actin proteinname for file access
+		prot = fix_actin_proteinname(prot).gsub(" ", "-").downcase
+
+		# copy file to /tmp/cymo_alignment_
 		@file_id = "cug" + session[:file][:id] + rand(1000000000).to_s
 		# set correct file extension for dialign/ seqan files
-
 		file_scr = File.join(BASE_PATH, session[:file][:id], "#{prot}-#{hit.to_s}-aligned.fasta")
 		file_dest = File.join(Dir::tmpdir, "cymobase_alignment_#{@file_id}.fasta")
-
 		Helper.file_exist_or_die(file_scr)
 
 		# write data again to file, leave line breaks after 80 chars out (lucullus will be much faster this way)
@@ -149,10 +150,8 @@ class PredictionsController < ApplicationController
 
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]
-
 	rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
 		@fatal_error = ["Cannot load file.", "Please contact us."]
-
 	ensure
 		render :show_alignment
 	end
@@ -265,7 +264,7 @@ class PredictionsController < ApplicationController
 		@fatal_error = [exp.message]
 
 	rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
-		@fatal_error = ["Sorry, an error occured. Please contact us."]
+			@fatal_error = ["Sorry, an error occured. Please contact us."]
 	ensure
 		render :predict_genes, formats: [:js]
 	end
@@ -294,7 +293,8 @@ class PredictionsController < ApplicationController
 		Prediction.class_variable_set(:@@align_method, params[:algo]) if params.has_key?(:algo)
 		Prediction.class_variable_set(:@@align_config, params[:config]) if params.has_key?(:config)
 		hit_start = params[:hit].to_i + 1 # use next hit for prediction
-		@prot = params[:prot]
+		@prot = fix_actin_proteinname(params[:prot])
+
 		file_basename = File.dirname(session[:file][:path]) 
 
 		if session[:file][:name] == "Candida_albicans_WO_1.fasta" then
@@ -363,6 +363,7 @@ class PredictionsController < ApplicationController
 		# convert mapped results to @predicted_prots (accessible in view)
 		@predicted_prots = Hash[results.flatten.each_slice(2).to_a]
 		fix_actin_proteinname
+		@prot = fix_actin_proteinname(@prot) # convert @prot from filesave variant to view-safe variant!
 
 		# save status to use it again in predict_more
 		f_stats = File.join(file_basename, "stat")
@@ -398,9 +399,27 @@ class PredictionsController < ApplicationController
 	# actin itself is listed in reference data as "Actin related protein"
 	# fix this for the view
 	# (in reference data, the old name is ok to count it together with all "actin related" proteins)
-	def fix_actin_proteinname
-		@predicted_prots["Actin"] = @predicted_prots["Actin related protein"]
-		@predicted_prots.delete("Actin related protein")
+	def fix_actin_proteinname(*prot)
+		# fix protein name both ways:
+		# 1) return name which belongs to all the files
+		if prot.any?
+			if prot[0] == "Actin" then
+				return "Actin related protein"
+			elsif prot[0] == "Actin related protein"
+				return "Actin"
+			else
+				return prot[0]
+			end
+		else
+		# 2) return prediction data with different key
+			# mappings hash wish keys = old keys of @predicted_prots; values = new keys of predicted prots
+			mappings = Hash[ 
+				@predicted_prots.keys.map{|k| [k, k.sub(" related protein", "")] if (k =~ /Actin related protein/ && k !~ /Class/)}  
+			]
+			@predicted_prots.keys.each do |k|
+				@predicted_prots[mappings[k]] = @predicted_prots.delete(k) if mappings[k]
+			end 
+		end
 	end
 
 	# def write_status(done, total, final=false)

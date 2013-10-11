@@ -19,8 +19,15 @@ class ProteinFamily
 	def get_refdata(data)
 		seqs = Hash[*data["alignment"].split("\n")]
 		seqs.keys.each {|k| seqs[ k.sub(">", "") ] = seqs.delete(k)}
-		genes = data["genes"]
+		genes = filter_genes(data["genes"])
 		return seqs, genes
+	end
+
+	def filter_genes(all_genes)
+		# remove all incomple gene structures
+		keys_to_del = all_genes.collect{|k,v| k if v["completeness"] != "complete"}.compact
+		keys_to_del.each { |key| all_genes.delete(key) }
+		return all_genes
 	end
 
 	def get_fname(type)
