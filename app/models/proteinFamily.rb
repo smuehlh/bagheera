@@ -25,8 +25,9 @@ class ProteinFamily
 
 	def filter_genes(all_genes)
 		# remove all incomple gene structures
-		keys_to_del = all_genes.collect{|k,v| k if v["completeness"] != "complete"}.compact
-		keys_to_del.each { |key| all_genes.delete(key) }
+		puts all_genes.keys.size
+		all_genes.delete_if { |_,g| g["completeness"] != "complete" ||
+			(YAML::load(g["gene"])[0]["status"] && YAML::load(g["gene"])[0]["status"] == "incomplete") }
 		return all_genes
 	end
 
