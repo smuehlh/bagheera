@@ -300,9 +300,9 @@ class Prediction
 					codons << nil
 				else
 					# save codon and translation
-					# col << cymo_prot[ref_cymopos]
+					# get codon translation from alignment to get translation regardless gene status (also if incomplete)
+					
 					spos = Helper::Sequence.alignment_pos2sequence_pos(ref_cymopos, cymo_prot) # position in sequece without gaps
-					# get codon translation from yaml, not from alignment to avoid wrong data in alignments!
 					this_gene = nil
 					if @protein.ref_genes[cymo_header] then
 						# gene does exist (so it is not a partial)
@@ -312,11 +312,13 @@ class Prediction
 					this_aa = nil
 					this_codon = nil
 					begin
-						this_aa = Helper::Sequence.extract_translation(this_gene)[spos]
+						# this_aa = Helper::Sequence.extract_translation(this_gene)[spos]
+						this_aa = cymo_prot[ref_cymopos]
 						this_codon = Helper::Sequence.split_cdna_into_codons(this_gene, spos)
 					rescue
-						this_aa = nil
-						this_codon = nil
+						# add 1 amino acid but 3 codons!
+						this_aa = "X" if ! this_aa
+						this_codon = "XXX" if ! this_codon
 					ensure
 						col << this_aa
 						codons << this_codon
@@ -324,6 +326,7 @@ class Prediction
 				end
 
 			end
+
 			ref_pos << ref_cymopos
 			ref_cols << col.compact
 			ref_codons << codons.compact
