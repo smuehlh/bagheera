@@ -83,7 +83,7 @@ module Helper
 	# @return [Hash] reference data
 	# @return [Array] Errors occured during file load
 	def load_ref_data
-		path = ProteinFamily.class_variable_get(:@@ref_data_path) + REF_DATA
+		path = File.join( ProteinFamily.class_variable_get(:@@ref_data_path), REF_DATA)
 		file_exist_or_die(path)
 		return JSON.load(File.read(path)) 
 	end

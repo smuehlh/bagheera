@@ -199,6 +199,7 @@ class PredictionsController < ApplicationController
 		@stats = Hash.new(0)
 
 		ref_data = Helper.load_ref_data
+
 		file_basename = File.dirname(session[:file][:path])
 
 		# sucessfully loaded reference data file
@@ -260,12 +261,12 @@ class PredictionsController < ApplicationController
 		f_stats = File.join(file_basename, "stat")
 		Status.save(f_stats, @stats)
 
-	rescue RuntimeError => exp
-		@fatal_error = [exp.message]
+	# rescue RuntimeError => exp
+	# 	@fatal_error = [exp.message]
 
-	rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
-			@fatal_error = ["Sorry, an error occured. Please contact us."]
-	ensure
+	# rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
+	# 		@fatal_error = ["Sorry, an error occured. Please contact us."]
+	# ensure
 		render :predict_genes, formats: [:js]
 	end
 

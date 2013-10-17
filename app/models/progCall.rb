@@ -14,7 +14,9 @@ module ProgCall
 
 	def create_blast_db(f_in)
 		# -i [INPUT: GENOME FILE] -p [PROTEIN] FALSE -n [DB NAME] -o [CREATE INDEX OVER SEQID] TRUE
-		is_success = system(FORMATDB, "-i", f_in, "-p", "F", "-n", @genome_db, "-o", "T")
+		# is_success = system(FORMATDB, "-i", f_in, "-p", "F", "-n", @genome_db, "-o", "T")
+		is_success = system(Legacy_blast, "formatdb", 
+			"-i", f_in, "-p", "F", "-n", @genome_db, "-o", "T", "--path", New_blast_path)
 		# no output needed, so system is sufficient
 		Helper.worked_or_die(is_success, "Cannot create BLAST database from genome data.")
 	end
@@ -22,8 +24,10 @@ module ProgCall
 	def blast(f_out, f_ref)
 		# -p [PROGRAM] protein query against nt-db -d [DATABASE] 
 		# -i [FILE] -m8 [OUTPUT FORMAT] -F [FILTERING] -s [SMITH-WATERMAN ALIGNMENT] T 
-		stdin, stdout_err, wait_thr = Open3.popen2e(BLASTALL, 
-			"-p", "tblastn", "-d", @genome_db, "-i", f_ref, "-m8", "-F", @blast_filtering, "-s", "T")
+		# stdin, stdout_err, wait_thr = Open3.popen2e(BLASTALL, 
+		# 	"-p", "tblastn", "-d", @genome_db, "-i", f_ref, "-m8", "-F", @blast_filtering, "-s", "T")
+		stdin, stdout_err, wait_thr = Open3.popen2e( Legacy_blast, "blastall", 
+			"-p", "tblastn", "-d", @genome_db, "-i", f_ref, "-m8", "-F", @blast_filtering, "-s", "T", "--path", New_blast_path)
 		stdin.close
 		output = stdout_err.read
 		stdout_err.close
@@ -39,8 +43,11 @@ module ProgCall
 	def fastacmd(f_out, seq_id, start, stop, strand)
 		# -d [DB] -p [PROTEIN] false -s [SEARCH STRING] -L [START,STOP]
 		# add 1000 nucleotides to start/stop 
-		stdin, stdout_err, wait_thr = Open3.popen2e(FASTACMD, "-d", @genome_db, "-p", "F", "-s", seq_id, 
-		"-L", "#{start},#{stop}", "-S", strand.to_s, "-o", f_out)
+		# stdin, stdout_err, wait_thr = Open3.popen2e(FASTACMD, "-d", @genome_db, "-p", "F", "-s", seq_id, 
+		# "-L", "#{start},#{stop}", "-S", strand.to_s, "-o", f_out)
+		stdin, stdout_err, wait_thr = Open3.popen2e( Legacy_blast, "fastacmd", 
+			"-d", @genome_db, "-p", "F", "-s", seq_id, 
+			"-L", "#{start},#{stop}", "-S", strand.to_s, "-o", f_out, "--path", New_blast_path)
 		stdin.close
 		output = stdout_err.read
 		stdout_err.close
