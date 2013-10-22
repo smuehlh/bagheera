@@ -43,7 +43,8 @@ module Helper
 	def mkdir_or_die(path)
 		if ! FileTest.directory?(path) then
 			begin
-				Dir.mkdir(path)
+				# Dir.mkdir(path)
+				FileUtils.mkdir_p(path)
 			rescue
 				raise_runtime_error "Fatal: Cannot create directory #{path}"
 			end

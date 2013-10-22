@@ -6,7 +6,7 @@ class TreeController < ApplicationController
 		@error = ""
 		@id = "cugtree" + rand(1000000000).to_s # for lucullus
 
-		path = File.join(BASE_PATH, session[:file][:id])
+		path = File.join(Tmp_path, session[:file][:id])
 
 		# if mafft was not used to create the alignment, files will contain only predicted seq and one reference seq
 		# => useless for tree calucation
@@ -135,7 +135,7 @@ class TreeController < ApplicationController
 # 		@minor_error = []
 # 		@id = ""
 
-# 		f_out = File.join(BASE_PATH, session[:file][:id], "concat.fasta")
+# 		f_out = File.join(Tmp_path, session[:file][:id], "concat.fasta")
 # 		concat_seqs = {}
 # 		max_length = []
 

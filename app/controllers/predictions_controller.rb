@@ -18,8 +18,8 @@ class PredictionsController < ApplicationController
 
 		@fatal_error = catch(:error) {
 
-			id = Helper.make_new_tmp_dir(BASE_PATH)
-			f_dest = File.join(BASE_PATH, id, "query.fasta")
+			id = Helper.make_new_tmp_dir(Tmp_path)
+			f_dest = File.join(Tmp_path, id, "query.fasta")
 			f_mode = 0444
 
 			if params.has_key?(:is_example) then
@@ -40,7 +40,7 @@ class PredictionsController < ApplicationController
 				Helper.filesize_below_limit(params[:uploaded_file], MAX_SIZE)
 
 				# store file in place (i.e. an new folder for this session)
-				Helper.mkdir_or_die( File.join(BASE_PATH,id) )
+				Helper.mkdir_or_die( File.join(Tmp_path,id) )
 				Helper.move_or_copy_file(params[:uploaded_file].path,f_dest,"move") 
 				Helper.chmod(f_dest, f_mode)
 
@@ -70,33 +70,6 @@ class PredictionsController < ApplicationController
 
 	end
 
-	# # Handel loading the example genome:
-	# # store it in /tmp/cug and add its id(new file name), original filename and path to the session
-	# # render partial showing the uploaded file
-	# # accessible params: @fatal_error [Array] Errors occured during file load
-	# def load_example
-	# 	example_file = "Candida_albicans_WO_1.fasta"
-	# 	example_path = Rails.root + "lib/" + example_file
-	# 	@fatal_error = []
-	# 	if File.exist?(example_path) then
-	# 		# do not check content, but check file size, just to be sure
-	# 		@fatal_error |= check_filesize(File.size(example_path))
-	# 		if @fatal_error.blank? then
-	# 			file_id = rand(1000000000).to_s
-	# 			file_path = File.join(BASE_PATH, file_id, "query.fasta")
-	# 			begin
-	# 				FileUtils.mkdir(BASE_PATH + file_id, :mode => 0775)
-	# 				FileUtils.cp(example_path, file_path)
-	# 			rescue
-	# 				@fatal_error << "Cannot upload file."
-	# 			end
-	# 			session[:file] = { id: file_id, name: example_file, path: file_path }
-	# 		end
-	# 	else
-	# 		@fatal_error << "Cannot upload file."
-	# 	end
-	# 	render :upload_file_ajax, formats: [:js]
-	# end
 
 # uncomment if alignment options should get an own submit-button instead of the big "Predict button"
 	# def set_alignment_options
@@ -120,7 +93,7 @@ class PredictionsController < ApplicationController
 		# copy file to /tmp/cymo_alignment_
 		@file_id = "cug" + session[:file][:id] + rand(1000000000).to_s
 		# set correct file extension for dialign/ seqan files
-		file_scr = File.join(BASE_PATH, session[:file][:id], "#{prot}-#{hit.to_s}-aligned.fasta")
+		file_scr = File.join(Tmp_path, session[:file][:id], "#{prot}-#{hit.to_s}-aligned.fasta")
 		file_dest = File.join(Dir::tmpdir, "cymobase_alignment_#{@file_id}.fasta")
 		Helper.file_exist_or_die(file_scr)
 
@@ -261,12 +234,12 @@ class PredictionsController < ApplicationController
 		f_stats = File.join(file_basename, "stat")
 		Status.save(f_stats, @stats)
 
-	# rescue RuntimeError => exp
-	# 	@fatal_error = [exp.message]
+	rescue RuntimeError => exp
+		@fatal_error = [exp.message]
 
-	# rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
-	# 		@fatal_error = ["Sorry, an error occured. Please contact us."]
-	# ensure
+	rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
+			@fatal_error = ["Sorry, an error occured. Please contact us."]
+	ensure
 		render :predict_genes, formats: [:js]
 	end
 
