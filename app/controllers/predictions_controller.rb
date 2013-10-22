@@ -160,7 +160,7 @@ class PredictionsController < ApplicationController
 		Prediction.class_variable_set(:@@align_method, params[:algo]) if params.has_key?(:algo)
 		Prediction.class_variable_set(:@@align_config, params[:config]) if params.has_key?(:config)
 
-		if session[:file][:name] == "Candida_albicans_WO_1.fasta" then
+		if session[:file][:name].match("Candida_albicans_WO_1") then
 			ProteinFamily.class_variable_set(:@@ref_data_path, File.join(BASE_PATH,PATH_REF_WO_EXAMPLE) )
 		else
 			ProteinFamily.class_variable_set(:@@ref_data_path, BASE_PATH)
