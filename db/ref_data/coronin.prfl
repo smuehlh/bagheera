@@ -310,4 +310,4 @@ name=unknown_E
 0	481
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/cug/new/coronin.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/coronin.fasta

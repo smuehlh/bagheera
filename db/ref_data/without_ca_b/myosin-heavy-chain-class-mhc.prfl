@@ -327,4 +327,4 @@ name=unknown_F
 0	1357
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/cug/new/without_ca_b/myosin-heavy-chain-class-mhc.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/myosin-heavy-chain-class-mhc.fasta

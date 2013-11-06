@@ -5,7 +5,11 @@
 # fab8 has a ssh-key shared with wwwrun@cymo
 
 # initialize variables
-FAB8DATA='/fab8/server/bagheera/db'
+if ! [ $# -eq 1 ] ; then
+	FAB8DATA='/fab8/server/bagheera/db'
+else
+	FAB8DATA=$1
+fi
 WEBAPPDATA='/usr/local/cymo/bagheera/db'
 DIR='ref_data'
 # reference me like ${DATA}

@@ -724,4 +724,4 @@ name=unknown_AB
 0	0
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/cug/new/without_ca_b/wasp-interacting-protein.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/wasp-interacting-protein.fasta

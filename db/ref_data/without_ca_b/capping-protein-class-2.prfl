@@ -160,4 +160,4 @@ name=unknown_E
 0	202
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/cug/new/without_ca_b/capping-protein-class-2.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/capping-protein-class-2.fasta

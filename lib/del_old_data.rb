@@ -1,8 +1,8 @@
 #!/usr/local/bin/ruby
-
+### Important: This script is no longer needed, as it was replaced by a cronjob cleaning up whole /tmp/ ###
+ 
 ### Clean up Bagheeras temporary files
-### Called dayly in crontab
-
+### [Formerly] Called dayly in crontab
 # 00 23 * * * ruby /fab8/server/bagheera/lib/del_old_data.rb
 
 require 'fileutils'

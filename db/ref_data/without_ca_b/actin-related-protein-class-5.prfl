@@ -450,4 +450,4 @@ name=unknown_K
 0	218
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/cug/new/without_ca_b/actin-related-protein-class-5.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/actin-related-protein-class-5.fasta

@@ -157,4 +157,4 @@ name=unknown_D
 0	2
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/cug/new/without_ca_b/dynein-tctex.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/dynein-tctex.fasta

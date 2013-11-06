@@ -1,9 +1,0 @@
-Spider-Modus eingeschaltet.  Prüfe ob die Datei auf dem Server existiert.
---2013-10-11 13:20:40--  http://fab8:2001/api_cug_alignment/all
-Auflösen des Hostnamen fab8... 10.208.0.186
-Verbindungsaufbau zu fab8|10.208.0.186|:2001... verbunden.
-HTTP-Anforderung gesendet, warte auf Antwort... 200 OK
-Länge: 4 [text/html]
-Datei auf dem Server existiert und könnte weitere Links enthalten,
-aber Rekursion ist abgeschaltet -- kein Download.
-
