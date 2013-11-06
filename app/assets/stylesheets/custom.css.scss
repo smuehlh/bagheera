@@ -383,6 +383,13 @@ tr.grey:hover td {
     background: #ededed; /* to better keep track of the line the mouse is over */
 }
 
+tr.highlight {
+    color: $h1_color;
+}
+tr:hover td {
+    background: #ededed; /* to better keep track of the line the mouse is over */
+}
+
 /*.predTable td .normal_text {
     font-family: Arial, sans-serif;
     font-size: 12px;

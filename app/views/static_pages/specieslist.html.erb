@@ -1,4 +1,9 @@
 <% provide(:title, 'Species List') %>
 <%= content_tag(:h1, "Species List") %>
 <%= content_tag(:h2, "Teleomorph, anamorph, alternative names and abbreviations") %>
+<%= 
+content_tag(:p, 
+	"All species using the alternative yeast nuclear code appear in purple. Each species is linked to NCBI taxonomy."
+	) 
+%>
 <%= content_tag(:table, species_table) %>
