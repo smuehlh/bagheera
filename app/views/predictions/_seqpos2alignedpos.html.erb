@@ -1,6 +1,10 @@
+</br>
+<%= content_tag(:normal, "Index of CTG position[s] in the alignment") %>
 <table>
+
 <%= content_tag(:tr, 
-	content_tag(:th, "Index of CTG position[s] in the alignment", :colspan => "2") 
+	content_tag(:th, "CTG Position in sequence") + 
+	content_tag(:th, "CTG Position in alignment") 
 ) %>
 <% @ctgpos2alignment.each do |spos, apos| %>
 	<%= content_tag(:tr,

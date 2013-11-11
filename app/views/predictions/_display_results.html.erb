@@ -31,7 +31,6 @@
     <%
 
     ### this part is to prepare data
-    puts value[:ctg_pos]
         seq, seq_pos, aa_pct = format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
 
         not_sign_pos = value[:ref_chem].collect{|k,v| ruby2human_counting(k) if ! v[:is_significant]}

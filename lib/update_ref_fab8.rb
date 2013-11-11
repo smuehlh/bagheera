@@ -141,11 +141,6 @@ puts "Save reference data to file"
 ref_data_obj.save_ref_data(path_to_revised_json)
 ref_data_wo_cab_obj.save_ref_data( File.join( tmp_path_new_data, subfolder, Json ) )
 
-### chmod file mode of new reference data
-Dir.glob(File.join(tmp_path_new_data, "*.*")).each do |file|
-	File.chmod(0664, file)
-end
-
 puts "Move everything to place"
 final_pathes_new_data.each do |path|
 	# delete old stuff in path, files and folders
