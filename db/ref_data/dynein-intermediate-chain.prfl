@@ -495,4 +495,4 @@ name=unknown_S
 8	62
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/dynein-intermediate-chain.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug/dynein-intermediate-chain.fasta

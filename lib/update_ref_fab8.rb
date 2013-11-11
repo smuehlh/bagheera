@@ -11,12 +11,7 @@ require 'open3'
 # require 'ruby-debug'
 
 # load helper classes and modules
-Dir[File.join(File.dirname(__FILE__), 'update_ref_fab8_lib', '*.rb')].each {|file| require file }
-
-### shell script to copy updated data to cymo
-path_to_sh_script = File.join( 
-	File.expand_path(File.dirname(__FILE__)), 
-	"copy_bagheera_refdata_to_cymo.sh")
+Dir[File.join(File.dirname(__FILE__), 'update_ref_fab8_lib', '*.rb')].each {|file| require File.absolute_path(file) }
 
 ### files and pathes to the new refdata and their final location
 Path = "/tmp/new_cug"
@@ -44,7 +39,6 @@ end
 path_to_native_json = File.join(Path, Json) # this comes directly from cymo-API
 path_to_revised_json = File.join(tmp_path_new_data, Json) # this is the revised json (adapted to actual needs ... )
 
-
 ### details about how to handle protein families
 Del_unusual_prots = ["Calcineurin", "Calmodulin", "Centrin", "Frequenin", 
 	"Dynein Light Intermediate Chain",
@@ -58,35 +52,31 @@ Split_prot_abbrs = { "Myosin heavy chain" => "Myo",
 	"Capping Protein" => "CAP" }
 
 
-Reffile_exists = Helper.does_file_exist(path_to_native_json) ? true : false
-
 ### define process housekeeping
 at_exit {
 	# clean up
 	Helper.del_file_or_dir( tmp_path_new_data )
 }
-
-def callCymoAPI 
+### define function
+def callCymoAPI(temp)
 	wget_path = `which wget`.chomp
-	system(wget_path, "--spider", "http://fab8:2001/api_cug_alignment/all", "-o", File.join(tmp_path_new_data, "cron.log"))
+	system(wget_path, "--spider", "http://fab8:2001/api_cug_alignment/all", "-o", File.join(temp, "cron.log"))
 end
 
-# "main script"
+### "main script"
 # prepare directory structure
 
-if ! Reffile_exists then
-	Helper.del_file_or_dir(path_to_native_json)
+Helper.del_file_or_dir(path_to_native_json)
 
-	# fetch reference data from cymobase
-	max_secs = 60*10 # wait max. 10 minutes for cymoapi
-	puts "Start wget: #{Time.now}"
-	begin
-		status = Timeout::timeout(max_secs) { callCymoAPI }
-	rescue Timeout::Error => exc
-		Helper.abort(exc)
-	end
-	Helper.worked_or_die(status && Helper.does_file_exist(path_to_native_json), "wget failed")
+# fetch reference data from cymobase
+max_secs = 60*10 # wait max. 10 minutes for cymoapi
+puts "Start wget: #{Time.now}"
+begin
+	status = Timeout::timeout(max_secs) { callCymoAPI(tmp_path_new_data) }
+rescue Timeout::Error => exc
+	Helper.abort(exc)
 end
+Helper.worked_or_die(status && Helper.does_file_exist(path_to_native_json), "wget failed")
 
 ref_data_obj = ReferenceData.new(path_to_native_json)
 
@@ -151,6 +141,11 @@ puts "Save reference data to file"
 ref_data_obj.save_ref_data(path_to_revised_json)
 ref_data_wo_cab_obj.save_ref_data( File.join( tmp_path_new_data, subfolder, Json ) )
 
+### chmod file mode of new reference data
+Dir.glob(File.join(tmp_path_new_data, "*.*")).each do |file|
+	File.chmod(0664, file)
+end
+
 puts "Move everything to place"
 final_pathes_new_data.each do |path|
 	# delete old stuff in path, files and folders
@@ -160,12 +155,4 @@ final_pathes_new_data.each do |path|
 	# move new data to place
 	scr = tmp_path_new_data + '/.'
 	FileUtils.cp_r scr, path
-end
-
-### update ref_data on cymo
-is_sucess = system(path_to_sh_script, final_pathes_new_data[0])
-if is_sucess then 
-	puts "Updated data to cymo"
-else
-	puts "Could not update data to cymo"
 end

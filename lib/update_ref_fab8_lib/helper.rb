@@ -100,7 +100,9 @@ module Helper
 		end
 
 		# calculate profiles
-		output = system "/usr/local/bin/augustus/scripts/msa2prfl.pl", f_in, :out => f_out, :err => '/tmp/cug/err.log'
+		output = system "/usr/local/bin/augustus/scripts/msa2prfl.pl", f_in, 
+			:out => f_out, 
+			:err => File.join(File.dirname(f_in), "err.log")
 	end
 
 	module Sequence
