@@ -2,8 +2,16 @@
 <% if @fatal_error && @fatal_error.any? then%>
 	show_error('<%=raw(@fatal_error.join("<br />"))%>');
 <% else %>
+
+	<% if @ctgpos2alignment && @ctgpos2alignment.any? then %>
+	// map sequence position to alignment positions ( but only if there is anything to map)
+		<% mapdata = escape_javascript(render(partial: "seqpos2alignedpos"))%>
+		$('#alignment_<%= @frame_id %>').html('<%=mapdata%>');
+	<% end %>
+
+	// the alignment frame
 	<% iframe_src = LUCULLUS_URL + "?source=" + @file_id %>
-	<% new_content = content_tag(:iframe, "Loading ...", :src => iframe_src, 
+	<% alignment = content_tag(:iframe, "Loading ...", :src => iframe_src, 
 		:width => "675px", :height => "200px", :id => "lucullus_alignment_frame") %>
-	$('#alignment_<%= @frame_id %>').html('<%=new_content%>');
+	$('#alignment_<%= @frame_id %>').append('<%=alignment%>');
 <% end %>

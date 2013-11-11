@@ -83,9 +83,13 @@ class PredictionsController < ApplicationController
 	# accessible params in view: @frame_id [Array] Identify the right div
 	# accessible params in view: @file_id [Array] Part of file path, for lucullus
 	def show_alignment
+
 		prot = params[:prot]
 		hit = params[:hit].to_s
+		ctg_pos = params[:ctgs] || []
+
 		@frame_id = prot.gsub(" ", "-").downcase + "_" + hit
+		@ctgpos2alignment = []
 
 		# fix actin proteinname for file access
 		prot = fix_actin_proteinname(prot).gsub(" ", "-").downcase
@@ -112,6 +116,14 @@ class PredictionsController < ApplicationController
 				headers.unshift(pred_header)
 				seqs.unshift(pred_seq)
 			end
+
+			# map CTG position in predicted sequence to aligned sequence
+			pred_seq = seqs[pred_seq_ind] if ! pred_seq
+			@ctgpos2alignment = ctg_pos.map do |spos|
+				spos = spos.to_i
+				apos = Helper::Sequence.sequence_pos2alignment_pos(spos, pred_seq)
+				[spos, apos]
+			end
 		end
 
 		fh_dest = File.new(file_dest, 'w')
@@ -120,6 +132,7 @@ class PredictionsController < ApplicationController
 	# # write predicted seq at the end of alignment, to make sure no seq is missing (Prediction is already at the top)
 	# fh_dest.puts( str2fasta("Prediction", seqs[headers.index(">Prediction")], true) )
 		fh_dest.close
+
 
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]

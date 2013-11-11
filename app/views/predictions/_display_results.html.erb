@@ -31,6 +31,7 @@
     <%
 
     ### this part is to prepare data
+    puts value[:ctg_pos]
         seq, seq_pos, aa_pct = format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
 
         not_sign_pos = value[:ref_chem].collect{|k,v| ruby2human_counting(k) if ! v[:is_significant]}
@@ -138,7 +139,7 @@
                     id: "show_alignment_#{basename}_#{value[:hit_shown]}_img",
                     :title => "Show/hide alignment",
                     onclick: "toggle_icon(this, $('#alignment_#{basename}_#{value[:hit_shown]}'))"),
-            show_alignment_path(prot: prot_name, hit: value[:hit_shown]),
+            show_alignment_path(prot: prot_name, hit: value[:hit_shown], ctgs: value[:ctg_pos]),
             {:remote => true}
         ) +
         # button_to("Show alignment", show_alignment_path(prot: prot_name, hit: value[:hit_shown]), 
