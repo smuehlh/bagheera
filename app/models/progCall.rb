@@ -16,6 +16,7 @@ module ProgCall
 		# -i [INPUT: GENOME FILE] -p [PROTEIN] FALSE -n [DB NAME] -o [CREATE INDEX OVER SEQID] TRUE
 		is_success = system(FORMATDB, "-i", f_in, "-p", "F", "-n", @genome_db, "-o", "T")
 		# getestet
+# [new blast version] /usr/local/ncbi_2.2.28+/bin/makeblastdb -dbtype nucl -out query_db -in query -parse_seqids
 		# is_success = system( Legacy_blast, "formatdb", 
 		# 	"-i", f_in, "-p", "F", "-n", @genome_db, "-o", "T", "--path", New_blast_path)
 
@@ -28,10 +29,7 @@ module ProgCall
 		# -i [FILE] -m8 [OUTPUT FORMAT] -F [FILTERING] -s [SMITH-WATERMAN ALIGNMENT] T 
 		stdin, stdout_err, wait_thr = Open3.popen2e(BLASTALL, 
 			"-p", "tblastn", "-d", @genome_db, "-i", f_ref, "-m8", "-F", @blast_filtering, "-s", "T")
-
-		# nicht getestet, braucht lange!
-		# stdin, stdout_err, wait_thr = Open3.popen2e( Legacy_blast, "blastall", 
-		# 	"-p", "tblastn", "-d", @genome_db, "-i", f_ref, "-m8", "-F", @blast_filtering, "-s", "T", "--path", New_blast_path)
+# [new blast version] /usr/local/ncbi_2.2.28+/bin/tblastn -db query_db -query dynactin4-p62-refseq.fasta -outfmt 6 -seg no 
 		stdin.close
 		output = stdout_err.read
 		stdout_err.close
@@ -49,6 +47,7 @@ module ProgCall
 		# add 1000 nucleotides to start/stop 
 		stdin, stdout_err, wait_thr = Open3.popen2e(FASTACMD, "-d", @genome_db, "-p", "F", "-s", seq_id, 
 			"-L", "#{start},#{stop}", "-S", strand.to_s, "-o", f_out)
+# [new blast version] /usr/local/ncbi_2.2.28+/bin/blastdbcmd -db query_db -dbtype nucl -entry "gi|92090995|gb|CM000309.1|" -out tmp_out -range 2177688-2179013 -strand minus 
 		# nicht getestet
 		# stdin, stdout_err, wait_thr = Open3.popen2e( Legacy_blast, "fastacmd", 
 		# 	"-d", @genome_db, "-p", "F", "-s", seq_id, 

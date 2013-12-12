@@ -133,6 +133,8 @@ module Helper
 		end
 
 		# calculate position of residue in aligned sequence based on the position in unaligned sequence
+		# spos: posion [int] in unaligned sequence
+		# aseq: aligned sequence [string]
 		def sequence_pos2alignment_pos(spos, aseq)
 			pats = []
 			aseq.gsub("-", "")[0..spos].split("").each {|chr| pats << ("-*" + chr)}
@@ -141,6 +143,8 @@ module Helper
 		end
 
 		# calculate position of residue in unaligned sequence based on the position in aligned sequence
+		# apos: position [int] in aligned sequence
+		# aseq: aligned sequence [string]
 		def alignment_pos2sequence_pos(apos, aseq)
 			aseq[0..apos].gsub("-", "").length - 1
 		end

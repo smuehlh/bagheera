@@ -3,7 +3,7 @@
 ### Update Bagheeras reference data on fab8
 ### Called monthly in crontab
 
-# 00 04 1 * * ruby update_ref_neu.rb > /tmp/cug/cron-ruby.log 2> /tmp/cug/err-ruby.log
+# 12 3 1 * * ruby update_ref_neu.rb > /tmp/cug/cron-ruby.log 2> /tmp/cug/err-ruby.log
 require 'timeout'
 require 'fileutils'
 require 'json'
