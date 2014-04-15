@@ -7,6 +7,7 @@ Bagheera::Application.routes.draw do
     match '/help', to: 'static_pages#help', as: 'help', :via => [:get]
     match '/contact', to: 'static_pages#contact', as: 'contact', :via => [:get]
     match '/specieslist', to: 'static_pages#specieslist', as: 'specieslist', :via => [:get]
+    match '/translation', to: 'translations#start', as: 'translation', :via => [:get]
 
     match 'upload_file', to: 'predictions#upload_file', as: 'post/upload_file', :via => [:post]
     match 'upload_file', to: 'predictions#upload_file', as: 'get/upload_file', :via => [:get]
@@ -15,6 +16,9 @@ Bagheera::Application.routes.draw do
     match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
     match 'calc_tree', to: 'tree#calc_tree', as: 'calc_tree', :via => [:post]
     match 'download', to: 'tree#download', as: 'download', :via => [:get]
+    match 'transl_mrna', to: 'translations#transl_mrna', as: 'transl_mrna', :via => [:post]
+    match 'transl_protein', to: 'translations#transl_protein', as: 'transl_protein', :via => [:post]
+    match 'download_seq', to: 'translations#download', as: 'download_seq', :via => [:get]
 
     # match 'read_status', to: 'predictions#read_status', as: 'read_status', :via => [:get]
   else
@@ -27,6 +31,7 @@ Bagheera::Application.routes.draw do
       match '/help', to: 'static_pages#help', as: 'help', :via => [:get]
       match '/contact', to: 'static_pages#contact', as: 'contact', :via => [:get]
       match '/specieslist', to: 'static_pages#specieslist', as: 'specieslist', :via => [:get]
+      match '/translation', to: 'translations#start', as: 'translation', :via => [:get]
 
       match 'upload_file', to: 'predictions#upload_file', as: 'post/upload_file', :via => [:post]
       match 'upload_file', to: 'predictions#upload_file', as: 'get/upload_file', :via => [:get]
@@ -35,6 +40,9 @@ Bagheera::Application.routes.draw do
       match 'show_alignment', to: 'predictions#show_alignment', as: 'show_alignment', :via => [:get]
       match 'calc_tree', to: 'tree#calc_tree', as: 'calc_tree', :via => [:post]
       match 'download', to: 'tree#download', as: 'download', :via => [:get]
+      match 'transl_mrna', to: 'translations#transl_mrna', as: 'transl_mrna', :via => [:post]
+      match 'transl_protein', to: 'translations#transl_protein', as: 'transl_protein', :via => [:post]
+      match 'download_seq', to: 'translations#download', as: 'download_seq', :via => [:get]
     end
   end
 

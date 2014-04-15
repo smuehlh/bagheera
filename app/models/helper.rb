@@ -164,12 +164,40 @@ module Helper
 			codons = dna_seq.scan(/.{1,3}/)
 			return codons[pos]
 		end
+
+		# converts dna or rna sequence into valid dna sequence
+		def validate_dna_seq(seq)
+			seq = validate_seq(seq) 
+			seq = seq.gsub("U", "T") # convert rna to dna seq
+			return seq
+		end
+		# validates one sequence: removes fasta header and all white spaces
+		def validate_seq(seq)
+			# seq is fasta-formatted
+			if seq.start_with?(">") then 
+				headers, seqs = fasta2str(seq)
+				seq = seqs.first
+			end
+			seq = seq.upcase # convert to upper case
+			seq = seq.gsub(/\s+/, "") # remove all white spaces
+			return seq
+		end
 	end
 
 	class Gene
 		require 'yaml'
 
 		def initialize(blat_data)
+			# ensure format
+			if blat_data.kind_of?(Hash) then
+				if blat_data["ScipioResult"] then
+					# this yaml was downloaded by WebScipio, but is perfectly valid
+					blat_data = blat_data["ScipioResult"]
+				elsif blat_data["uploaded_seq"]
+					blat_data = blat_data["uploaded_seq"]
+				end
+			end
+
 			@blat_data = blat_data
 			exon_number = 0
 			@blat_data.each_with_index do |contig, contig_index|

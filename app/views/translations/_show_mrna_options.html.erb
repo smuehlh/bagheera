@@ -1,0 +1,32 @@
+<% options, preselected = fill_codon_usage_selection_tag %>
+<%= 
+	content_tag(:p, 
+		"Translate mRNA into protein sequence. All CTG codons will be translated as serine or leucine depending on the condon usage of the selected reference species.") +
+	form_tag(transl_mrna_path, :remote => true) do
+		text_area_tag(:mrna_seq, nil, placeholder: "Enter mRNA sequence", size: "50x10"
+		) +
+		content_tag(:table) do
+			# content_tag(:tr) do
+			# 	content_tag(:td, label_tag(:std, "Standard codon usage") ) +
+			# 	content_tag(:td, radio_button_tag(:codonusage, "L", :checked => true) )
+			# end +
+			# content_tag(:tr) do
+			# 	content_tag(:td, label_tag(:alt, "Alternative codon usage") ) +
+			# 	content_tag(:td, radio_button_tag(:codonusage, "S") )
+			# end
+			content_tag(:tr) do 
+				content_tag(:td, "Genetic code") + 
+				content_tag(:td, 
+					select_tag(:codonusage, 
+						options_for_select(options, preselected), 
+						:disabled => false
+					)
+				)
+			end
+		end + 
+		submit_tag("Translate",
+			:id => "mrna_button",
+			onclick: "hide_show_waiting('show');"
+		)
+	end
+%>

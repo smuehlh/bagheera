@@ -1,0 +1,8 @@
+<% tab_seq = {table_class: "predTable", th_left: "Translated protein sequence", 
+    th_right: "CTG position", col_left: "", col_right: ""} %>
+<% seq, ctg_pos = pretty_format_protein_seq(@protein_seq, @ctg_pos) %> 
+<%# draw_table method comes from PredictionsHelper%>
+<%= content_tag(:normal, 
+	    draw_table(seq, ctg_pos, tab_seq)
+    )
+%> 

@@ -1,0 +1,19 @@
+hide_show_waiting('hide');
+<% if @error.blank? then %>
+	// prepare layout
+	$('#results_section').show();
+
+	// fill layout with content
+	<% if @is_from_transl_mrna then %>
+		$('#results_section').html('<h2>Translated mRNA</h2>')
+		<% new_content = escape_javascript(render(partial: "transl_mrna_results"))%>
+		$('#results_section').append('<%=new_content%>');
+	<% else %>
+		$('#results_section').html('<h2>Checked protein translation</h2>')
+		<% new_content = escape_javascript(render(partial: "transl_prot_results"))%>
+		$('#results_section').append('<%=new_content%>');
+	<% end %>
+<% else %>
+	show_error('<%= raw(@error) %>');
+<% end %>
+

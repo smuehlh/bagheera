@@ -1,0 +1,26 @@
+<% tab_seq = {table_class: "predTable", th_left: "Translated protein sequence", 
+    th_right: "CTG position", col_left: "", col_right: ""} %>
+<% seq, ctg_pos = pretty_format_protein_seq(@protein_seq, @ctg_pos) %> 
+<%# draw_table method comes from PredictionsHelper%>
+<%= content_tag(:normal, 
+	    draw_table(seq, ctg_pos, tab_seq)
+    )
+%> 
+
+<%= if @ctg_pos.any? then 
+		content_tag(:h4, "Translation of CTG codons") + 
+		if @ctg_pos_wrongly_transl.empty? then  
+			content_tag(:p, "All CTG codons were correctly translated.")
+		else
+			content_tag(:p,
+				"CTG codons at positions #{@ctg_pos_wrongly_transl.join(", ")} were incorrectly translated."
+			) + 
+			link_to("Download correctly translated sequence", 
+				download_seq_path(seq: @protein_seq), :class => "internal"
+			)
+
+		end
+	else
+		content_tag(:p, "No CTG codons found.")
+	end
+%>

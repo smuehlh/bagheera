@@ -9,7 +9,7 @@ module StaticPagesHelper
 		content_tag(:thead, escape: false) do
 			content_tag(:tr) do 
 				content_tag(:th, "Abbreviation") +
-				content_tag(:th, "Species (teleomorph") +
+				content_tag(:th, "Species (teleomorph)") +
 				content_tag(:th, "Anamorph") +
 				content_tag(:th, "Alternative names") +
 				content_tag(:th, "Link to NCBI Taxonomy")
