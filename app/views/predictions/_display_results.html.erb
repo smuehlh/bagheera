@@ -30,22 +30,30 @@
     <div class="pred_data_wrapper" id="pred_data_<%= basename %>" style="clear:both">
     <%
 
-    ### this part is to prepare data
+        ### this part is to prepare data
         seq, seq_pos, aa_pct = format_seq(value[:pred_prot], value[:ctg_pos], value[:ref_chem])
 
-        not_sign_pos = value[:ref_chem].collect{|k,v| ruby2human_counting(k) if ! v[:is_significant]}
+        # combined_res_table = ""
+        res_table_chem, res_table_ctg = "", ""
+        mini_stats_chem, mini_stats_ctg = "", ""
 
-        combined_res_table = ""
+        # check if protein profile was used for gene prediction
+        # true if no protein profile
+        is_no_prot_profile = find_and_del_no_prfl(value[:message])
 
-    # check if protein profile was used for gene prediction
-    # true if no protein profile
-    is_no_prot_profile = find_and_del_no_prfl(value[:message])
-
-    ###  this part is to collect results from amino acid and CTG usage (to show them in one table)
+        ###  this part is to collect results from amino acid and CTG usage (to show them in one table)
         if value[:ctg_pos].any? && value[:ref_chem].any? then
-            # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps) 
-            combined_res_table = draw_table2(ruby2human_counting(value[:ref_chem].keys), 
-                    aa_pct, value[:ref_chem].collect {|_, v| v[:aa_num]}, not_sign_pos, tab_aa)
+
+            klass_by_pos = assign_layout_class_to_ctg_pos( value[:ref_chem] )
+            # combined_res_table = draw_table2(
+            res_table_chem = draw_table2(
+                ruby2human_counting(value[:ref_chem].keys), 
+                aa_pct, 
+                value[:ref_chem].collect {|_, v| v[:aa_num]}, 
+                klass_by_pos, tab_aa
+            )
+
+            mini_stats_chem = stats_suggested_transl_as_text( value[:ref_chem], value[:ctg_pos] )
 
             # # display informative text in one row, with same font as throughout the page
             # combined_res_table << content_tag(:tr, 
@@ -56,12 +64,17 @@
 
         end 
         if value[:ctg_pos].any? && value[:ref_ctg].any? then
-            # convert CTG positions to human counting                     # collect: count number of amino acids (no gaps) 
-            not_sign_pos = value[:ref_ctg].collect{|k,v| ruby2human_counting(k) if ! v[:is_significant]}
             
-            combined_res_table += draw_table2(ruby2human_counting(value[:ref_ctg].keys), 
-                    format_ctg_stats(value[:ref_ctg]), 
-                    value[:ref_ctg].collect {|_, v| v[:ctg_num]}, not_sign_pos, tab_ctg).html_safe 
+            klass_by_pos = assign_layout_class_to_ctg_pos( value[:ref_ctg] )
+            # combined_res_table += draw_table2(
+            res_table_ctg = draw_table2(    
+                ruby2human_counting(value[:ref_ctg].keys), 
+                format_ctg_stats(value[:ref_ctg]), 
+                value[:ref_ctg].collect {|_, v| v[:ctg_num]}, 
+                klass_by_pos, tab_ctg
+            ).html_safe 
+
+            mini_stats_ctg = stats_suggested_transl_as_text( value[:ref_ctg], value[:ctg_pos] )
         end
     %>
     <%=    
@@ -74,7 +87,7 @@
             if value[:ref_chem].empty? then 
                 # do not show results, this will be done elsewhere!
                 content_tag(:p, 
-                    content_tag(:i, "No CTG position aligned with discriminative sites of reference data")
+                    content_tag(:i, "No CTG aligned with reference data")
                     )
             end +
 
@@ -83,22 +96,33 @@
             if value[:ref_ctg].empty? then
                 # again: do not show results, this will be done elsewhere
                 content_tag(:p, 
-                    content_tag(:i, "No CTG codons in reference data at same positions")
+                    content_tag(:i, "No CTG aligned with CTG in reference data")
                     )
             end +
 
             ### this part is only needed if any results (= aa distribution or CTG usage in refernce data) are there
             ### it prints the table containing results (of both amino acid and CTG usage, if applicable)
             ### it suggests a CTG usage
-            if value[:ref_chem].any? || value[:ref_ctg].any? then
 
-                content_tag(:table, raw(combined_res_table), :class => "predTable") +
-
-                if ! suggested_transl(value[:ref_chem], value[:ref_ctg]).blank? then
-                    content_tag(:p, suggested_transl(value[:ref_chem], value[:ref_ctg]), :class => "highlight_res" )
-                end
+            if value[:ref_chem].any? then 
+                content_tag(:h4, "Sequence similarity") +
+                content_tag(:table, raw(res_table_chem), :class => "predTable" ) +
+                content_tag(:p, mini_stats_chem, :class => "highlight_res" )
             end +
+            if value[:ref_ctg].any? then 
+                content_tag(:h4, "CTG position conservation") + 
+                content_tag(:table, raw(res_table_ctg), :class => "predTable" ) +
+                content_tag(:p, mini_stats_ctg, :class => "highlight_res" )
+            end +
+#             if value[:ref_chem].any? || value[:ref_ctg].any? then
 
+#                 content_tag(:table, raw(combined_res_table), :class => "predTable") #+
+#                 # if ! suggested_transl(value[:ref_chem], value[:ref_ctg]).blank? then
+#                 #     content_tag(:p, suggested_transl(value[:ref_chem], value[:ref_ctg]), :class => "highlight_res" )
+#                 # end
+#             end +
+
+            content_tag(:h4, "") +
             content_tag(:p, pluralize(value[:ref_seq_num].to_s, "sequence") << " in reference alignment")
             
         else

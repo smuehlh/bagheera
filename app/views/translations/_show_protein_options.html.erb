@@ -3,7 +3,9 @@
 	content_tag(:p, 
 		"Reverse translate protein into mRNA sequence. Via a gene prediction of the given protein sequence in the selected genome, the coding sequence is obtained. This sequence is then used to check if CTG codons are correctly translated in the input protein sequence.") +
 	form_tag(transl_protein_path, :remote => true) do
-		text_area_tag(:protein_seq, nil, placeholder: "Enter protein sequence", size: "50x10"
+		text_area_tag(:protein_seq, nil, placeholder: "Enter protein sequence", size: "50x10",
+			onchange:  
+				"if ($('#protein_seq').val() == '') {$('#protein_button').attr('disabled', 'disabled');$('#species').attr('disabled', 'disabled');$('#scipio_relaxed').attr('disabled', 'disabled');} else {$('#protein_button').removeAttr('disabled');$('#species').removeAttr('disabled');$('#scipio_relaxed').removeAttr('disabled');}"
 		) +
 		content_tag(:table) do
 			# content_tag(:tr) do
@@ -15,24 +17,25 @@
 			# 	content_tag(:td, radio_button_tag(:codonusage, "S") )
 			# end
 			content_tag(:tr) do 
-				content_tag(:td, "Predict gene in species") + 
+				content_tag(:td, "Reference species for gene prediction (WebScipio)") + 
 				content_tag(:td, 
 					select_tag(:species, 
 						grouped_options_for_select(grouped_species, preselected_species), 
-						:disabled => false
+						:disabled => true
 					)
 				)
 			end + 
 			content_tag(:tr) do
 				content_tag(:td, "Use less stringent scipio parameters" ) +
 				content_tag(:td, 
-					check_box_tag(:scipio_relaxed, true, false) 
+					check_box_tag(:scipio_relaxed, true, false, :disabled => false ) 
 					)
 			end
 		end + 
 		submit_tag("Translate",
 			:id => "protein_button",
-			onclick: "hide_show_waiting('show');"
+			onclick: "hide_show_waiting('show');",
+			:disabled => true
 		)
 	end
 %>

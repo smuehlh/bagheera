@@ -184,6 +184,12 @@ class PredictionsController < ApplicationController
 		@predicted_prots = Hash.new() # will become Hash of hashes
 		@stats = Hash.new(0)
 
+		# TODO include tRNA pred here
+		# its ok to locate tool call in prediction.rb and progCall.rb
+		# save stats (change method stats.update)
+		# think about how to save this results (not in @predicted_prots!)
+		
+
 		ref_data = Helper.load_ref_data
 
 		file_basename = File.dirname(session[:file][:path])
@@ -408,14 +414,6 @@ class PredictionsController < ApplicationController
 			end 
 		end
 	end
-
-	# def write_status(done, total, final=false)
-	# 	html = ["<html>", "<head>"]
-	# 	html += ['<meta http-equiv="refresh" content="5;url=./status.html">'] if ! final 
-	# 	html += ["</head>", "<body>", "Processed #{done}/#{total}", "</body>", "</html>"]
-	# 	return html.join(" ")
-	# end
-
 
 	# # Read fasta and test if it is fasta-formatted genome file and contains an CTG codon
 	# # @param file [String] File handle

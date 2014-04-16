@@ -1,4 +1,9 @@
 <%=
+	heading_trna = "Identity of tRNA<sub>CAG</sub>"
+	content_tag(:h3, heading_trna.html_safe) +
+
+	content_tag(:h3, "Gene prediction") + 
+
 	content_tag(:table,
 		content_tag(:tr, 
 			content_tag(:td, "Predicted " + "protein".pluralize(@stats[:n_prots])) +
@@ -9,29 +14,66 @@
 			content_tag(:td, "Predicted CTG " + "position".pluralize(@stats[:pred_ctg])) +
 			content_tag(:td, @stats[:pred_ctg].to_s )
 		) +
-		# these are predicted CTG positions which occur also in reference data (they are conserved)
 		content_tag(:tr, 
-			content_tag(:td, "Conserved CTG " + "position".pluralize(@stats[:conserved_pos])) +
 			content_tag(:td, 
-				@stats[:conserved_pos].to_s + 
-				# these are the proteins which contain a predicted, conserved CTG position
-				" (" + @stats[:prot_conserved_pos].to_s + " protein".pluralize(@stats[:prot_conserved_pos]) + ")"
-			)
-		) +
-		# # these are the proteins which contain a predicted, conserved CTG position
-		# content_tag(:tr, 
-		# 	content_tag(:td, "Protein".pluralize(@stats["prot_conserved_pos"]) + " with conserved CTG positions") +
-		# 	content_tag(:td, @stats["prot_conserved_pos"])
-		# ) +
+				"Thereof " + "position".pluralize(@stats[:contradiction_ref_chem_ref_ctg]) + " with ambiguous results") +
+			content_tag(:td, @stats[:contradiction_ref_chem_ref_ctg].to_s )
+		)
+	) +
+	content_tag(:h4, "Sequence similarity") +
+	content_tag(:table, 
 		content_tag(:tr, 
 			content_tag(:td, "Alternative codon usage") +
-			content_tag(:td, @stats[:ser].to_s)
+			content_tag(:td, @stats[:ref_chem_ser].to_s)
 		) +
 		content_tag(:tr, 
 			content_tag(:td, "Standard codon usage") +
-			content_tag(:td, @stats[:leu].to_s)
+			content_tag(:td, @stats[:ref_chem_leu].to_s)
+		) +
+		content_tag(:tr, 
+			content_tag(:td, "Indiscriminative") +
+			content_tag(:td, @stats[:ref_chem_unknown].to_s)
+		)
+	) +
+
+	content_tag(:h4, "CTG position conservation") +
+	content_tag(:table, 
+		content_tag(:tr, 
+			content_tag(:td, "Alternative codon usage") +
+			content_tag(:td, @stats[:ref_ctg_ser].to_s)
+		) +
+		content_tag(:tr, 
+			content_tag(:td, "Standard codon usage") +
+			content_tag(:td, @stats[:ref_ctg_leu].to_s)
+		) +
+		content_tag(:tr, 
+			content_tag(:td, "Indiscriminative") +
+			content_tag(:td, @stats[:ref_ctg_unknown].to_s)
 		)
 	)
+
+		# # these are predicted CTG positions which occur also in reference data (they are conserved)
+		# content_tag(:tr, 
+		# 	content_tag(:td, "Conserved CTG " + "position".pluralize(@stats[:conserved_pos])) +
+		# 	content_tag(:td, 
+		# 		@stats[:conserved_pos].to_s + 
+		# 		# these are the proteins which contain a predicted, conserved CTG position
+		# 		" (" + @stats[:prot_conserved_pos].to_s + " protein".pluralize(@stats[:prot_conserved_pos]) + ")"
+		# 	)
+		# ) +
+		# # # these are the proteins which contain a predicted, conserved CTG position
+		# # content_tag(:tr, 
+		# # 	content_tag(:td, "Protein".pluralize(@stats["prot_conserved_pos"]) + " with conserved CTG positions") +
+		# # 	content_tag(:td, @stats["prot_conserved_pos"])
+		# # ) +
+		# content_tag(:tr, 
+		# 	content_tag(:td, "Alternative codon usage") +
+		# 	content_tag(:td, @stats[:ser].to_s)
+		# ) +
+		# content_tag(:tr, 
+		# 	content_tag(:td, "Standard codon usage") +
+		# 	content_tag(:td, @stats[:leu].to_s)
+		# )
 %>
 
 <%#=

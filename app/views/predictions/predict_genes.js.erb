@@ -8,24 +8,29 @@ hide_show_waiting('hide');
 	$('#results_section').show();
 	$('#results_section').html('<h2>Summary</h2>');
 	$('#results_section').append('<div id="results_stats"></div>');
+	$('#results_section').append('<h2>Identity of tRNA<sub>CAG</sub></h2>');
+	$('#results_section').append('<div id="results_trna"></div>');
 	$('#results_section').append('<h2>Predicted Genes</h2>');
 	$('#results_section').append('<div id="results_pred"></div>');
 	$('#results_section').append('<div id="results_error"></div>');
 	$('#results_section').append('<div id="link_to_abbr"></div>');
 
 	// fill layout with content
-	<% new_content = escape_javascript(render(partial: "display_results"))%>
-	$('#results_pred').html('<%=new_content%>');
-
 	<% new_content = escape_javascript(render(partial: "display_stats"))%>
 	$('#results_stats').html('<%=new_content%>');
+
+	<% new_content = escape_javascript(render(partial: "display_trna"))%>
+	$('#results_trna').html('<%=new_content%>');
+
+	<% new_content = escape_javascript(render(partial: "display_results"))%>
+	$('#results_pred').html('<%=new_content%>');
 
 	$('#results_error').html('<h2>Codon usage predictions without result</h2>');
 	<% new_content = escape_javascript(render(partial: "display_minor_error"))%>
 	$('#results_error').append('<%=new_content%>');
 	$('#results_error').show();
 
-	$('#link_to_abbr').html('<h2>Used species abbreviations</h2>');
+	$('#link_to_abbr').html('<h2>Species abbreviations used in the alignments</h2>');
 	$('#link_to_abbr').append('<%= link_to("Species List", specieslist_path, :target => "_blank", :class => "internal") %>')
 	$('#link_to_abbr').show();
 

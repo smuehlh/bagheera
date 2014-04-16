@@ -33,7 +33,7 @@ $h1_color: #853475;
 // $h1_color: #793C67;
 $h2_color: #ddd;
 $nice_button_bg: $h1_color;
-$h1_accent_color: #FFCC66;
+$h1_accent_color: #FF8D66 ; // #FFA666;
 
 /*** Allgemeine Regeln ***/
 
@@ -182,6 +182,15 @@ h1, h2, h3, h4, h5 {
         padding: 0px 0px 2px 0px;
         font-weight: bold;
         font-size: 14px;
+    }
+    h4 {
+        display: block;
+        font-weight: bold;
+        font-size: 14px;
+        margin: 15px 0px 5px 0px;
+        padding: 0px 0px 2px 0px;
+        border: 1px solid $h2_color;
+        border-width: 0px 0px 1px 0px;
     }
     div {
         padding-left: 5px;
@@ -375,20 +384,27 @@ form.disabled {
     font-size: 13px;
 }
 
-.predTable tr.grey {
+.predTable td.grey {
     color: $dunkelgrau;
 }
-
-tr.grey:hover td {
-    color: black;
-    background: #ededed; /* to better keep track of the line the mouse is over */
+.predTable td.orange {
+    color: $h1_accent_color;
 }
+.predTable td.purple {
+    color: $h1_color;
+}
+
+// tr.grey:hover td {
+//     color: black;
+//     background: #ededed; /* to better keep track of the line the mouse is over */
+// }
 
 tr.highlight {
     color: $h1_color;
 }
 tr:hover td {
     background: #ededed; /* to better keep track of the line the mouse is over */
+    color:black;
 }
 
 /*.predTable td .normal_text {

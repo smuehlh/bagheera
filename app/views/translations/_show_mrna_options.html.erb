@@ -3,7 +3,9 @@
 	content_tag(:p, 
 		"Translate mRNA into protein sequence. All CTG codons will be translated as serine or leucine depending on the condon usage of the selected reference species.") +
 	form_tag(transl_mrna_path, :remote => true) do
-		text_area_tag(:mrna_seq, nil, placeholder: "Enter mRNA sequence", size: "50x10"
+		text_area_tag(:mrna_seq, nil, placeholder: "Enter mRNA sequence", size: "50x10",
+			onchange:  
+				"if ($('#mrna_seq').val() == '') {$('#mrna_button').attr('disabled', 'disabled');$('#codonusage').attr('disabled', 'disabled');} else {$('#mrna_button').removeAttr('disabled');$('#codonusage').removeAttr('disabled');}"
 		) +
 		content_tag(:table) do
 			# content_tag(:tr) do
@@ -19,14 +21,15 @@
 				content_tag(:td, 
 					select_tag(:codonusage, 
 						options_for_select(options, preselected), 
-						:disabled => false
+						:disabled => true
 					)
 				)
 			end
 		end + 
 		submit_tag("Translate",
 			:id => "mrna_button",
-			onclick: "hide_show_waiting('show');"
+			onclick: "hide_show_waiting('show');", 
+			:disabled => true
 		)
 	end
 %>

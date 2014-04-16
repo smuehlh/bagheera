@@ -116,7 +116,7 @@ module PredictionsHelper
 	end
 
 	# no table-tag is printed, useful to concatenate tables
-	def draw_table2(col1, col2, *col3, sign_pos, table_spec)
+	def draw_table2(col1, col2, *col3, klass_by_col1, table_spec)
 		content_tag(:thead) do
 			content_tag(:tr) do
 				content_tag(:th, table_spec[:th_left]) +
@@ -143,20 +143,14 @@ module PredictionsHelper
 			end +
 
 			col1.each_with_index.collect do |data, ind|
-				# set class for table row -> display not significant data in grey
-				# if table_spec.has_key?(:display_grey) then
-				# 	if table_spec[:display_grey].include?(ind) then
-				# 		klass = "grey"
-				# 		change_col = "this.style.color='red';"
-				# 	else
-				# 		klass = ""
-				# 	end
+
+				# if sign_pos.include?(data) then
+				# 	klass = "grey"
 				# else
 				# 	klass = ""
 				# end
-
-				if sign_pos.include?(data) then
-					klass = "grey"
+				if klass_by_col1[data] then 
+					klass = klass_by_col1[data]
 				else
 					klass = ""
 				end
@@ -189,7 +183,7 @@ module PredictionsHelper
 				has_rejected = true
 			end
 		end
-		res << "Others: < 5%" if has_rejected
+		res << "Others:&nbsp;<5%" if has_rejected
 		# check if any freq is < 0.05 than add "Others: , 5%"
 		return res.join(", ")
 	end
@@ -226,43 +220,86 @@ module PredictionsHelper
 	end
 
 
-	def suggested_transl(ref_chem, ref_ctg, simple_output=false)
+	# def suggested_transl(ref_chem, ref_ctg, simple_output=false)
+	# 	res = []
+
+	# 	# counts for aa distribution in reference data
+	# 	pos_ser = ref_chem.collect{|k,v| k if v[:transl] == "S"}
+	# 	pos_leu = ref_chem.collect{|k,v| k if v[:transl] == "L"}
+	# 	# add counts for ctg usage in reference data
+	# 	pos_ser = pos_ser | ref_ctg.collect{|k,v| k if v[:transl] == "S"} # set union
+	# 	pos_leu = pos_leu | ref_ctg.collect{|k,v| k if v[:transl] == "L"} # set union
+
+	# 	pos_ser.compact!
+	# 	pos_leu.compact!
+
+	# 	alt_usage = (pos_ser - pos_leu).size # set difference
+	# 	std_usage = (pos_leu - pos_ser).size # set difference
+	# 	strange = (pos_ser & pos_leu).size # set intersect
+
+	# 	# only add to results if values are not zero
+	# 	if alt_usage > 0 then
+	# 		res << pluralize(alt_usage, ' CTG position', ' CTG positions') + " suggest alternative codon usage."
+	# 	end
+	# 	if std_usage > 0 then
+	# 		res << pluralize(std_usage, ' CTG position', ' CTG positions') + " suggest standard codon usage."
+	# 	end
+	# 	if strange > 0 then
+	# 		res << pluralize(strange, ' CTG position', ' CTG positions') +
+	# 			" leads to contrary results." 
+	# 			# " suggest contrary codon usage based on distribution of amino acids and CTG usage in reference data."
+	# 	end
+
+	# 	if simple_output then
+	# 		return [alt_usage, std_usage]
+	# 	else
+	# 		return res.join("</br>").html_safe
+	# 	end
+	# end
+
+	# 
+
+	def stats_suggested_transl_as_text(ref_data, all_ctg_pos)
+		n_ser, n_leu, n_unknown = Status.count_unknown_and_suggested_transl(ref_data, all_ctg_pos)
 		res = []
-
-		# counts for aa distribution in reference data
-		pos_ser = ref_chem.collect{|k,v| k if v[:transl] == "S"}
-		pos_leu = ref_chem.collect{|k,v| k if v[:transl] == "L"}
-		# add counts for ctg usage in reference data
-		pos_ser = pos_ser | ref_ctg.collect{|k,v| k if v[:transl] == "S"} # set union
-		pos_leu = pos_leu | ref_ctg.collect{|k,v| k if v[:transl] == "L"} # set union
-
-		pos_ser.compact!
-		pos_leu.compact!
-
-		alt_usage = (pos_ser - pos_leu).size # set difference
-		std_usage = (pos_leu - pos_ser).size # set difference
-		strange = (pos_ser & pos_leu).size # set intersect
-
-		# only add to results if values are not zero
-		if alt_usage > 0 then
-			res << pluralize(alt_usage, ' CTG position', ' CTG positions') + " suggest alternative codon usage."
+		if n_ser > 0 then 
+			res << pluralize(n_ser, ' CTG position', ' CTG positions') + " suggest alternative codon usage."
 		end
-		if std_usage > 0 then
-			res << pluralize(std_usage, ' CTG position', ' CTG positions') + " suggest standard codon usage."
+		if n_leu > 0 then 
+			res << pluralize(n_leu, ' CTG position', ' CTG positions') + " suggest standard codon usage."
 		end
-		if strange > 0 then
-			res << pluralize(strange, ' CTG position', ' CTG positions') +
-				" leads to contrary results." 
-				# " suggest contrary codon usage based on distribution of amino acids and CTG usage in reference data."
+		if n_unknown > 0 then 
+			res << pluralize(n_unknown, ' CTG position', ' CTG positions') + " are indiscriminative."
 		end
-
-		if simple_output then
-			return [alt_usage, std_usage]
-		else
-			return res.join("</br>").html_safe
-		end
+		return res.join("</br>").html_safe
 	end
 
+	# assign class to each ctg_position based on discriminativ-status and suggested translation
+	# works for ref_chem and ref_ctg
+	# translates the positions into human counting
+	def assign_layout_class_to_ctg_pos(ref_data)
+
+		# possible classes
+		klass_insignificant = "grey"
+		klass_significant_leu = "orange"
+		klass_significant_ser = "purple"
+
+		layout_by_pos = {}
+		ref_data.each do |pos, val|
+			human_counted_pos = ruby2human_counting(pos)
+			if val[:is_significant] then 
+				if val[:transl] == "S" then 
+					layout_by_pos[human_counted_pos] = klass_significant_ser
+				end
+				if val[:transl] == "L" then 
+					layout_by_pos[human_counted_pos] = klass_significant_leu
+				end
+			else
+				layout_by_pos[human_counted_pos] = klass_insignificant 
+			end
+		end
+		return layout_by_pos
+	end
 
 	# methods to parse [:message]
 	def has_fatal_error(errs)
