@@ -6,30 +6,48 @@ module ProgCall
 	@augustus_species = "candida_albicans"
 	@augustus_config_path = "/usr/local/bin/augustus/config/"
 
-	@blast_filtering = "F"
+	# @blast_filtering = "F"
+	@blast_filtering = "no"
+	@blast_filtering_masking = "false"
 
 	@blosum62_path = Rails.root.join('lib', 'blosum62').to_s
 	@genome_db = ""
 
+	def create_blast_db(f_in, genome_db=@genome_db)
 
-	def create_blast_db(f_in)
-		# -i [INPUT: GENOME FILE] -p [PROTEIN] FALSE -n [DB NAME] -o [CREATE INDEX OVER SEQID] TRUE
-		is_success = system(FORMATDB, "-i", f_in, "-p", "F", "-n", @genome_db, "-o", "T")
-		# getestet
-# [new blast version] /usr/local/ncbi_2.2.28+/bin/makeblastdb -dbtype nucl -out query_db -in query -parse_seqids
-		# is_success = system( Legacy_blast, "formatdb", 
-		# 	"-i", f_in, "-p", "F", "-n", @genome_db, "-o", "T", "--path", New_blast_path)
+		path_to_program = File.join( New_blast_path, "makeblastdb")
+		# -dbtype nucl [nucleotide] -out [DB NAME] -in [INPUT:FASTA] -parse_seqids [create index over seqid]
+		is_success = system(path_to_program, 
+			"-dbtype", "nucl", "-out", genome_db, "-in", f_in, "-parse_seqids")
 
 		# no output needed, so system is sufficient
 		Helper.worked_or_die(is_success, "Cannot create BLAST database from genome data.")
 	end
 
-	def blast(f_out, f_ref)
-		# -p [PROGRAM] protein query against nt-db -d [DATABASE] 
-		# -i [FILE] -m8 [OUTPUT FORMAT] -F [FILTERING] -s [SMITH-WATERMAN ALIGNMENT] T 
-		stdin, stdout_err, wait_thr = Open3.popen2e(BLASTALL, 
-			"-p", "tblastn", "-d", @genome_db, "-i", f_ref, "-m8", "-F", @blast_filtering, "-s", "T")
-# [new blast version] /usr/local/ncbi_2.2.28+/bin/tblastn -db query_db -query dynactin4-p62-refseq.fasta -outfmt 6 -seg no 
+	def blast(f_out, f_ref, options={})
+		defaults = {
+			:genome_db => @genome_db,
+			:program => "tblastn",
+			:output_format => "6" 
+		}
+		options = defaults.merge(options)
+
+		path_to_program = File.join( New_blast_path, options[:program] )
+		# -db [DB NAME] -query [INPUT FILE] -outfmt 6 [output in tabular format] -seg [yes|no] [filter query]
+		# 	-soft_masking [true|false] [filter locations as soft mask]
+		args_for_program = ["-db", options[:genome_db], "-query", f_ref, 
+			"-outfmt", options[:output_format], "-soft_masking", @blast_filtering_masking]
+
+		if options[:program] == "tblastn" then 
+			# option "-use_sw_tback" only supported by tblastn!
+			# FIXME - it does not work!!!
+			# args_for_program.push("-use_sw_tback") # FIXME - causes blast to crash
+
+			args_for_program.push("-seg", @blast_filtering)
+		end
+
+		stdin, stdout_err, wait_thr = Open3.popen2e(path_to_program, *args_for_program) 
+
 		stdin.close
 		output = stdout_err.read
 		stdout_err.close
@@ -42,16 +60,14 @@ module ProgCall
 		return true 
 	end
 
-	def fastacmd(f_out, seq_id, start, stop, strand)
-		# -d [DB] -p [PROTEIN] false -s [SEARCH STRING] -L [START,STOP]
-		# add 1000 nucleotides to start/stop 
-		stdin, stdout_err, wait_thr = Open3.popen2e(FASTACMD, "-d", @genome_db, "-p", "F", "-s", seq_id, 
-			"-L", "#{start},#{stop}", "-S", strand.to_s, "-o", f_out)
-# [new blast version] /usr/local/ncbi_2.2.28+/bin/blastdbcmd -db query_db -dbtype nucl -entry "gi|92090995|gb|CM000309.1|" -out tmp_out -range 2177688-2179013 -strand minus 
-		# nicht getestet
-		# stdin, stdout_err, wait_thr = Open3.popen2e( Legacy_blast, "fastacmd", 
-		# 	"-d", @genome_db, "-p", "F", "-s", seq_id, 
-		# 	"-L", "#{start},#{stop}", "-S", strand.to_s, "-o", f_out, "--path", New_blast_path)
+	def fastacmd(f_out, seq_id, start, stop, strand, genome_db=@genome_db)
+
+		path_to_program = File.join( New_blast_path, "blastdbcmd" )
+		# -db [DB NAME] -dbtype nucl [nucleotide] -entry [SEARCH STRING] -out [OUT FILE] -range [start-stop in fasta] -strand [DNA strand]
+		stdin, stdout_err, wait_thr = Open3.popen2e(path_to_program, 
+			"-db", genome_db, "-dbtype", "nucl", "-entry", seq_id, "-out", f_out, 
+			"-range", "#{start}-#{stop}", "-strand", strand)
+
 		stdin.close
 		output = stdout_err.read
 		stdout_err.close
@@ -87,13 +103,21 @@ module ProgCall
 		return true, 0
 	end
 
-	def mafft(f_out, f_in_pred, f_in_ref)
+	def mafft(f_out, f_in_pred, f_in_ref, options={})
 		# --addfragments: add non-full length sequence to existing MSA
 		# --amino: input is protein
+		# --nuc: is nucleotide
 		# --anysymbol: replace unusal symbols by "X"
 		# --quiet: output only alignment
 
-		stdin, stdout_err, wait_thr = Open3.popen2e(MAFFT, "--addfragments", f_in_pred, "--amino", "--anysymbol", "--quiet", f_in_ref)
+		defaults = {
+			:input => "amino",
+		}
+		options = defaults.merge(options)
+
+		stdin, stdout_err, wait_thr = Open3.popen2e(MAFFT, "--addfragments", f_in_pred, 
+			"--#{options[:input]}", "--anysymbol", "--quiet", 
+			f_in_ref)
 		stdin.close
 		output = stdout_err.read
 		stdout_err.close
@@ -140,10 +164,42 @@ module ProgCall
 		is_success = system(FastTree, "-out", f_out, f_in)
 	end
 
+	def trnascan(f_in)
+		# -G: general model, as opposed to a specific one for eukaryotes
+		# -D: no search for pseudogenes, makes search faster
+		# -f#: output sequence and its secondary structure
+		# -Q: do not prompt before overwriting an existing file
+		is_success = system(TRNASCAN, "-G", "-D", "-f#", "-Q", f_in )
+	end
+
 	# def config(configfile)
 
 	# 	@augustus_species = session[:augustus][:species]
 	# 	@blast_filtering = session[:blast][:use_low_comp_filter]
 
 	# end
+
+	def set_blast_filtering(is_filtering) 
+		if is_filtering then 
+			# @blast_filtering = "yes" #"T"
+			@blast_filtering = "yes"
+			@blast_filtering_masking = "true"
+		else
+			@blast_filtering = "no" # "F"
+			@blast_filtering_masking = "false"
+		end
+	end
+
+	# how to call the old blast version
+	# formatdb
+		# is_success = system(FORMATDB, "-i", f_in, "-p", "F", "-n", genome_db, "-o", "T")
+	# blast
+		# stdin, stdout_err, wait_thr = Open3.popen2e(BLASTALL, 
+		# "-p", options[:program], "-d", options[:genome_db], "-i", f_ref, "-m8", "-F", @blast_filtering, "-s", "T")
+		# caution: @blast_filtering must be "F" or "m S"; no @blast_filtering_masking
+		# c
+	# fastacmd
+		# stdin, stdout_err, wait_thr = Open3.popen2e(FASTACMD, "-d", genome_db, "-p", "F", "-s", seq_id, 
+		# 	"-L", "#{start},#{stop}", "-S", strand.to_s, "-o", f_out)
+		# caution: strand must be "1" or "2"
 end

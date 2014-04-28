@@ -89,6 +89,17 @@ module Helper
 		return JSON.load(File.read(path)) 
 	end
 
+	# def load_trna_ref_data
+	# 	path = File.join( BASE_PATH, TRNA_REF_DATA)
+	# 	file_exist_or_die(path)
+	# 	return File.read(path)
+	# end
+	def provide_trna_ref_data_path
+		path = File.join( BASE_PATH, TRNA_REF_DATA)
+		file_exist_or_die(path)
+		return path
+	end
+
 	def get_tmp_file(extension="fasta")
 		rand(1000000).to_s + "." + extension
 	end

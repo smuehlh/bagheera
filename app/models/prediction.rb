@@ -129,10 +129,10 @@ class Prediction
 		seq_id = fields[1] # sequence contig
 		start = fields[8].to_i # sequence start
 		stop = fields[9].to_i # sequence stop
-		strand = 1 # set strand to plus for fastacmd
+		strand = "plus" # set strand to plus for fastacmd
 		if stop < start then
 			# change start/ stop if prediction on minus strand 
-			strand = 2 # set strand to minus for fastacmd
+			strand = "minus" # set strand to minus for fastacmd
 			tmp = start
 			start = stop
 			stop = tmp
@@ -148,10 +148,10 @@ class Prediction
 			this_parts = this_hit.split("\t")
 			this_start = this_parts[8].to_i
 			this_stop = this_parts[9].to_i
-			this_strand = 1
+			this_strand = "plus"
 			if this_stop < this_start then
 				# change start/ stop if prediction on minus strand 
-				this_strand = 2 # set strand to minus for fastacmd
+				this_strand = "minus" # set strand to minus for fastacmd
 				tmp = this_start
 				this_start = this_stop
 				this_stop = tmp
@@ -438,7 +438,7 @@ class Prediction
 		end
 	end
 
-	def save_message(results, msg=@err_msg)
+	def save_message(results)
 		results[:message] |= [@err_msg] if ! @err_msg.blank?
 	end
 

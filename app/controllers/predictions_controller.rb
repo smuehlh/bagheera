@@ -133,7 +133,6 @@ class PredictionsController < ApplicationController
 	# fh_dest.puts( str2fasta("Prediction", seqs[headers.index(">Prediction")], true) )
 		fh_dest.close
 
-
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]
 	rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
@@ -164,14 +163,19 @@ class PredictionsController < ApplicationController
 		require 'proteinFamily.rb'
 		require 'refProtein.rb'
 		require 'prediction.rb'
+		require 'tRNAprediction.rb'
 		# require 'status.rb' # for some reason, this class needs not to be loaded separately
 
 		require 'open3'
 
 		# add options to this session
-		ProgCall.blast_filtering = "m S" if params.has_key?(:blast) # use low complexity filter
+		ProgCall.set_blast_filtering(true) if params.has_key?(:blast) # use low complexity filter
+		# ProgCall.blast_filtering = "m S" 
 		Prediction.class_variable_set(:@@align_method, params[:algo]) if params.has_key?(:algo)
 		Prediction.class_variable_set(:@@align_config, params[:config]) if params.has_key?(:config)
+		
+		TRNAprediction.class_variable_set(:@@align_method, params[:algo]) if params.has_key?(:algo)
+		TRNAprediction.class_variable_set(:@@align_config, params[:config]) if params.has_key?(:config)
 
 		if session[:file][:name].match("Candida_albicans_WO_1") then
 			ProteinFamily.class_variable_set(:@@ref_data_path, File.join(BASE_PATH,PATH_REF_WO_EXAMPLE) )
@@ -182,76 +186,96 @@ class PredictionsController < ApplicationController
 		# initialize "results" variables
 		@fatal_error = []
 		@predicted_prots = Hash.new() # will become Hash of hashes
+		@predicted_trna = Hash.new()
 		@stats = Hash.new(0)
-
-		# TODO include tRNA pred here
-		# its ok to locate tool call in prediction.rb and progCall.rb
-		# save stats (change method stats.update)
-		# think about how to save this results (not in @predicted_prots!)
 		
-
 		ref_data = Helper.load_ref_data
 
 		file_basename = File.dirname(session[:file][:path])
+
+		f_stats = File.join(file_basename, "stat")
 
 		# sucessfully loaded reference data file
 		# setup blast database
 		ProgCall.genome_db = session[:file][:path].gsub(".fasta", "_db")
 		ProgCall.create_blast_db(session[:file][:path])
 
-		# predict genes for every protein
+		# predict genes for every protein and for tRNA
 		sorted_ref_prots = ref_data.keys.sort_by {|key| key.to_s.naturalized}
-		# Alternative: use in_threads here, then rewrite "storage" of results
-		results = Parallel.map( sorted_ref_prots, :in_processes => 0 ) do |prot|
+		sorted_ref_prots.push("tRNA")
 
-			# initialize 
-			all_prot_data = ref_data[prot]
-			this_results = {
-				ref_species: "", ref_prot: "", ref_seq_num: "", 
-				pred_prot: "", 
-				n_hits: "", hit_shown: "", 
-				message: [], 
-				ctg_pos: [], ref_chem: {}, ref_ctg: {}
-			}
-			
-			begin
-				prot_obj = RefProtein.new(prot, all_prot_data, file_basename)
-			rescue RuntimeError => exp
-				# only profile missing or fasta file? 
-				# nothing to do if fasta is missing
-				next if ! exp.message.include?(".prfl") 
-			end
+		results = Parallel.map( sorted_ref_prots ) do |prot|
 
-			pred_obj = Prediction.new(prot_obj, 1, file_basename) # use BLAST hit nr 1
-			pred_obj.predict
+			if prot == "tRNA" then 
+				# special execution for tRNA prediction
 
-			# save results
-			pred_obj.save(this_results)
+				trna_ref_data_path = Helper.provide_trna_ref_data_path
+				this_results = { seq: "", struct: "", score: "",
+					anticodon: "", anticodon_pos: "",
+					blast_hits: [], f_blast_alignment: "",
+					message: "" }
 
-			# save error messages
-			if ! pred_obj.err_msg.blank? then
-				pred_obj.save_message(this_results)
-			end
+				trna_pred_obj = TRNAprediction.new(session[:file][:path], trna_ref_data_path)
+				trna_pred_obj.predict
 
-			if ! pred_obj.used_prfl then
-				pred_obj.save_message(this_results, "No protein profile available for gene prediction." )
-			end
+				trna_pred_obj.save(this_results)
+				
+				Status.update_file(this_results, f_stats)
 
-			# Status.update(@predicted_prots[prot], @stats)
-			Status.update(this_results, @stats)
+				# repeat variables which should be catched by map
+				[prot, this_results]
 
-			# repeat variables which should be catched by map
-			[prot, this_results]
+			else
+
+				# initialize 
+				all_prot_data = ref_data[prot]
+				this_results = {
+					ref_species: "", ref_prot: "", ref_seq_num: "", 
+					pred_prot: "", 
+					n_hits: "", hit_shown: "", 
+					message: [], 
+					ctg_pos: [], ref_chem: {}, ref_ctg: {}
+				}
+				
+				begin
+					prot_obj = RefProtein.new(prot, all_prot_data, file_basename)
+				rescue RuntimeError => exp
+					# only profile missing or fasta file? 
+					# nothing to do if fasta is missing
+					next if ! exp.message.include?(".prfl") 
+				end
+
+				pred_obj = Prediction.new(prot_obj, 1, file_basename) # use BLAST hit nr 1
+				pred_obj.predict
+
+				# save results
+				pred_obj.save(this_results)
+
+				# save error messages
+				if ! pred_obj.err_msg.blank? then
+					pred_obj.save_message(this_results)
+				end
+
+				if ! pred_obj.used_prfl then
+					pred_obj.save_message(this_results, "No protein profile available for gene prediction." )
+				end
+
+				Status.update_file(this_results, f_stats)
+
+				# repeat variables which should be catched by map
+				[prot, this_results]
+			end # if/else tRNA / protein
 
 		end # Parallel
 
 		# convert mapped results to @predicted_prots (accessible in view)
 		@predicted_prots = Hash[results.flatten.each_slice(2).to_a]
 		fix_actin_proteinname
+		# delete tRNA key from @predicted_prots
+		@predicted_trna = @predicted_prots.delete("tRNA")
 
-		# save status to use it again in predict_more
-		f_stats = File.join(file_basename, "stat")
-		Status.save(f_stats, @stats)
+		# save status in variable to have it accessbile in view
+		@stats = Status.read(f_stats)
 
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]
@@ -290,6 +314,8 @@ class PredictionsController < ApplicationController
 
 		file_basename = File.dirname(session[:file][:path]) 
 
+		f_stats = File.join(file_basename, "stat")
+
 		if session[:file][:name] == "Candida_albicans_WO_1.fasta" then
 			ProteinFamily.class_variable_set(:@@ref_data_path, File.join(BASE_PATH,PATH_REF_WO_EXAMPLE) )
 		else
@@ -299,7 +325,8 @@ class PredictionsController < ApplicationController
 		# initialize "results" variables
 		@fatal_error = []
 		@predicted_prots = Hash.new() # will become Hash of hashes
-		@stats = Hash.new(0)
+		@predicted_trna = Hash.new()
+		@stats = Hash.new(0) 
 
 		# initialize reference data
 		ref_data = Helper.load_ref_data
@@ -346,7 +373,8 @@ class PredictionsController < ApplicationController
 				pred_obj.save_message(this_results, "No protein profile available for gene prediction." )
 			end
 
-			Status.update(this_results, @stats)
+			Status.update_file(this_results, f_stats)
+				# Status.update(this_results, @stats)
 
 			# repeat variables which should be catched by map
 			[key, this_results]
@@ -358,9 +386,11 @@ class PredictionsController < ApplicationController
 		fix_actin_proteinname
 		@prot = fix_actin_proteinname(@prot) # convert @prot from filesave variant to view-safe variant!
 
-		# save status to use it again in predict_more
-		f_stats = File.join(file_basename, "stat")
-		Status.save(f_stats, @stats)
+		# # save status to use it again in predict_more
+		# Status.save(f_stats, @stats)
+
+		# save status in variable to have it accessbile in view
+		@stats = Status.read(f_stats)
 
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]

@@ -384,13 +384,13 @@ form.disabled {
     font-size: 13px;
 }
 
-.predTable td.grey {
+.predTable tr.grey {
     color: $dunkelgrau;
 }
-.predTable td.orange {
+.predTable tr.orange {
     color: $h1_accent_color;
 }
-.predTable td.purple {
+.predTable tr.purple {
     color: $h1_color;
 }
 

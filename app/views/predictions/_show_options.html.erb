@@ -37,15 +37,18 @@
 			# 		check_box_tag('multi')
 			# 	)
 			# end
-		end +
-
-		# uncomment if submit tag should be used
-		# submit_tag("Use options")
-		# comment if submit-tag should be used
-		submit_tag("Start prediction", #class: "nice_button", 
-			:id => "predict_button", 
-			onclick: "hide_show_waiting('show');",
-			# onclick: "periodically_show_stat();",
-			:disabled => true)
+		end # TODO +
+		# TODO
+		# content_tag(:h2, "Start gene prediction and tRNA search", :disabled => false) +
+		# # uncomment if submit tag should be used
+		# # submit_tag("Use options")
+		# # comment if submit-tag should be used
+		# submit_tag("Start prediction", #class: "nice_button", 
+		# 	:id => "predict_button", 
+		# 	onclick: "hide_show_waiting('show');",
+		# 	# onclick: "periodically_show_stat();",
+		# 	:disabled => true) +
+		# tag(:br)
+		
 	end
 %>

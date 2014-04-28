@@ -186,3 +186,11 @@ function toggle_icon(img, div, mode) {
     }
     return false;
 }
+
+// to submit prediction-form
+$(document).ready(function() {
+    $('#predict_button').click(function(){
+        $('#options_form').submit();
+        return false;
+    });
+});

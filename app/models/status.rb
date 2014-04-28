@@ -37,6 +37,16 @@ class Status
 			stats[:contradiction_ref_chem_ref_ctg] += n_contr
 		end
 
+		if pred_data[:score] then 
+			stats[:trna_score] = pred_data[:score]
+		end
+		if pred_data[:blast_hits] then 
+			n_ser, n_leu, n_unknown = count_unknown_and_suggested_transl( pred_data[:blast_hits], pred_data[:blast_hits].keys )
+			stats[:trna_leu] += n_leu
+			stats[:trna_ser] += n_ser
+			stats[:trna_unknown] += n_unknown
+		end
+
 		# if pred_data[:ref_chem]&& pred_data[:ref_ctg] then
 		# 	# number of CTGs discriminative for alternative usage/ standard usage
 		# 	arr = suggested_transl(pred_data[:ref_chem], pred_data[:ref_ctg])
@@ -55,6 +65,17 @@ class Status
 		return stats
 	end
 
+	# read stats from file, updates them and writes them back to file
+	def self.update_file(pred_data, file)
+		if Helper.does_file_exist(file) then 
+			stats = read(file)
+		else
+			stats = Hash.new(0)
+		end
+		stats = update(pred_data, stats)
+		save(file, stats)
+	end
+
 	# save statistics to file
 	def self.save(file, stats)
 		str = stats.map {|obj| obj.join(":") }.join("\n")
@@ -65,9 +86,13 @@ class Status
 	def self.read(file)
 		str = File.read(file)
 		stats = Hash.new(0)
-		stats = Hash[str.scan(/([\w_]+):(\d+)/)] # parse data and put them right into the hash
-		stats.each{ |key,val| stats[key] = val.to_i } # convert all numbers (string representation) to integers
 
+		# parse data and put them into the hash
+		str.scan(/([\w_]+):(\d+)/).each do |key, val|
+			key = key.to_sym # convert all keys to symbols
+			val = val.to_i # convert all numbers to integers
+			stats[key] = val
+		end
 		return stats
 	end
 

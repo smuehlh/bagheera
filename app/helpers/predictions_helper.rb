@@ -216,6 +216,8 @@ module PredictionsHelper
 			return numplus
 		elsif num.kind_of?(Fixnum) 
 			return num + 1
+		elsif num.kind_of?(String)
+			return num
 		end
 	end
 
@@ -259,20 +261,33 @@ module PredictionsHelper
 
 	# 
 
-	def stats_suggested_transl_as_text(ref_data, all_ctg_pos)
+	def stats_suggested_transl_as_text(ref_data, all_ctg_pos, options={})
+		defaults = {
+			:text_singular => ' CTG position',
+			:text_plural => ' CTG positions' 
+		}
+		options = defaults.merge(options)
 		n_ser, n_leu, n_unknown = Status.count_unknown_and_suggested_transl(ref_data, all_ctg_pos)
 		res = []
 		if n_ser > 0 then 
-			res << pluralize(n_ser, ' CTG position', ' CTG positions') + " suggest alternative codon usage."
+			res << pluralize(n_ser, options[:text_singular], options[:text_plural]) + " suggest alternative codon usage."
 		end
 		if n_leu > 0 then 
-			res << pluralize(n_leu, ' CTG position', ' CTG positions') + " suggest standard codon usage."
+			res << pluralize(n_leu, options[:text_singular], options[:text_plural]) + " suggest standard codon usage."
 		end
 		if n_unknown > 0 then 
-			res << pluralize(n_unknown, ' CTG position', ' CTG positions') + " are indiscriminative."
+			res << pluralize(n_unknown, options[:text_singular], options[:text_plural]) + " are indiscriminative."
 		end
 		return res.join("</br>").html_safe
 	end
+
+	# def stats_suggested_transl_by_trna_as_text(ref_data)
+	# 	ser_pos, leu_pos = Status.ctg_pos_by_suggested_transl(ref_data)
+	# 	n_ser = ser_pos.size
+	# 	n_leu = leu_pos.size
+	# 	res = []
+	# 	if ser_pos.any
+	# end
 
 	# assign class to each ctg_position based on discriminativ-status and suggested translation
 	# works for ref_chem and ref_ctg

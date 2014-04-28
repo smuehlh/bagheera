@@ -1,6 +1,29 @@
 <%=
 	heading_trna = "Identity of tRNA<sub>CAG</sub>"
 	content_tag(:h3, heading_trna.html_safe) +
+	
+	if @stats[:trna_score] != "" then 
+		content_tag(:table,
+			content_tag(:tr, 
+				content_tag(:td, "Score") +
+				content_tag(:td, @stats[:trna_score].to_s)
+			) +
+			content_tag(:tr, 
+				content_tag(:td, "Alternative codon usage") +
+				content_tag(:td, @stats[:trna_ser].to_s)
+			) +
+			content_tag(:tr, 
+				content_tag(:td, "Standard codon usage") +
+				content_tag(:td, @stats[:trna_leu].to_s)
+			) +
+			content_tag(:tr, 
+				content_tag(:td, "Indiscriminative") +
+				content_tag(:td, @stats[:trna_unknown].to_s)
+			)
+		)
+	else
+		content_tag(:normal, "Not predicted")
+	end +
 
 	content_tag(:h3, "Gene prediction") + 
 

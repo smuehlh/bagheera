@@ -1,0 +1,84 @@
+<%=
+
+    tab_blast = {table_class: "predTable", 
+    	th_left: "Name", th_middle: "Score", th_right: "E-value",
+        col_left: "", col_middle: "", col_right: "" }
+    tab_seq = {table_class: "predTable", th_left: "Description", 
+        th_right: "Predicted tRNA sequence", col_left: "", col_right: ""}
+    tab_info = {table_class: "", th_left: "Prediction details", th_right: "", th_middle: "", col_left: "", col_right: "", col_middle: ""}
+
+    # prepare results 
+
+    blast_hits = @predicted_trna[:blast_hits].keys
+    scores = @predicted_trna[:blast_hits].collect { |_,v| v[:score] }
+    e_values = @predicted_trna[:blast_hits].collect { |_,v| v[:e_val] }
+    klass_by_pos = assign_layout_class_to_ctg_pos( @predicted_trna[:blast_hits] )
+    blast_table = draw_table2(blast_hits, scores, e_values, klass_by_pos, tab_blast).html_safe
+
+    seq, dummy, dummy = format_seq(@predicted_trna[:seq], [], {})
+    struct, dummy, dummy = format_seq(@predicted_trna[:struct], [], {})
+    seq_struct = seq.zip(struct).flatten
+    description_arr = Array.new(seq.size, "Sequence").zip(Array.new(struct.size, "Structure")).flatten
+    # dummy_arr = Array.new(seq_struct.size, "")
+    seq_table = draw_table(description_arr, seq_struct, tab_seq)
+
+    mini_stats = stats_suggested_transl_as_text(@predicted_trna[:blast_hits], @predicted_trna[:blast_hits].keys, 
+        { text_singular: "BLAST hit", text_plural: "BLAST hits" }
+        )
+
+    # render results
+
+    if ! @predicted_trna[:message].blank? || @predicted_trna[:seq].blank? then 
+
+        if @predicted_trna[:message].blank? then 
+            @predicted_trna[:message] = "No tRNA with anticodon CAG found"
+        end
+        content_tag(:p, @predicted_trna[:message], :class => "pred_nothing") 
+
+    else
+
+        # display tRNA seq and structure
+        heading_trna = "tRNA<sub>CAG</sub>"
+        content_tag(:h4, heading_trna.html_safe) +
+
+        content_tag(:table, raw(seq_table), :class => "predTable" ) +
+        tag(:br) +
+        draw_table(["Anticodon", "Anticodon position", "tRNAscan-SE score"],
+            [ @predicted_trna[:anticodon], 
+            @predicted_trna[:anticodon_pos],
+            @predicted_trna[:score] ],
+            tab_info
+        ) +
+
+        # display BLAST hits and alignment
+        content_tag(:h4, "BLAST results") +
+        content_tag(:table, raw(blast_table), :class => "predTable" ) +
+        content_tag(:p, mini_stats, :class => "highlight_res" ) +
+
+        content_tag(:normal, "Show BLAST alignment ") +
+        link_to( 
+            image_tag("icons/down.png",
+                    id: "blast_img",
+                    :title => "Show/hide BLAST alignments",
+                    onclick: "toggle_icon(this, $('#alignment_trna_blast'))"),
+            show_alignment_path(prot: "trna", hit: "blast", ctgs: []),
+            {:remote => true}
+        ) +
+        content_tag(:div, "", :id => "alignment_trna_blast", :style => "display:none") + 
+        tag(:br) +
+
+        # display MAFFT alignment
+        content_tag(:normal, "Show tRNA alignment ") +
+        link_to( 
+            image_tag("icons/down.png",
+                    id: "blast_img",
+                    :title => "Show/hide BLAST alignments",
+                    onclick: "toggle_icon(this, $('#alignment_trna_align'))"),
+            show_alignment_path(prot: "trna", hit: "align", ctgs: []),
+            {:remote => true}
+        ) +
+        content_tag(:div, 
+            content_tag(:p, "Alignment was generated with MAFFT."),
+            :id => "alignment_trna_align", :style => "display:none")
+    end 
+%>
