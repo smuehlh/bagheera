@@ -43,10 +43,13 @@
 </h2>
 
 	<h3>Options for gene prediction</h3>
-	<p>After you have entered the query data, you can set options for gene prediction. Bagheera predicts cytoskeletal and motor protein genes in the query data with a standalone version of <a class = "external" href="http://bioinf.uni-greifswald.de/augustus/" target = "_blank">AUGUSTUS</a>. Select the species feature model most suitable to predict genes in your query data from the menu. Protein profiles generated from the reference proteins are used to enhance the quality of the gene predictions.</p>
+	<p>After you have entered the query data, you can set options for gene prediction. <strong>The query data are transformed into a <a class = "external" href="http://blast.ncbi.nlm.nih.gov/Blast.cgi" target = "_blank">BLAST</a> database. TBLASTN searches are preformed for one representative of each reference protein. Representative genes are chosen based on the species selected as an feature model for AUGUSTUS. The genomic regions of the BLAST hits are extended by 500 nucleotides in both directions to obtain better and more complete ab initio gene predictions. To use BLAST with a low complexity filter, check this option. </strong>Bagheera predicts cytoskeletal and motor protein genes in the query data with a standalone version of <a class = "external" href="http://bioinf.uni-greifswald.de/augustus/" target = "_blank">AUGUSTUS</a>. Select the species feature model most suitable to predict genes in your query data from the menu. Protein profiles generated from the reference proteins are used to enhance the quality of the gene predictions.</p>
 
 	<h3>Options for alignment generation</h3>
 	<p>Bagheera aligns the predicted genes to the respective protein families and classes. This is crucial for the mapping of CUG codons in the predicted genes. You can choose between different alignment methods. <a class = "external" href = "http://mafft.cbrc.jp/alignment/software/" target = "_blank">MAFFT</a> will add the predicted sequence to the reference multiple sequence alignment, while all other algorithms will perform pairwise alignments between the predicted sequence and a reference sequence.This sequences is selected based on the species which was specified as AUGUSTUS species model.  In a second step, the aligned predicted sequence is mapped onto the reference multiple sequence alignment. Pairwise alignment methods are used as implemented in the <a class = "external" href = "http://www.seqan.de/" target = "_blank">SeqAn</a> library.</p>
+
+	<h3>Options for tRNA scan</h3>
+	<p><strong>Bagheera performs a tRNA scan and compares it with reference data containing Ser-tRNA<sub>CAG</sub> and Leu-tRNA<sub>CAG</sub>.<a class = "external" href = "http://lowelab.ucsc.edu/tRNAscan-SE/" target = "_blank">tRNAscan-SE</a> is used to predict the tRNA<sub>CAG</sub>. A BLAST search is performed to find the most similar reference tRNAs. BLAST search will be preformed using a low complexity filter, if this option was selected. In addition, the predicted tRNA<sub>CAG</sub> is aligned with reference tRNAs. To obtain an alignment covering both Ser-tRNA<sub>CAG</sub> as well as Leu-tRNA<sub>CAG</sub>, the alignment will be performed using MAFFT, regardless the specified alignment method for gene prediction.</strong></p>
 
 <h2>
 	<table width=100%>
@@ -57,11 +60,11 @@
 	</table>
 </h2>
 
-	<p>In the results section, you can view a short summary about the predicted CUG codons and the suggested codon usage. Beneath, the detailed results for every predicted cytoskeletal and motor protein are listed. You can toggle the display of the predicted protein itself with all CUG positions highlighted as well as the alignment between predicted protein and reference proteins. All CUG codons in the predicted sequence are translated as leucine, regardless the suggested codon usage.
-<strong>TODO: screenshot mit erklaerung zu dem pfeil und was man darunter sieht</strong>
+	<p>		<img alt="gene prediction view" src="/bagheera/assets/help/bagheera_genepred.png" width="300px" align="right">
+		In the results section, you can view a short summary about the predicted CUG codons and the suggested codon usage. Beneath, the detailed results for every predicted cytoskeletal and motor protein are listed. You can toggle the display of the predicted protein itself with all CUG positions highlighted as well as the alignment between predicted protein and reference proteins. All CUG codons in the predicted sequence are translated as leucine, regardless the suggested codon usage.
+
 	</p>
-	<p>Additional statistics are shown for every predicted CUG codon mapped to the reference data. These cover both the distribution of amino acids in reference data as well as the encoding of CUG codons conserved between reference proteins and the predicted protein.
-<strong>TODO: umschreiben, statt statistics "tables" schreiben, farben in den tables; screenshot von table mit erklaerung zu den farben</strong>
+	<p><strong>Additionally, information about reference data is shown for every predicted CUG codon mapped to the reference data. This information cover both the distribution of amino acids in reference data as well as the encoding of CUG codons conserved between reference proteins and the predicted protein. The colouring of lines indicates the most probable translation scheme.</strong>
 	</p>
 	<p>The gene prediction is based on the first hit of a TBLASTN search of a reference protein in the uploaded query data. You can restart the gene prediction for a specific protein family by clicking the “Use next BLAST hit for gene prediction” button. The next ten BLAST hits will then be used for gene prediction.</p>
 
@@ -73,9 +76,7 @@
 		</tr>
 	</table>
 </h2>
-	<p>
-<strong>TODO results of trna prediction beschreiben</strong>
-	</p>
+	<p><strong>tRNA<sub>CAG</sub> sequence and secondary structure prediction is displayed. In the secondary structure prediction, unmatched nucleotides are displayed as &quot;.&quot;, while a pair of matched nucleotides is indicated by &quot;&lt;&quot; and &quot;&gt;&quot;. In addition, tRNAscan score is given. The most probable identity can be assessed based on the BLAST best hits and the alignment with reference Ser-Leu tRNAs. Results of the BLAST search as shown as table indicating the best hits, their bit score and E-value and as BLAST alignment. Table rows are coloured according to the most probable tRNA identity.</strong></p>
 
 <h2>
 	<table width=100%>
@@ -87,7 +88,8 @@
 </h2>
 	<p>The prediction of the most probable decoding scheme is based on the CUG codon usage and amino acid distribution at the respective alignment position in the reference data.</p>
 	<p>On the one hand, the amino acid distribution of the reference data is analysed. This is done only for those columns of the multiple sequence alignment, which are aligned with CUG codons in the predicted genes. The distribution of all amino acids accounting for more than 5% of the reference data is listed in the view. Prediction of the codon usage is done based on the chemical properties of the amino acids. The hydrophobic amino acids valine, isoleucine, leucine, methionine and phenylalanine suggest the translation of the predicted CUG as leucine (standard nuclear code). The presence of the polar and small amino acids serine, threonine, cystein and alanine on the other hand suggest the translation of the predicted CUG as serine. However, only portions of these data are taken as hint for one or the other codon usage. A predicted CUG position is considered as discriminative if either hydrophobic or polar amino acids account for more than 50% of all amino acids while the other party accounts for less than 45%. Discriminative positions are coloured in black, while non-discriminative positions are coloured in grey.
-<strong>TODO: umschreiben: neues discrim. schema; farben: discrim. positions are coloured in purple (alternative codon usage) and orange (standard codon usage), while non-discrim are coloured in grey.</strong>
+<strong><i>TODO: umschreiben: neues discrim. schema;</i> Discriminative CUG positions are coloured in purple and orange, if the suggest alternative and standard codon usage, respectively. CUG positions which are non-discriminative are displayed in grey.
+</strong>
 	</p>
 	<p>On the other hand, CUG codons conserved between the predicted protein and the reference data are taken as hint. The translation of CUG as serine in the reference data suggests the translation of the predicted CUG as serine as well. Likewise, the translation of CUG as leucine in reference data suggests the translation of the predicted CUG as leucine as well.</p>
 	<p>The number of CUG positions suggesting alternative codon usage or standard codon usage is indicated for each predicted protein separately. In addition, the overall number is listed in the summary section.</p>

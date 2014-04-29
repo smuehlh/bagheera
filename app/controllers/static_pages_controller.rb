@@ -14,5 +14,4 @@ class StaticPagesController < ApplicationController
   # species abbr to species names 
   def specieslist
   end
-
 end
