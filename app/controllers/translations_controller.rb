@@ -99,7 +99,7 @@ class TranslationsController < ApplicationController
 		end
 		@protein_seq = Helper::Sequence.validate_seq(params[:protein_seq])
 		fasta_formatted_protein_seq = Helper::Sequence.str2fasta(">uploaded_seq", @protein_seq)
-		species_name = params[:species]
+		species_name = params[:species] || ""
 		is_use_alternative_codon_usage = view_context.is_species_with_alternative_codon_usage(species_name)
 
 		if params[:scipio_relaxed] then 

@@ -1,6 +1,9 @@
 module WebScipio
 
 	extend self
+	require "net/http"
+	require "uri"
+	require 'yaml'
 
 	Webscipio_server = "www.webscipio.org"
 	Webscipio_port = "80"
@@ -29,7 +32,7 @@ module WebScipio
 
 			# process results
 			is_success = is_scipio_run_successful(status)
-			Helper.worked_or_throw_error( is_success, "Gene prediction failed. Nothing found." )
+			Helper.worked_or_throw_error( is_success, "Gene prediction failed. Nothing found.<br> Try it again with relaxed parameters." )
 
 			yaml =  YAML.dump(scipio_result)
 		}
