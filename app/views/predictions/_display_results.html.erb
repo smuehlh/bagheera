@@ -11,10 +11,10 @@
         th_right: "CTG position", col_left: "", col_right: ""} %>
     <% tab_aa = {table_class: "predTable", 
         th_left: "CTG Position", th_middle: "Distribution of amino acids in reference data", th_right: "Number of amino acids", 
-        col_left: "", col_middle: "", col_right: "", display_grey: []} %>
+        col_left: "first_col", col_middle: "middle_col", col_right: "last_col", display_grey: []} %>
     <% tab_ctg = {table_class: "predTable", 
         th_left: "CTG Position", th_middle: "CTG usage in reference data", th_right: "Number of CTG codons", 
-        col_left: "", col_middle: "", col_right: ""} %>
+        col_left: "first_col", col_middle: "middle_col", col_right: "last_col"} %>
     <%tab_info = {table_class: "", th_left: "", th_right: "", th_middle: "", col_left: "", col_right: "", col_middle: ""}%>
 
     <% basename = prot_name.gsub(" ", "-").downcase %>

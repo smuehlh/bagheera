@@ -225,7 +225,7 @@ class Prediction
 	end
 
 	def compare_pred_ref
-		results = {ctg_pos: [], ref_chem: {}, ref_ctg: {}}
+		results = {ctg_pos: [], ref_chem: {}, ref_ctg: {}, pred_ctg_unaligned: [], no_ref_ctg: []}
 		headers, seqs = Helper::Sequence.fasta2str(File.read(@f_align))
 		pred_seq_aligned = seqs[-1]
 		codons = pred_dnaseq.scan(/.{1,3}/)
@@ -246,7 +246,10 @@ class Prediction
 			ref_alignment_cols.each_with_index do |col, ind|
 
 				# handle unmatched CTG positions
-				next if ctg_pos_mapped[ind].nil?
+				if ctg_pos_mapped[ind].nil? then 
+					results[:pred_ctg_unaligned].push ctg_pos[ind]
+					next
+				end
 				aa_freq, aa_num = word_frequency(col)
 				is_significant, prob_transl = predict_translation(aa_freq)
 				results[:ref_chem][ctg_pos[ind]] = {aa_comp: aa_freq, aa_num: aa_num}
@@ -259,8 +262,8 @@ class Prediction
 			end
 
 			# 2) CTGs in reference data at CTG positions in predicted sequence?
-			results[:ref_ctg] = ref_ctg_usage(ref_codons, ref_alignment_cols, ctg_pos)
-
+			results[:ref_ctg], results[:no_ref_ctg] = ref_ctg_usage(ref_codons, ref_alignment_cols, ctg_pos)
+			
 		else 
 			Helper.worked_or_throw_error(false, "No CTG position in predicted gene aligned with reference sequences")
 		end
@@ -346,6 +349,10 @@ class Prediction
 		return norm_res, sum.to_i
 	end
 
+	# determine most probable translation scheme based on amino acid frequency
+	# determination algorithm:
+	# max of hydrophobic/ polar/ other amino acids
+	# -> standard/ alternative/ indiscriminative position
 	def predict_translation(aa_freq)
 		aa_freq.delete("-")
 		if aa_freq.empty? then
@@ -357,40 +364,33 @@ class Prediction
 		hyd_aas = HYDORPHOBIC_AAS.collect{|aa| aa_freq[aa]}.compact.sum # hydrophobic amino acids
 		pct_pol = pol_aas/num_aas.to_f
 		pct_hyd = hyd_aas/num_aas.to_f
+		pct_other = (num_aas - pol_aas - hyd_aas )/ num_aas.to_f
 
-		is_discrim = false
-		transl = ""
-		if pct_hyd > pct_pol then 
-			is_discrim = true
-			transl = "L"
-		end
-		if pct_pol > pct_hyd then 
+		# maximum of values gives predicted translation
+		# requirements for discriminative position: majority of amino acids is hydrophobic or polar
+		# requirements of leucine position: majority of amino acids is hydrophobic
+		# requirements of serine position: majority of amino acids is polar
+		# ... indiscriminative: majority of amino acids neither hydrophobic nor polar
+		max_val = [pct_hyd, pct_pol, pct_other].max
+		if max_val == pct_pol then 
 			is_discrim = true
 			transl = "S"
 		end
-			
-		# # # requirements for a discriminative position:
-		# # 	# 1) occurence in more than half of sequences
-		# # 	# 2) the other usage should occure in less than half or sequences
-		# is_discrim = false
-		# # # default translation = ""
-		# # 	# discriminative AND more hydrophobic aas: "L"
-		# # 	# discriminative AND more polar aas: "S"
-		# transl = ""
-
-		# if pct_hyd >= 0.5 && pct_pol < 0.45 then 
-		# 	is_discrim = true
-		# 	transl = "L"
-		# elsif pct_pol >= 0.5 && pct_hyd < 0.45 then
-		# 	is_discrim = true
-		# 	transl = "S"
-		# end
+		if max_val == pct_hyd then 
+			is_discrim = true
+			transl = "L"
+		end
+		if max_val == pct_other then 
+			is_discrim = false
+			transl = ""
+		end
 
 		return is_discrim, transl
 	end
 
 	def ref_ctg_usage(codons, aas, ctg_pos)
-		counts = {}
+		counts = {} # usage of CTG codons in reference data, per CTG position in prediction
+		no_ctgs = [] # predicted CTG positiions with no CTG codons in reference data
 
 		codons.each_with_index do |codons_thiscol, ind|
 			indices = codons_thiscol.find_each_index("CTG")
@@ -412,15 +412,16 @@ class Prediction
 				counts[ctg_pos[ind]][:ctg_usage]["L"] = pct_leu
 
 				if (pct_ser + pct_leu) == 0.0 then
-					counts[ctg_pos[ind]][:transl] = "???"
+					counts[ctg_pos[ind]][:transl] = "?"
 					next
 				end
 
 				counts[ctg_pos[ind]][:is_significant], counts[ctg_pos[ind]][:transl] = predict_translation(counts[ctg_pos[ind]][:ctg_usage])
-
+			else
+				no_ctgs.push(ctg_pos[ind])
 			end # if ctg_num
 		end # codons.each_with_index
-		return counts
+		return counts, no_ctgs
 	end
 
 

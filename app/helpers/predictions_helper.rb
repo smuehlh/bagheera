@@ -9,6 +9,8 @@ module PredictionsHelper
 	# @return [String] Preselected configuration
 	# @return [Array] Available species (for gene prediction) in selection_tag format
 	# @return [String] Preselected species
+	# @return [Array] Available models for tRNA scan in selection_tag format
+	# @return [String] Preselected model
 	def fill_selection_tags()
 		arr_algo = [['MAFFT (recommended)', 'mafft'],['Needleman-Wunsch', 'nw'], ['Gotoh', 'gotoh'], ['Smith-Waterman', 'sw'], ['Longest Common Subsequence', 'lcs']]
 		pre_select_algo = 'mafft'
@@ -28,7 +30,9 @@ module PredictionsHelper
 			['Yarrowia lipolytica', 'yarrowia_lipolytica']]
 
 		pre_select_species = 'candida_albicans'
-		return arr_algo, pre_select_algo, arr_conf, pre_select_conf, arr_species, pre_select_species
+		arr_model = [['(Mixed) General tRNA model', 'general'],['Eukaryotic', 'eukaryot']]
+		pre_select_model = 'general'
+		return arr_algo, pre_select_algo, arr_conf, pre_select_conf, arr_species, pre_select_species, arr_model, pre_select_model
 	end
 
 	# Format data for view
@@ -261,22 +265,22 @@ module PredictionsHelper
 
 	# 
 
-	def stats_suggested_transl_as_text(ref_data, all_ctg_pos, options={})
+	def stats_suggested_transl_as_text(ref_data, options={})
 		defaults = {
-			:text_singular => ' CTG position',
-			:text_plural => ' CTG positions' 
+			:text_singular => ' CTG position suggests',
+			:text_plural => ' CTG positions suggest' 
 		}
 		options = defaults.merge(options)
-		n_ser, n_leu, n_unknown = Status.count_unknown_and_suggested_transl(ref_data, all_ctg_pos)
+		n_ser, n_leu, n_unknown = Status.count_unknown_and_suggested_transl(ref_data)
 		res = []
 		if n_ser > 0 then 
-			res << pluralize(n_ser, options[:text_singular], options[:text_plural]) + " suggest alternative codon usage."
+			res << pluralize(n_ser, options[:text_singular], options[:text_plural]) + " alternative codon usage."
 		end
 		if n_leu > 0 then 
-			res << pluralize(n_leu, options[:text_singular], options[:text_plural]) + " suggest standard codon usage."
+			res << pluralize(n_leu, options[:text_singular], options[:text_plural]) + " standard codon usage."
 		end
 		if n_unknown > 0 then 
-			res << pluralize(n_unknown, options[:text_singular], options[:text_plural]) + " are indiscriminative."
+			res << pluralize(n_unknown, options[:text_singular], options[:text_plural]) + " indiscriminative."
 		end
 		return res.join("</br>").html_safe
 	end

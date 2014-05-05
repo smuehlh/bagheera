@@ -168,15 +168,14 @@ class PredictionsController < ApplicationController
 
 		require 'open3'
 
+
 		# add options to this session
 		ProgCall.set_blast_filtering(true) if params.has_key?(:blast) # use low complexity filter
+		ProgCall.set_tRNAscan_model( params[:trna_scan_model] == "general" ) # use general model or not
 		# ProgCall.blast_filtering = "m S" 
 		Prediction.class_variable_set(:@@align_method, params[:algo]) if params.has_key?(:algo)
 		Prediction.class_variable_set(:@@align_config, params[:config]) if params.has_key?(:config)
 		
-		TRNAprediction.class_variable_set(:@@align_method, params[:algo]) if params.has_key?(:algo)
-		TRNAprediction.class_variable_set(:@@align_config, params[:config]) if params.has_key?(:config)
-
 		if session[:file][:name].match("Candida_albicans_WO_1") then
 			ProteinFamily.class_variable_set(:@@ref_data_path, File.join(BASE_PATH,PATH_REF_WO_EXAMPLE) )
 		else
@@ -205,7 +204,6 @@ class PredictionsController < ApplicationController
 		sorted_ref_prots.push("tRNA")
 
 		results = Parallel.map( sorted_ref_prots ) do |prot|
-
 			if prot == "tRNA" then 
 				# special execution for tRNA prediction
 
@@ -234,7 +232,8 @@ class PredictionsController < ApplicationController
 					pred_prot: "", 
 					n_hits: "", hit_shown: "", 
 					message: [], 
-					ctg_pos: [], ref_chem: {}, ref_ctg: {}
+					ctg_pos: [], pred_ctg_unaligned: [], no_ref_ctg: [],
+					ref_chem: {}, ref_ctg: {}
 				}
 				
 				begin
@@ -354,7 +353,8 @@ class PredictionsController < ApplicationController
 				pred_prot: "", 
 				n_hits: "", hit_shown: "", 
 				message: [], 
-				ctg_pos: [], ref_chem: {}, ref_ctg: {}
+				ctg_pos: [], pred_ctg_unaligned: [], no_ref_ctg: [],
+				ref_chem: {}, ref_ctg: {}
 			}
 
 			pred_obj = Prediction.new(prot_obj, n_hit, file_basename) 

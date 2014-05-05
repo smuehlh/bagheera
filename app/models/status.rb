@@ -15,9 +15,13 @@ class Status
 			stats[:pred_ctg] += pred_data[:ctg_pos].size
 		end
 
+		if pred_data[:pred_ctg_unaligned] then
+			stats[:pred_ctg_unaligned] += pred_data[:pred_ctg_unaligned].size
+		end
+
 		if pred_data[:ref_chem] then 
 			# number of ctg codons discriminative (alternative/ standard codon usage) and not discriminative
-			n_ser, n_leu, n_unknown = count_unknown_and_suggested_transl( pred_data[:ref_chem], pred_data[:ctg_pos] )
+			n_ser, n_leu, n_unknown = count_unknown_and_suggested_transl( pred_data[:ref_chem] )
 			stats[:ref_chem_leu] += n_leu
 			stats[:ref_chem_ser] += n_ser
 			stats[:ref_chem_unknown] += n_unknown
@@ -25,10 +29,14 @@ class Status
 
 		if pred_data[:ref_ctg] then 
 			# number of ctg codons discriminative (alternative/ standard codon usage) and not discriminative
-			n_ser, n_leu, n_unknown = count_unknown_and_suggested_transl( pred_data[:ref_ctg], pred_data[:ctg_pos] )
+			n_ser, n_leu, n_unknown = count_unknown_and_suggested_transl( pred_data[:ref_ctg] )
 			stats[:ref_ctg_leu] += n_leu
 			stats[:ref_ctg_ser] += n_ser
 			stats[:ref_ctg_unknown] += n_unknown
+		end
+
+		if pred_data[:no_ref_ctg] then 
+			stats[:no_ref_ctg] += [:no_ref_ctg].size
 		end
 
 		if pred_data[:ref_chem] && pred_data[:ref_ctg] then 
@@ -41,7 +49,7 @@ class Status
 			stats[:trna_score] = pred_data[:score]
 		end
 		if pred_data[:blast_hits] then 
-			n_ser, n_leu, n_unknown = count_unknown_and_suggested_transl( pred_data[:blast_hits], pred_data[:blast_hits].keys )
+			n_ser, n_leu, n_unknown = count_unknown_and_suggested_transl( pred_data[:blast_hits] )
 			stats[:trna_leu] += n_leu
 			stats[:trna_ser] += n_ser
 			stats[:trna_unknown] += n_unknown
@@ -97,24 +105,28 @@ class Status
 	end
 
 	# returns number of positions leading to suggest serine or leucine or no suggestion 
-	def self.count_unknown_and_suggested_transl(ref_dat, all_ctgpos)
+	def self.count_unknown_and_suggested_transl(ref_dat)
 		ser_pos, leu_pos = ctg_pos_by_suggested_transl(ref_dat)
-		unknown_pos = ctg_pos_by_unknown_transl(ser_pos, leu_pos, all_ctgpos)
+		unknown_pos = ctg_pos_by_unknown_transl(ref_dat)
 		return ser_pos.size, leu_pos.size, unknown_pos.size
 	end
 
 	# parse ref_chem and ref_ctg for ctg positions leading to alternative, standard, or unknown
 	def self.ctg_pos_by_suggested_transl(ref_dat)
-		pos_ser = ref_dat.collect {|k,v| k if v[:transl] == "S" }
-		pos_leu = ref_dat.collect {|k,v| k if v[:transl] == "L" }
+		pos_ser = ref_dat.collect {|k,v| k if v[:transl] == "S" && v[:is_significant] }
+		pos_leu = ref_dat.collect {|k,v| k if v[:transl] == "L" && v[:is_significant] }
 		return pos_ser.compact, pos_leu.compact
 	end
 
 	# count number of ctg positions without an clear assignment
 	# all ctg positions which suggest neither leucine nor serine translation
-	def self.ctg_pos_by_unknown_transl(pos_ser, pos_leu, all_ctgpos)
-		return all_ctgpos - (pos_ser | pos_leu)
+	def self.ctg_pos_by_unknown_transl(ref_dat)
+		pos_indiscrim = ref_dat.collect {|k,v| k if ! v[:is_significant] }
+		return pos_indiscrim.compact
 	end
+	# def self.ctg_pos_by_unknown_transl(pos_ser, pos_leu, all_ctgpos)
+	# 	return all_ctgpos - (pos_ser | pos_leu)
+	# end
 
 	# count number of ctg positions where amino acid chemistry and ctg translation lead to conflicting results
 	def self.count_contradicting_pos_chem_ctg(ref_dat_chem, ref_dat_ctg)

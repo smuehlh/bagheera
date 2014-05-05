@@ -39,7 +39,12 @@
 		) +
 		content_tag(:tr, 
 			content_tag(:td, 
-				"Thereof " + "position".pluralize(@stats[:contradiction_ref_chem_ref_ctg]) + " with ambiguous results") +
+				"Thereof unaligned " + "position".pluralize(@stats[:pred_ctg_unaligned]) ) +
+			content_tag(:td, @stats[:pred_ctg_unaligned].to_s )
+		) +
+		content_tag(:tr, 
+			content_tag(:td, 
+				"Predicted CTG " + "position".pluralize(@stats[:contradiction_ref_chem_ref_ctg]) + " with ambiguous results") +
 			content_tag(:td, @stats[:contradiction_ref_chem_ref_ctg].to_s )
 		)
 	) +
@@ -72,6 +77,11 @@
 		content_tag(:tr, 
 			content_tag(:td, "Indiscriminative") +
 			content_tag(:td, @stats[:ref_ctg_unknown].to_s)
+		) +
+		content_tag(:tr,
+			content_tag(:td, 
+				"No aligned CTG " + "codon".pluralize(@stats[:no_ref_ctg]) ) +
+			content_tag(:td, @stats[:no_ref_ctg].to_s )
 		)
 	)
 

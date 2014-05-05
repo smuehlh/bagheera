@@ -1,19 +1,29 @@
-<%opt_algo, pre_select_algo, opt_config, pre_select_config, opt_species, pre_select_species = fill_selection_tags%>
+<% opt_algo, pre_select_algo, opt_config, pre_select_config, opt_species, pre_select_species, opt_trna, pre_select_trna = fill_selection_tags
+%>
 <%= 
-	form_tag(predict_genes_path, :remote => true, :class => "disabled", :id => "options_form") do
-		content_tag(:table) do
+	form_tag(predict_genes_path, :remote => true, :id => "options_form") do
+		content_tag(:h2, "Gene prediction and alignment options") +
+
+		content_tag(:table, :class => "param_table") do
+
+			content_tag(:colgroup) do
+				content_tag(:col, "", :class => "first_col")
+			end +
+
 			content_tag(:tr) do
 				content_tag(:td, "Use BLAST low complexity filter") +
 				content_tag(:td,
 					check_box_tag(:blast, "1", false, :disabled => true)
 				)
 			end +
+
 			content_tag(:tr) do
 				content_tag(:td, "Reference species for gene prediction (Augustus)") +
 				content_tag(:td,
 					select_tag(:species, options_for_select(opt_species, pre_select_species), :disabled => true)
 				)
 			end +
+
 			content_tag(:tr) do 
 				content_tag(:td, "Alignment method") +
 				content_tag(:td, 		
@@ -23,6 +33,7 @@
 					:disabled => true)
 				)
 			end +
+
 			content_tag(:tr) do
 				content_tag(:td, "Alignment configuration") +
 				content_tag(:td, 
@@ -30,25 +41,28 @@
 					:disabled => true)
 				)
 			end
+		end +
 
-			# content_tag(:tr) do
-			# 	content_tag(:td, "Predict genes for five best BLAST hits") +
-			# 	content_tag(:td, 
-			# 		check_box_tag('multi')
-			# 	)
-			# end
-		end # TODO +
-		# TODO
-		# content_tag(:h2, "Start gene prediction and tRNA search", :disabled => false) +
-		# # uncomment if submit tag should be used
-		# # submit_tag("Use options")
-		# # comment if submit-tag should be used
-		# submit_tag("Start prediction", #class: "nice_button", 
-		# 	:id => "predict_button", 
-		# 	onclick: "hide_show_waiting('show');",
-		# 	# onclick: "periodically_show_stat();",
-		# 	:disabled => true) +
-		# tag(:br)
-		
+		content_tag(:h2, "tRNA scan options") +
+
+		content_tag(:table, :class => "param_table") do
+						content_tag(:colgroup) do
+				content_tag(:col, "", :class => "first_col")
+			end +
+
+			content_tag(:tr) do
+				content_tag(:td, "tRNA scan model") +
+				content_tag(:td,
+					select_tag(:trna_scan_model, options_for_select(opt_trna, pre_select_trna), :disabled => true)
+				)
+			end
+		end +
+		# tag(:br) +
+
+		content_tag(:h2, "Start prediction") +
+		submit_tag("Submit", #class: "nice_button", 
+			:id => "predict_button", 
+			onclick: "hide_show_waiting('show');",
+			:disabled => true)
 	end
 %>

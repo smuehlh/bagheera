@@ -241,9 +241,7 @@ class TRNAprediction
 		results[:score] = @score
 
 		results[:blast_hits] = @blast_results if @blast_results.any?
-		# TODO
-		# alignment: indicate method!!! ( or just how to build path)
-		# results[:f_blast_alignment] = @f_blast_alignment if ! @f_blast_alignment.blank?
+
 		results[:message] = @err_msg if ! @err_msg.blank?
 
 		return results

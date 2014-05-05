@@ -393,12 +393,12 @@ form.disabled {
 .predTable tr.purple {
     color: $h1_color;
 }
-
-// tr.grey:hover td {
-//     color: black;
-//     background: #ededed; /* to better keep track of the line the mouse is over */
-// }
-
+.predTable .first_col {
+    width: 120px;
+}
+.predTable .last_col {
+    width: 180px;
+}
 tr.highlight {
     color: $h1_color;
 }
@@ -458,6 +458,24 @@ tr:hover td {
 /*.stats {
 }*/
 
+// .param_table td,th {
+//     width: 720px;
+//     vertical-align: middle;
+// }
+// .param_table .first_col {
+//     width: 40%;
+// }
+
+.param_table {
+    td, th {
+        vertical-align: middle;
+    }
+    width: 720px;
+}
+.param_table .first_col{
+    width: 40%;
+}
+
 /* end display results */
 
 
@@ -497,4 +515,11 @@ tr:hover td {
 
 #errors_container {
     color: red;
+}
+
+td, th {
+    vertical-align: top;
+}
+.img_help {
+    float: right;
 }
