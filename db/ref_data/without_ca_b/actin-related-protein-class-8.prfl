@@ -65,7 +65,7 @@ name=unknown_B
 [block]
 # block no. 2 follows, 69 sequences, length 31
 # corresponding to MSA columns:
-# 346-354,357-364,399-412
+# 346-376
 name=unknown_C
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -110,7 +110,7 @@ name=unknown_C
 [block]
 # block no. 3 follows, 69 sequences, length 37
 # corresponding to MSA columns:
-# 482-518
+# 446-482
 name=unknown_D
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -161,7 +161,7 @@ name=unknown_D
 [block]
 # block no. 4 follows, 69 sequences, length 17
 # corresponding to MSA columns:
-# 520-536
+# 484-500
 name=unknown_E
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -192,7 +192,7 @@ name=unknown_E
 [block]
 # block no. 5 follows, 69 sequences, length 13
 # corresponding to MSA columns:
-# 619-631
+# 526-538
 name=unknown_F
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -219,7 +219,7 @@ name=unknown_F
 [block]
 # block no. 6 follows, 69 sequences, length 10
 # corresponding to MSA columns:
-# 658-667
+# 555-564
 name=unknown_G
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -243,7 +243,7 @@ name=unknown_G
 [block]
 # block no. 7 follows, 69 sequences, length 20
 # corresponding to MSA columns:
-# 875-882,912-918,940-944
+# 668-687
 name=unknown_H
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -277,7 +277,7 @@ name=unknown_H
 [block]
 # block no. 8 follows, 69 sequences, length 47
 # corresponding to MSA columns:
-# 982-1007,1021-1041
+# 689-735
 name=unknown_I
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -338,7 +338,7 @@ name=unknown_I
 [block]
 # block no. 9 follows, 69 sequences, length 31
 # corresponding to MSA columns:
-# 1142-1172
+# 751-781
 name=unknown_J
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -383,7 +383,7 @@ name=unknown_J
 [block]
 # block no. 10 follows, 69 sequences, length 25
 # corresponding to MSA columns:
-# 1326-1332,1729-1746
+# 791-815
 name=unknown_K
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -422,7 +422,7 @@ name=unknown_K
 [block]
 # block no. 11 follows, 69 sequences, length 10
 # corresponding to MSA columns:
-# 1803-1812
+# 869-878
 name=unknown_L
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -446,7 +446,7 @@ name=unknown_L
 [block]
 # block no. 12 follows, 69 sequences, length 9
 # corresponding to MSA columns:
-# 1862-1870
+# 928-936
 name=unknown_M
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -469,7 +469,7 @@ name=unknown_M
 [block]
 # block no. 13 follows, 69 sequences, length 14
 # corresponding to MSA columns:
-# 1995-2008
+# 1041-1054
 name=unknown_N
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -497,7 +497,7 @@ name=unknown_N
 [block]
 # block no. 14 follows, 69 sequences, length 16
 # corresponding to MSA columns:
-# 2047-2062
+# 1093-1108
 name=unknown_O
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -527,7 +527,7 @@ name=unknown_O
 [block]
 # block no. 15 follows, 69 sequences, length 18
 # corresponding to MSA columns:
-# 2065-2082
+# 1111-1128
 name=unknown_P
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -557,4 +557,4 @@ name=unknown_P
 38	188
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug/without_ca_b/actin-related-protein-class-8.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/actin-related-protein-class-8.fasta

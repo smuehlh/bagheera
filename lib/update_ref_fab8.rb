@@ -73,7 +73,7 @@ def validate_save_alignment_and_precalc_profile(ref_data_obj, prot, prot_obj, tm
 	f_out = File.join(tmp_path, "#{prot_obj.prot_filesave_name}.fasta")	
 	Helper::Sequence.save_alignment(f_out, prot_obj.ref_alignment)
 	ref_data_obj.update_alignment(prot, prot_obj.ref_alignment)
-	ref_data_wo_cab_obj.update_genes(prot, prot_obj.ref_genes)
+	ref_data_obj.update_genes(prot, prot_obj.ref_genes)
 
 	# 3) test if mafft can handle alignment files
 	prot_obj.ensure_mafft_is_fine(f_out)
@@ -90,7 +90,7 @@ end
 Helper.del_file_or_dir(path_to_native_json)
 
 # fetch reference data from cymobase
-max_secs = 60*10 # wait max. 10 minutes for cymoapi
+# max_secs = 60*10 # wait max. 10 minutes for cymoapi
 puts "Start wget: #{Time.now}"
 begin
 	status = Timeout::timeout(max_secs) { callCymoAPI(tmp_path_new_data) }
@@ -121,6 +121,7 @@ prot_list.sort.each do |prot|
 	puts prot
 
 	# complete set of reference data
+
 	prot_obj = ref_data_obj.create_protfam_obj(prot)
 	tmp_path = tmp_path_new_data
 
@@ -145,6 +146,7 @@ ref_data_wo_cab_obj.save_ref_data( File.join( tmp_path_new_data, subfolder, Json
 
 puts "Move everything to place"
 final_pathes_new_data.each do |path|
+
 	# delete old stuff in path, files and folders
 	Helper.del_file_or_dir( Dir.glob(File.join(path, "*.*")) ) # delete old fasta, prfl, json and log files
 	Helper.del_file_or_dir( File.join( path, subfolder ) )

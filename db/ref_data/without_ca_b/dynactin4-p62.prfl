@@ -9,7 +9,7 @@ unknown
 [block]
 # block no. 0 follows, 31 sequences, length 6
 # corresponding to MSA columns:
-# 33-38
+# 17-22
 name=unknown_A
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -29,7 +29,7 @@ name=unknown_A
 [block]
 # block no. 1 follows, 31 sequences, length 11
 # corresponding to MSA columns:
-# 113-123
+# 74-84
 name=unknown_B
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -54,7 +54,7 @@ name=unknown_B
 [block]
 # block no. 2 follows, 31 sequences, length 21
 # corresponding to MSA columns:
-# 141-152,155-163
+# 87-107
 name=unknown_C
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -89,7 +89,7 @@ name=unknown_C
 [block]
 # block no. 3 follows, 31 sequences, length 10
 # corresponding to MSA columns:
-# 207-216
+# 141-150
 name=unknown_D
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -113,7 +113,7 @@ name=unknown_D
 [block]
 # block no. 4 follows, 31 sequences, length 6
 # corresponding to MSA columns:
-# 218-223
+# 152-157
 name=unknown_E
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -133,7 +133,7 @@ name=unknown_E
 [block]
 # block no. 5 follows, 31 sequences, length 15
 # corresponding to MSA columns:
-# 357-371
+# 202-216
 name=unknown_F
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -162,7 +162,7 @@ name=unknown_F
 [block]
 # block no. 6 follows, 31 sequences, length 12
 # corresponding to MSA columns:
-# 449-460
+# 261-272
 name=unknown_G
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -188,7 +188,7 @@ name=unknown_G
 [block]
 # block no. 7 follows, 31 sequences, length 13
 # corresponding to MSA columns:
-# 673-685
+# 466-478
 name=unknown_H
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -213,4 +213,4 @@ name=unknown_H
 8	242
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug/without_ca_b/dynactin4-p62.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/dynactin4-p62.fasta

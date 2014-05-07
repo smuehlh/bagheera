@@ -9,7 +9,7 @@ unknown
 [block]
 # block no. 0 follows, 67 sequences, length 35
 # corresponding to MSA columns:
-# 4371-4375,4379-4385,4404-4426
+# 766-800
 name=unknown_A
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -58,7 +58,7 @@ name=unknown_A
 [block]
 # block no. 1 follows, 67 sequences, length 10
 # corresponding to MSA columns:
-# 4475-4479,4483-4487
+# 802-811
 name=unknown_B
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -82,7 +82,7 @@ name=unknown_B
 [block]
 # block no. 2 follows, 67 sequences, length 85
 # corresponding to MSA columns:
-# 4778-4787,4792-4802,4824-4837,4966-4973,4975-4991,4993-4998,5018-5036
+# 842-926
 name=unknown_C
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -181,7 +181,7 @@ name=unknown_C
 [block]
 # block no. 3 follows, 67 sequences, length 18
 # corresponding to MSA columns:
-# 5154-5171
+# 944-961
 name=unknown_D
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -213,7 +213,7 @@ name=unknown_D
 [block]
 # block no. 4 follows, 67 sequences, length 70
 # corresponding to MSA columns:
-# 5299-5306,5308-5313,5315-5326,5329-5372
+# 964-1033
 name=unknown_E
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -297,7 +297,7 @@ name=unknown_E
 [block]
 # block no. 5 follows, 67 sequences, length 18
 # corresponding to MSA columns:
-# 5380-5388,5390-5398
+# 1041-1058
 name=unknown_F
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -327,4 +327,4 @@ name=unknown_F
 0	1357
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug/without_ca_b/myosin-heavy-chain-class-mhc.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/myosin-heavy-chain-class-mhc.fasta

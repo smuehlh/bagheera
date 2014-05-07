@@ -9,7 +9,7 @@ unknown
 [block]
 # block no. 0 follows, 24 sequences, length 24
 # corresponding to MSA columns:
-# 221-244
+# 11-34
 name=unknown_A
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -47,7 +47,7 @@ name=unknown_A
 [block]
 # block no. 1 follows, 24 sequences, length 58
 # corresponding to MSA columns:
-# 251-257,283-291,293-299,324-330,334-352,356-364
+# 36-93
 name=unknown_B
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -117,4 +117,4 @@ name=unknown_B
 0	1
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug/without_ca_b/dynein-light-chain-8.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/dynein-light-chain-8.fasta

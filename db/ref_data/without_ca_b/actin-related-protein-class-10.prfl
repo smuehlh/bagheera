@@ -9,7 +9,7 @@ unknown
 [block]
 # block no. 0 follows, 63 sequences, length 7
 # corresponding to MSA columns:
-# 868-874
+# 386-392
 name=unknown_A
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -30,7 +30,7 @@ name=unknown_A
 [block]
 # block no. 1 follows, 63 sequences, length 24
 # corresponding to MSA columns:
-# 876-887,912-918,940-944
+# 394-417
 name=unknown_B
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -68,7 +68,7 @@ name=unknown_B
 [block]
 # block no. 2 follows, 63 sequences, length 22
 # corresponding to MSA columns:
-# 984-1005
+# 420-441
 name=unknown_C
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -104,7 +104,7 @@ name=unknown_C
 [block]
 # block no. 3 follows, 63 sequences, length 16
 # corresponding to MSA columns:
-# 1939-1954
+# 710-725
 name=unknown_D
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -134,7 +134,7 @@ name=unknown_D
 [block]
 # block no. 4 follows, 63 sequences, length 13
 # corresponding to MSA columns:
-# 2318-2330
+# 785-797
 name=unknown_E
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -159,4 +159,4 @@ name=unknown_E
 2	68
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug/without_ca_b/actin-related-protein-class-10.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/actin-related-protein-class-10.fasta

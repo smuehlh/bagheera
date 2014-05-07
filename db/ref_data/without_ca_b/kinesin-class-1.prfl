@@ -9,7 +9,7 @@ unknown
 [block]
 # block no. 0 follows, 38 sequences, length 22
 # corresponding to MSA columns:
-# 2078,2081-2083,2088-2105
+# 245-266
 name=unknown_A
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -45,7 +45,7 @@ name=unknown_A
 [block]
 # block no. 1 follows, 38 sequences, length 18
 # corresponding to MSA columns:
-# 2338-2355
+# 340-357
 name=unknown_B
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -77,7 +77,7 @@ name=unknown_B
 [block]
 # block no. 2 follows, 38 sequences, length 23
 # corresponding to MSA columns:
-# 2570-2583,2589-2597
+# 362-384
 name=unknown_C
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -114,7 +114,7 @@ name=unknown_C
 [block]
 # block no. 3 follows, 38 sequences, length 26
 # corresponding to MSA columns:
-# 2840-2851,2886-2899
+# 452-477
 name=unknown_D
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -154,7 +154,7 @@ name=unknown_D
 [block]
 # block no. 4 follows, 38 sequences, length 31
 # corresponding to MSA columns:
-# 2924-2954
+# 480-510
 name=unknown_E
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -199,7 +199,7 @@ name=unknown_E
 [block]
 # block no. 5 follows, 38 sequences, length 20
 # corresponding to MSA columns:
-# 3055-3074
+# 521-540
 name=unknown_F
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -233,7 +233,7 @@ name=unknown_F
 [block]
 # block no. 6 follows, 38 sequences, length 28
 # corresponding to MSA columns:
-# 3161-3188
+# 546-573
 name=unknown_G
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -275,7 +275,7 @@ name=unknown_G
 [block]
 # block no. 7 follows, 38 sequences, length 62
 # corresponding to MSA columns:
-# 3314-3327,3333-3336,3358-3373,3534-3549,3552-3563
+# 583-644
 name=unknown_H
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -349,4 +349,4 @@ name=unknown_H
 42	664
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug/without_ca_b/kinesin-class-1.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/kinesin-class-1.fasta

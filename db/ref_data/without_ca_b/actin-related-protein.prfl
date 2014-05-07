@@ -9,7 +9,7 @@ unknown
 [block]
 # block no. 0 follows, 71 sequences, length 217
 # corresponding to MSA columns:
-# 408-410,460-469,471-476,521-524,526-532,656-671,685-698,707-713,782-793,857-861,866-887,912-918,940-944,982-1007,1021-1041,1117-1126,1140-1167,1301-1308,1326-1331
+# 34-250
 name=unknown_A
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -238,4 +238,4 @@ name=unknown_A
 0	126
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug/without_ca_b/actin-related-protein.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/actin-related-protein.fasta

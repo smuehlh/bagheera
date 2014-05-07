@@ -9,7 +9,7 @@ unknown
 [block]
 # block no. 0 follows, 69 sequences, length 15
 # corresponding to MSA columns:
-# 72-86
+# 16-30
 name=unknown_A
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -38,7 +38,7 @@ name=unknown_A
 [block]
 # block no. 1 follows, 69 sequences, length 16
 # corresponding to MSA columns:
-# 88-103
+# 32-47
 name=unknown_B
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -68,7 +68,7 @@ name=unknown_B
 [block]
 # block no. 2 follows, 69 sequences, length 12
 # corresponding to MSA columns:
-# 122-133
+# 66-77
 name=unknown_C
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -94,7 +94,7 @@ name=unknown_C
 [block]
 # block no. 3 follows, 69 sequences, length 24
 # corresponding to MSA columns:
-# 162-172,199-211
+# 89-112
 name=unknown_D
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -132,7 +132,7 @@ name=unknown_D
 [block]
 # block no. 4 follows, 69 sequences, length 16
 # corresponding to MSA columns:
-# 258-273
+# 124-139
 name=unknown_E
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -160,4 +160,4 @@ name=unknown_E
 0	202
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug/without_ca_b/capping-protein-class-2.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/capping-protein-class-2.fasta

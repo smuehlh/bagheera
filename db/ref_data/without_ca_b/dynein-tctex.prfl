@@ -9,7 +9,7 @@ unknown
 [block]
 # block no. 0 follows, 24 sequences, length 28
 # corresponding to MSA columns:
-# 378-405
+# 12-39
 name=unknown_A
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -51,7 +51,7 @@ name=unknown_A
 [block]
 # block no. 1 follows, 24 sequences, length 32
 # corresponding to MSA columns:
-# 501-515,532-548
+# 58-89
 name=unknown_B
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -97,7 +97,7 @@ name=unknown_B
 [block]
 # block no. 2 follows, 24 sequences, length 21
 # corresponding to MSA columns:
-# 595-615
+# 99-119
 name=unknown_C
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -132,7 +132,7 @@ name=unknown_C
 [block]
 # block no. 3 follows, 24 sequences, length 13
 # corresponding to MSA columns:
-# 883-895
+# 387-399
 name=unknown_D
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -157,4 +157,4 @@ name=unknown_D
 0	2
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug/without_ca_b/dynein-tctex.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/dynein-tctex.fasta

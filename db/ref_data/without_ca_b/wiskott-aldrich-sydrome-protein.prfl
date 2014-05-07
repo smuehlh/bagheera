@@ -9,7 +9,7 @@ unknown
 [block]
 # block no. 0 follows, 37 sequences, length 112
 # corresponding to MSA columns:
-# 87-92,97-115,132-145,147,148,152-161,171-175,179-190,196-239
+# 32-143
 name=unknown_A
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -135,7 +135,7 @@ name=unknown_A
 [block]
 # block no. 1 follows, 37 sequences, length 7
 # corresponding to MSA columns:
-# 248-254
+# 152-158
 name=unknown_B
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -156,7 +156,7 @@ name=unknown_B
 [block]
 # block no. 2 follows, 37 sequences, length 9
 # corresponding to MSA columns:
-# 368-376
+# 170-178
 name=unknown_C
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -179,7 +179,7 @@ name=unknown_C
 [block]
 # block no. 3 follows, 37 sequences, length 7
 # corresponding to MSA columns:
-# 384-390
+# 186-192
 name=unknown_D
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -200,7 +200,7 @@ name=unknown_D
 [block]
 # block no. 4 follows, 37 sequences, length 17
 # corresponding to MSA columns:
-# 1932-1948
+# 831-847
 name=unknown_E
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -231,7 +231,7 @@ name=unknown_E
 [block]
 # block no. 5 follows, 37 sequences, length 27
 # corresponding to MSA columns:
-# 1952-1978
+# 849-875
 name=unknown_F
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -272,7 +272,7 @@ name=unknown_F
 [block]
 # block no. 6 follows, 37 sequences, length 25
 # corresponding to MSA columns:
-# 2169-2193
+# 904-928
 name=unknown_G
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -309,4 +309,4 @@ name=unknown_G
 5	8
 
 # created by:
-# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug/without_ca_b/wiskott-aldrich-sydrome-protein.fasta
+# /usr/local/bin/augustus/scripts/msa2prfl.pl /tmp/new_cug2/without_ca_b/wiskott-aldrich-sydrome-protein.fasta
