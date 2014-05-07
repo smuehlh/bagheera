@@ -204,6 +204,7 @@ class PredictionsController < ApplicationController
 		sorted_ref_prots.push("tRNA")
 
 		results = Parallel.map( sorted_ref_prots ) do |prot|
+
 			if prot == "tRNA" then 
 				# special execution for tRNA prediction
 

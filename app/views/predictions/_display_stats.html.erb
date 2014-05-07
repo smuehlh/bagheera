@@ -6,7 +6,7 @@
 		content_tag(:table,
 			content_tag(:tr, 
 				content_tag(:td, @stats[:trna_score].to_s) +
-				content_tag(:td, "Score")
+				content_tag(:td, "Percent points tRNAscan-SE Score")
 			) +
 			content_tag(:tr, 
 				content_tag(:td, @stats[:trna_ser].to_s) +
@@ -40,7 +40,7 @@
 		content_tag(:tr, 
 			content_tag(:td, @stats[:pred_ctg_unaligned].to_s ) +
 			content_tag(:td, 
-				"Thereof unaligned " + "position".pluralize(@stats[:pred_ctg_unaligned]) )
+				"Position".pluralize(@stats[:pred_ctg_unaligned]) + " thereof are not aligned to reference data" )
 		) +
 		content_tag(:tr, 
 			content_tag(:td, @stats[:contradiction_ref_chem_ref_ctg].to_s ) +

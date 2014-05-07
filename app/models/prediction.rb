@@ -243,32 +243,47 @@ class Prediction
 
 		if ctg_pos_mapped.compact.any? then
 
-			# 1) preference for hydrophob/ polar residues?
-			ref_alignment_cols.each_with_index do |col, ind|
+			ref_alignment_cols.each_with_index do |this_col, ind|
+
+				this_ctg_pos = ctg_pos[ind]
+				this_codons = ref_codons[ind]
 
 				# handle unmatched CTG positions
 				if ctg_pos_mapped[ind].nil? then 
-					results[:pred_ctg_unaligned].push ctg_pos[ind]
+					results[:pred_ctg_unaligned] |= [this_ctg_pos]
 					next
 				end
-				aa_freq, aa_num = word_frequency(col)
+
+				# 1) preference for hydrophob/ polar residues?
+				aa_freq, aa_num = word_frequency(this_col)
 				is_significant, prob_transl = predict_translation(aa_freq)
-				results[:ref_chem][ctg_pos[ind]] = {aa_comp: aa_freq, aa_num: aa_num}
+				results[:ref_chem][this_ctg_pos] = {aa_comp: aa_freq, aa_num: aa_num}
 				if is_significant then
-					results[:ref_chem][ctg_pos[ind]][:is_significant] = true
-					results[:ref_chem][ctg_pos[ind]][:transl] = prob_transl
+					results[:ref_chem][this_ctg_pos][:is_significant] = true
+					results[:ref_chem][this_ctg_pos][:transl] = prob_transl
 				else
-					results[:ref_chem][ctg_pos[ind]][:is_significant] = false
+					results[:ref_chem][this_ctg_pos][:is_significant] = false
+				end
+
+				# 2) CTGs in reference data at CTG positions in predicted sequence?
+				ctg_usage, ctg_num = ref_ctg_usage_per_position(this_codons, this_col)
+				if ctg_num == 0 then 
+					results[:no_ref_ctg].push(this_ctg_pos)
+				else
+					is_significant, prob_transl = predict_translation(ctg_usage)
+
+					results[:ref_ctg][this_ctg_pos] =  {ctg_usage: ctg_usage, ctg_num: ctg_num}
+					results[:ref_ctg][this_ctg_pos][:transl] = prob_transl
+					results[:ref_ctg][this_ctg_pos][:is_significant] = is_significant
 				end
 			end
-
-			# 2) CTGs in reference data at CTG positions in predicted sequence?
-			results[:ref_ctg], results[:no_ref_ctg] = ref_ctg_usage(ref_codons, ref_alignment_cols, ctg_pos)
-			
+	
 		else 
 			Helper.worked_or_throw_error(false, "No CTG position in predicted gene aligned with reference sequences")
 		end
 		return results
+	rescue 
+		throw :problem, "Gene predicted failed."
 	end
 
 	def map_ctg_pos(ctg_pos)
@@ -338,6 +353,8 @@ class Prediction
 		end
 
 		return ref_pos, ref_cols, ref_codons
+	rescue 
+		throw :problem, "Gene predicted failed."
 	end
 
 	def word_frequency(arr)
@@ -389,42 +406,34 @@ class Prediction
 		return is_discrim, transl
 	end
 
-	def ref_ctg_usage(codons, aas, ctg_pos)
-		counts = {} # usage of CTG codons in reference data, per CTG position in prediction
-		no_ctgs = [] # predicted CTG positiions with no CTG codons in reference data
+	def ref_ctg_usage_per_position(codons, amino_acids)
 
-		codons.each_with_index do |codons_thiscol, ind|
-			indices = codons_thiscol.find_each_index("CTG")
-			ctg_num = indices.size
-			if ctg_num > 0 then
+		ctg_indices = codons.find_each_index("CTG")
 
-				counts[ctg_pos[ind]] = {ctg_usage: Hash.new(), ctg_num: ctg_num} 
-				counts[ctg_pos[ind]][:ctg_usage]["S"] = 0
-				counts[ctg_pos[ind]][:ctg_usage]["L"] = 0
+		# init result variables
+		ctg_usage = {"S" => 0, "L" => 0}
+		ctg_num = ctg_indices.size
+		transl = ""
+		is_significant = false
 
-				ctg_translations = indices.collect {|x| aas[ind][x]}
-				n_ser = ctg_translations.count("S")
-				n_leu = ctg_translations.count("L")
+		if ctg_num == 0 then 
+			return ctg_usage, ctg_num
+		end
 
-				pct_ser = n_ser / ctg_num.to_f
-				pct_leu = n_leu / ctg_num.to_f
+		ctg_translations = ctg_indices.collect {|x| amino_acids[x]}
+		n_ser = ctg_translations.count("S")
+		n_leu = ctg_translations.count("L")
 
-				counts[ctg_pos[ind]][:ctg_usage]["S"] = pct_ser
-				counts[ctg_pos[ind]][:ctg_usage]["L"] = pct_leu
+		pct_ser = n_ser / ctg_num.to_f
+		pct_leu = n_leu / ctg_num.to_f
 
-				if (pct_ser + pct_leu) == 0.0 then
-					counts[ctg_pos[ind]][:transl] = "?"
-					next
-				end
+		ctg_usage["S"] = pct_ser
+		ctg_usage["L"] = pct_leu
 
-				counts[ctg_pos[ind]][:is_significant], counts[ctg_pos[ind]][:transl] = predict_translation(counts[ctg_pos[ind]][:ctg_usage])
-			else
-				no_ctgs.push(ctg_pos[ind])
-			end # if ctg_num
-		end # codons.each_with_index
-		return counts, no_ctgs
+		return ctg_usage, ctg_num
+	rescue 
+		throw :problem, "Gene predicted failed."
 	end
-
 
 	def save(results)
 		# "fail-save" save only if new values are not nil 

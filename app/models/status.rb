@@ -36,7 +36,7 @@ class Status
 		end
 
 		if pred_data[:no_ref_ctg] then 
-			stats[:no_ref_ctg] += [:no_ref_ctg].size
+			stats[:no_ref_ctg] += pred_data[:no_ref_ctg].size
 		end
 
 		if pred_data[:ref_chem] && pred_data[:ref_ctg] then 
