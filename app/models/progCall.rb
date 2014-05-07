@@ -123,7 +123,7 @@ module ProgCall
 		stdin.close
 		output = stdout_err.read
 		stdout_err.close
-
+		
 		if ! wait_thr.value.success? then
 			return false, ""
 		end

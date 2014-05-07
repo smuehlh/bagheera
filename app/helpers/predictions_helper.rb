@@ -280,7 +280,7 @@ module PredictionsHelper
 			res << pluralize(n_leu, options[:text_singular], options[:text_plural]) + " standard codon usage."
 		end
 		if n_unknown > 0 then 
-			res << pluralize(n_unknown, options[:text_singular], options[:text_plural]) + " indiscriminative."
+			res << pluralize(n_unknown, " is", " are") + " indiscriminative."
 		end
 		return res.join("</br>").html_safe
 	end

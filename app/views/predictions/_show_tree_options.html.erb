@@ -1,5 +1,5 @@
 <%= 
-	content_tag(:p, "Calculate phylogenetic tree with Maximum Likelihood method as implemented in FastTree. This is only useful if alignment method was MAFFT.") +
+	content_tag(:p, "Calculate phylogenetic tree with Maximum Likelihood method as implemented in FastTree. The tree is calculated on a concatenation of alignments generated during gene prediction. Available alignment methods for gene prediction are pair-wise methods or multiple-sequence alignment method MAFFT. The phylogenetic tree will be calculated only on multiple sequence alignments.") +
 	form_tag(calc_tree_path(algo: params[:algo]), :remote => true) do
 		# hidden_field_tag(:session_id, session[:file][:id]) +
 		content_tag(:table) do

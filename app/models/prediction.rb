@@ -211,6 +211,7 @@ class Prediction
 		# collect aligned predicted and ref sequences
 		headers, seqs = Helper::Sequence.fasta2str(File.read(@f_align))
 		ind = headers.find_index{|str| str.include?(@protein.ref_key)}
+
 		if ind then
 			@refseq_aligned = seqs[ind]
 		else

@@ -5,20 +5,20 @@
 	if @stats[:trna_score] != "" then 
 		content_tag(:table,
 			content_tag(:tr, 
-				content_tag(:td, "Score") +
-				content_tag(:td, @stats[:trna_score].to_s)
+				content_tag(:td, @stats[:trna_score].to_s) +
+				content_tag(:td, "Score")
 			) +
 			content_tag(:tr, 
-				content_tag(:td, "Alternative codon usage") +
-				content_tag(:td, @stats[:trna_ser].to_s)
+				content_tag(:td, @stats[:trna_ser].to_s) +
+				content_tag(:td, "Alternative codon usage")
 			) +
 			content_tag(:tr, 
-				content_tag(:td, "Standard codon usage") +
-				content_tag(:td, @stats[:trna_leu].to_s)
+				content_tag(:td, @stats[:trna_leu].to_s) +
+				content_tag(:td, "Standard codon usage")
 			) +
 			content_tag(:tr, 
-				content_tag(:td, "Indiscriminative") +
-				content_tag(:td, @stats[:trna_unknown].to_s)
+				content_tag(:td, @stats[:trna_unknown].to_s) +
+				content_tag(:td, "Indiscriminative")
 			)
 		)
 	else
@@ -29,59 +29,59 @@
 
 	content_tag(:table,
 		content_tag(:tr, 
-			content_tag(:td, "Predicted " + "protein".pluralize(@stats[:n_prots])) +
-			content_tag(:td, @stats[:n_prots].to_s)
+			content_tag(:td, @stats[:n_prots].to_s) +
+			content_tag(:td, "Predicted " + "protein".pluralize(@stats[:n_prots]))
 		) +
 		# thers are all predicted CTG positions, independent of aligned CTG pos in ref data
 		content_tag(:tr, 
-			content_tag(:td, "Predicted CTG " + "position".pluralize(@stats[:pred_ctg])) +
-			content_tag(:td, @stats[:pred_ctg].to_s )
+			content_tag(:td, @stats[:pred_ctg].to_s ) +
+			content_tag(:td, "Predicted CTG " + "position".pluralize(@stats[:pred_ctg]))
 		) +
 		content_tag(:tr, 
+			content_tag(:td, @stats[:pred_ctg_unaligned].to_s ) +
 			content_tag(:td, 
-				"Thereof unaligned " + "position".pluralize(@stats[:pred_ctg_unaligned]) ) +
-			content_tag(:td, @stats[:pred_ctg_unaligned].to_s )
+				"Thereof unaligned " + "position".pluralize(@stats[:pred_ctg_unaligned]) )
 		) +
 		content_tag(:tr, 
+			content_tag(:td, @stats[:contradiction_ref_chem_ref_ctg].to_s ) +
 			content_tag(:td, 
-				"Predicted CTG " + "position".pluralize(@stats[:contradiction_ref_chem_ref_ctg]) + " with ambiguous results") +
-			content_tag(:td, @stats[:contradiction_ref_chem_ref_ctg].to_s )
+				"Predicted CTG " + "position".pluralize(@stats[:contradiction_ref_chem_ref_ctg]) + " where sequences similarity and CTG position conservation yield ambiguous results")
 		)
 	) +
 	content_tag(:h4, "Sequence similarity") +
 	content_tag(:table, 
 		content_tag(:tr, 
-			content_tag(:td, "Alternative codon usage") +
-			content_tag(:td, @stats[:ref_chem_ser].to_s)
+			content_tag(:td, @stats[:ref_chem_ser].to_s) +
+			content_tag(:td, "Alternative codon usage")
 		) +
 		content_tag(:tr, 
-			content_tag(:td, "Standard codon usage") +
-			content_tag(:td, @stats[:ref_chem_leu].to_s)
+			content_tag(:td, @stats[:ref_chem_leu].to_s) +
+			content_tag(:td, "Standard codon usage")
 		) +
 		content_tag(:tr, 
-			content_tag(:td, "Indiscriminative") +
-			content_tag(:td, @stats[:ref_chem_unknown].to_s)
+			content_tag(:td, @stats[:ref_chem_unknown].to_s) +
+			content_tag(:td, "Indiscriminative")
 		)
 	) +
 
 	content_tag(:h4, "CTG position conservation") +
 	content_tag(:table, 
 		content_tag(:tr, 
-			content_tag(:td, "Alternative codon usage") +
-			content_tag(:td, @stats[:ref_ctg_ser].to_s)
+			content_tag(:td, @stats[:ref_ctg_ser].to_s) +
+			content_tag(:td, "Alternative codon usage")
 		) +
 		content_tag(:tr, 
-			content_tag(:td, "Standard codon usage") +
-			content_tag(:td, @stats[:ref_ctg_leu].to_s)
+			content_tag(:td, @stats[:ref_ctg_leu].to_s) +
+			content_tag(:td, "Standard codon usage")
 		) +
 		content_tag(:tr, 
-			content_tag(:td, "Indiscriminative") +
-			content_tag(:td, @stats[:ref_ctg_unknown].to_s)
+			content_tag(:td, @stats[:ref_ctg_unknown].to_s) +
+			content_tag(:td, "Indiscriminative")
 		) +
 		content_tag(:tr,
+			content_tag(:td, @stats[:no_ref_ctg].to_s ) +
 			content_tag(:td, 
-				"No aligned CTG " + "codon".pluralize(@stats[:no_ref_ctg]) ) +
-			content_tag(:td, @stats[:no_ref_ctg].to_s )
+				"No CTG " + "codon".pluralize(@stats[:no_ref_ctg]) + " in reference data" )
 		)
 	)
 

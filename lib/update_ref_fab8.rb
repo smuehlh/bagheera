@@ -63,6 +63,27 @@ def callCymoAPI(temp)
 	system(wget_path, "--spider", "http://fab8:2001/api_cug_alignment/all", "-o", File.join(temp, "cron.log"))
 end
 
+def validate_save_alignment_and_precalc_profile(ref_data_obj, prot, prot_obj, tmp_path)
+	# 1) adapt alignments: ensure same lenght of all seqs and remove common gaps
+	prot_obj.ensure_same_length
+	prot_obj.remove_common_gaps
+
+	# 2) save alignments to file and to reference data
+
+	f_out = File.join(tmp_path, "#{prot_obj.prot_filesave_name}.fasta")	
+	Helper::Sequence.save_alignment(f_out, prot_obj.ref_alignment)
+	ref_data_obj.update_alignment(prot, prot_obj.ref_alignment)
+	ref_data_wo_cab_obj.update_genes(prot, prot_obj.ref_genes)
+
+	# 3) test if mafft can handle alignment files
+	prot_obj.ensure_mafft_is_fine(f_out)
+
+	# 4) precalculate protein profiles
+	f_prfl = f_out.sub("fasta", "prfl")
+	Helper.calc_protein_profile(f_out, f_prfl)
+
+end
+
 ### "main script"
 # prepare directory structure
 
@@ -98,42 +119,23 @@ ref_data_wo_cab_obj = ReferenceData.new(path_to_revised_json)
 prot_list = ref_data_obj.data.keys
 prot_list.sort.each do |prot|
 	puts prot
+
+	# complete set of reference data
 	prot_obj = ref_data_obj.create_protfam_obj(prot)
+	tmp_path = tmp_path_new_data
 
-	# 1) adapt alignments: ensure same lenght of all seqs and remove common gaps
-	prot_obj.ensure_same_length
-	prot_obj.remove_common_gaps
+	validate_save_alignment_and_precalc_profile(ref_data_obj, prot, prot_obj, tmp_path)
 
-	# 2) save alignments to file and to reference data
-
-	f_out = File.join(tmp_path_new_data, "#{prot_obj.prot_filesave_name}.fasta")	
-	Helper::Sequence.save_alignment(f_out, prot_obj.ref_alignment)
-	ref_data_obj.update_alignment(prot, prot_obj.ref_alignment)
-
-	# 3) test if mafft can handle alignment files
-	prot_obj.ensure_mafft_is_fine(f_out)
-
-	# 4) precalculate protein profiles
-	f_prfl = f_out.sub("fasta", "prfl")
-	Helper.calc_protein_profile(f_out, f_prfl)
-
-	## do exactly the same again for dataset without example species 'Ca_b'
-	prot_obj = ""
+	# set of reference data without example species 'Ca_b'
+	prot_obj = nil
 	prot_obj = ref_data_wo_cab_obj.create_protfam_obj(prot)
-
-	# 5) remove all 'Ca_b' genes from genes and alignments
+	# remove all 'Ca_b' genes from genes and alignments
 	prot_obj.ref_alignment.delete_if { |k,v| k =~ /Ca_b/ }
 	prot_obj.ref_genes.delete_if { |k,v| k =~ /Ca_b/ }
 
-	# 6) save alignments to file and to reference data
-	f_out = File.join(tmp_path_new_data, subfolder, "#{prot_obj.prot_filesave_name}.fasta")	
-	Helper::Sequence.save_alignment(f_out, prot_obj.ref_alignment)
-	ref_data_wo_cab_obj.update_alignment(prot, prot_obj.ref_alignment)
-	ref_data_wo_cab_obj.update_genes(prot, prot_obj.ref_genes)
+	tmp_path = File.join(tmp_path_new_data, subfolder)
 
-	# 3) precalculate protein profiles
-	f_prfl = f_out.sub("fasta", "prfl")
-	Helper.calc_protein_profile(f_out, f_prfl)
+	validate_save_alignment_and_precalc_profile(ref_data_wo_cab_obj, prot, prot_obj, tmp_path)
 
 end
 
