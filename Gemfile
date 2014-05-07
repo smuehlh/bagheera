@@ -61,3 +61,4 @@ gem 'debugger'
 gem "dalli"
 gem 'fancybox-rails'
 gem "parallel"
+gem "sitemap_generator"
