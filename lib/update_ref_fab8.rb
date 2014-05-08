@@ -17,7 +17,8 @@ Dir[File.join(File.dirname(__FILE__), 'update_ref_fab8_lib', '*.rb')].each {|fil
 Path = "/tmp/new_cug"
 Json = "alignment_gene_structure.json"
 tmp_path_new_data = ""
-final_pathes_new_data = ["/fab8/server/bagheera/db/ref_data", "/fab8/smuehlh/rails_projects/bagheera/db/ref_data"]
+final_pathes_new_data = ["/fab8/server/bagheera/db/ref_data/protein", 
+	"/fab8/smuehlh/rails_projects/bagheera/db/ref_data/protein"]
 subfolder = "without_ca_b" # should be expanded to tmp_path_new_data
 
 ### the final and temporary pathes for new data must exist and be writable
@@ -60,7 +61,8 @@ at_exit {
 ### define function
 def callCymoAPI(temp)
 	wget_path = `which wget`.chomp
-	system(wget_path, "--spider", "http://fab8:2001/api_cug_alignment/all", "-o", File.join(temp, "cron.log"))
+	# FIXME
+	system(wget_path, "--spider", "http://fab8:7007/api_cug_alignment/all", "-o", File.join(temp, "cron.log"))
 end
 
 def validate_save_alignment_and_precalc_profile(ref_data_obj, prot, prot_obj, tmp_path)
@@ -90,7 +92,7 @@ end
 Helper.del_file_or_dir(path_to_native_json)
 
 # fetch reference data from cymobase
-# max_secs = 60*10 # wait max. 10 minutes for cymoapi
+max_secs = 60*10 # wait max. 10 minutes for cymoapi
 puts "Start wget: #{Time.now}"
 begin
 	status = Timeout::timeout(max_secs) { callCymoAPI(tmp_path_new_data) }
@@ -148,7 +150,7 @@ puts "Move everything to place"
 final_pathes_new_data.each do |path|
 
 	# delete old stuff in path, files and folders
-	Helper.del_file_or_dir( Dir.glob(File.join(path, "*.*")) ) # delete old fasta, prfl, json and log files
+	Helper.del_file_or_dir( Dir.glob(File.join(path, "*.*")) ) # delete old prfl, fasta, json and log files
 	Helper.del_file_or_dir( File.join( path, subfolder ) )
 
 	# move new data to place

@@ -45,11 +45,6 @@ class TRNAprediction
 
 	def run_trna_scan
 		is_success = ProgCall.trnascan(@file)
-if is_success then
-	puts "trnascan success"
-else
-	puts "trnascan fail"
-end
 		Helper.worked_or_throw_error(is_success, "tRNA scan failed.")
 	end
 

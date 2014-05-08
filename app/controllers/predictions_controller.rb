@@ -177,9 +177,9 @@ class PredictionsController < ApplicationController
 		Prediction.class_variable_set(:@@align_config, params[:config]) if params.has_key?(:config)
 		
 		if session[:file][:name].match("Candida_albicans_WO_1") then
-			ProteinFamily.class_variable_set(:@@ref_data_path, File.join(BASE_PATH,PATH_REF_WO_EXAMPLE) )
+			ProteinFamily.class_variable_set(:@@ref_data_path, File.join(BASE_PATH_PROTEIN,PATH_REF_WO_EXAMPLE) )
 		else
-			ProteinFamily.class_variable_set(:@@ref_data_path, BASE_PATH)
+			ProteinFamily.class_variable_set(:@@ref_data_path, BASE_PATH_PROTEIN)
 		end 
 
 		# initialize "results" variables
@@ -317,9 +317,9 @@ class PredictionsController < ApplicationController
 		f_stats = File.join(file_basename, "stat")
 
 		if session[:file][:name] == "Candida_albicans_WO_1.fasta" then
-			ProteinFamily.class_variable_set(:@@ref_data_path, File.join(BASE_PATH,PATH_REF_WO_EXAMPLE) )
+			ProteinFamily.class_variable_set(:@@ref_data_path, File.join(BASE_PATH_PROTEIN,PATH_REF_WO_EXAMPLE) )
 		else
-			ProteinFamily.class_variable_set(:@@ref_data_path, BASE_PATH)
+			ProteinFamily.class_variable_set(:@@ref_data_path, BASE_PATH_PROTEIN)
 		end 
 
 		# initialize "results" variables

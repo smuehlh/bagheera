@@ -1,5 +1,6 @@
-# BASE_PATH = Dir::tmpdir + "/cug/" # all data files are stored in /tmp
 BASE_PATH = Rails.root.join('db', 'ref_data').to_s
+BASE_PATH_PROTEIN = File.join(BASE_PATH, "protein")
+BASE_PATH_TRNA = File.join(BASE_PATH, "trna")
 REF_DATA = "alignment_gene_structure.json"
 TRNA_REF_DATA = "trna.fasta"
 PATH_REF_WO_EXAMPLE = "without_ca_b/"

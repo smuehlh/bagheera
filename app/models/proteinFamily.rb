@@ -2,7 +2,7 @@ class ProteinFamily
 	attr_reader :prot, :prot_basename, 
 		:ref_alignment_file, :ref_alignment, :ref_genes, :ref_prfl_file
 
-	@@ref_data_path = BASE_PATH # overwrite if reference data without Ca_b are used
+	@@ref_data_path = BASE_PATH_PROTEIN # overwrite if reference data without Ca_b are used
 
 	def initialize(prot, data)
 		@prot = prot 
