@@ -61,8 +61,7 @@ at_exit {
 ### define function
 def callCymoAPI(temp)
 	wget_path = `which wget`.chomp
-	# FIXME
-	system(wget_path, "--spider", "http://fab8:7007/api_cug_alignment/all", "-o", File.join(temp, "cron.log"))
+	system(wget_path, "--spider", "http://fab8:2001/api_cug_alignment/all", "-o", File.join(temp, "cron.log"))
 end
 
 def validate_save_alignment_and_precalc_profile(ref_data_obj, prot, prot_obj, tmp_path)
