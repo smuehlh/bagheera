@@ -43,8 +43,8 @@ module WebScipio
 
 		return yaml, err_msg
 
-	rescue => err 
-		Helper.raise_runtime_error(err)
+	rescue NoMethodError, TypeError, NameError, RuntimeError, Errno::ENOENT, Errno::ETIMEDOUT
+		Helper.raise_runtime_error("An error occured with Webscipio")
 
 	end
 

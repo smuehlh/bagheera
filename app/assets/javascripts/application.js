@@ -175,32 +175,44 @@ function hide_show_waiting(kind) {
 
 // toggle translation-check protein buttons enabled/disabled if input or not
 $(document).ready(function() {
-    $("#protein_seq").on('change keypress paste focus mouseup click', function() {
-        if ( $(this).val() != '' ) {
-            $('#protein_button').removeAttr('disabled');
-            $('#species').removeAttr('disabled');
-            $('#scipio_relaxed').removeAttr('disabled');
-        }
-        else {
-            $('#protein_button').attr('disabled', 'disabled');
-            $('#species').attr('disabled', 'disabled');
-            $('#scipio_relaxed').attr('disabled', 'disabled');
-        }
+    $("#protein_seq").on('change keypress focus mouseup click', function() {
+        toggle_protein_seq_button("#protein_seq");
+    });
+    $("#protein_seq").on('input paste', function() {
+        setTimeout( toggle_protein_seq_button("#protein_seq"), 250);
     });
 });
 // toggle translation-check mRNA buttons enabled/disabled if input or not
 $(document).ready(function() {
-    $("#mrna_seq").on('change keypress paste focus mouseup click', function() {
-        if ( $(this).val() != '' ) {
-            $('#mrna_button').removeAttr('disabled');
-            $('#codonusage').removeAttr('disabled');
-        }
-        else {
-            $('#mrna_button').attr('disabled', 'disabled');
-            $('#codonusage').attr('disabled', 'disabled');
-        }
+    $("#mrna_seq").on('change keypress focus mouseup click', function() {
+        toggle_mrna_seq_button("#mrna_seq");
+    });
+    $("#mrna_seq").on('input paste', function() {
+        setTimeout( toggle_mrna_seq_button("#mrna_seq"), 250);
     });
 });
+function toggle_protein_seq_button(field_id) {
+    if ( $(field_id).val() != '' ) {
+        $('#protein_button').removeAttr('disabled');
+        $('#species').removeAttr('disabled');
+        $('#scipio_relaxed').removeAttr('disabled');
+    }
+    else {
+        $('#protein_button').attr('disabled', 'disabled');
+        $('#species').attr('disabled', 'disabled');
+        $('#scipio_relaxed').attr('disabled', 'disabled');
+    }
+};
+function toggle_mrna_seq_button(field_id) {
+    if ( $(field_id).val() != '' ) {
+        $('#mrna_button').removeAttr('disabled');
+        $('#codonusage').removeAttr('disabled');
+    }
+    else {
+        $('#mrna_button').attr('disabled', 'disabled');
+        $('#codonusage').attr('disabled', 'disabled');
+    }
+};
 
 function toggle_icon(img, div, mode) {
     // if(!mode) mode = 'block';
@@ -212,5 +224,4 @@ function toggle_icon(img, div, mode) {
       img.src = img.src.replace('/down.png','/up.png');
       div.show();
     }
-    return false;
 }

@@ -1,5 +1,6 @@
 # Set the host name for URL creation
 SitemapGenerator::Sitemap.default_host = "http://www.motorprotein.de/bagheera"
+SitemapGenerator::Sitemap.sitemaps_path = 'bagheera/'
 SitemapGenerator.verbose = false
 
 SitemapGenerator::Sitemap.create do

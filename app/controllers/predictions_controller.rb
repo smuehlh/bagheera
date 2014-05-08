@@ -211,7 +211,7 @@ class PredictionsController < ApplicationController
 				trna_ref_data_path = Helper.provide_trna_ref_data_path
 				this_results = { seq: "", struct: "", score: "",
 					anticodon: "", anticodon_pos: "",
-					blast_hits: [], f_blast_alignment: "",
+					blast_hits: {}, 
 					message: "" }
 
 				trna_pred_obj = TRNAprediction.new(session[:file][:path], trna_ref_data_path)

@@ -170,15 +170,24 @@ module ProgCall
 		# -D: no search for pseudogenes, makes search faster
 		# -f#: output sequence and its secondary structure
 		# -Q: do not prompt before overwriting an existing file
-		
+			
 		if @is_tRNA_scan_general_model then 
 			# -G: general model, as opposed to a specific one for eukaryotes
-			is_success = system(TRNASCAN, "-G", "-D", "-f#", "-Q", f_in )
+			stdout = IO.popen([TRNASCAN, "-G", "-D", "-f#", "-Q", f_in])
+			output = stdout.read
+			stdout.close
 		else
 			# eukaryotic model
-			is_success = system(TRNASCAN, "-D", "-f#", "-Q", f_in )
+			stdout = IO.popen([TRNASCAN, "-D", "-f#", "-Q", f_in])
+			output = stdout.read
+			stdout.close
 		end
-		return is_success
+
+		if output.include?("Sequence") then 
+			return true
+		else
+			return false
+		end
 	end
 
 	# def config(configfile)

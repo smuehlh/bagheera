@@ -139,7 +139,7 @@ class TranslationsController < ApplicationController
 		end
 
 	rescue NoMethodError, TypeError, NameError, RuntimeError, Errno::ENOENT
-		@error = "Cannot check CTG translation in protein."
+		@error = "An error occured. Cannot check CTG translation in protein."
 
 	ensure
 		render :show_protein_seq, formats: [:js]

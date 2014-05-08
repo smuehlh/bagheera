@@ -1,4 +1,13 @@
 hide_show_waiting('hide');
+
+// reset input fields
+$('#protein_seq').val('');
+$('#protein_button').attr('disabled', 'disabled');
+$('#species').attr('disabled', 'disabled');
+$('#scipio_relaxed').attr('disabled', 'disabled');
+$('#mrna_seq').val('');
+$('#mrna_button').attr('disabled', 'disabled');
+$('#codonusage').attr('disabled', 'disabled');
 <% if @error.blank? then %>
 	// prepare layout
 	$('#results_section').show();

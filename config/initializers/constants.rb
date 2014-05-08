@@ -8,8 +8,6 @@ Tmp_path = File.join(Dir::tmpdir, "cug/")
 # FORMATDB = "/usr/bin/formatdb"
 # BLASTALL = "/usr/bin/blastall"
 # FASTACMD = "/usr/bin/fastacmd"
-Legacy_blast = "/usr/local/ncbi_2.2.28+/bin/legacy_blast.pl"
-New_blast_path = "/usr/local/ncbi_2.2.28+/bin"
 
 AUGUSTUS = "/usr/local/bin/augustus/src/augustus"
 # DIALIGN2 = "/usr/local/bin/dialign_package/src/dialign2-2"
@@ -25,7 +23,10 @@ TRNASCAN = "tRNAscan-SE"
 if ENV && ENV["PWD"] && (ENV["PWD"].include?("fab8") || ENV["PWD"].include?("jenkins")) then
         LUCULLUS_URL = "http://fab8:8080/tpl_os"
         GBLOCKS = "/usr/local/Gblocks_0.91b/Gblocks"
+        New_blast_path = "/usr/local/ncbi_2.2.28+/bin"
 else
         LUCULLUS_URL = "http://www.motorprotein.de/tpl_os"
         GBLOCKS = "/usr/local/bin/Gblocks_0.91b/Gblocks"
+        New_blast_path = "/usr/local/ncbi-blast-2.2.28+/bin"
 end
+        
