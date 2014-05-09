@@ -2,126 +2,86 @@
 	heading_trna = "Identity of tRNA<sub>CAG</sub>"
 	content_tag(:h3, heading_trna.html_safe) +
 	
-	if @stats[:trna_score] != "" then 
-		content_tag(:table,
-			content_tag(:tr, 
-				content_tag(:td, @stats[:trna_score].to_s) +
-				content_tag(:td, "Percent points tRNAscan-SE Score")
-			) +
-			content_tag(:tr, 
-				content_tag(:td, @stats[:trna_ser].to_s) +
-				content_tag(:td, "Alternative codon usage")
-			) +
-			content_tag(:tr, 
-				content_tag(:td, @stats[:trna_leu].to_s) +
-				content_tag(:td, "Standard codon usage")
-			) +
-			content_tag(:tr, 
-				content_tag(:td, @stats[:trna_unknown].to_s) +
-				content_tag(:td, "Indiscriminative")
-			)
-		)
-	else
-		content_tag(:normal, "Not predicted")
-	end +
+	content_tag(:table,
+		content_tag(:tr, 
+			content_tag(:td, @stats[:trna_score].to_s, :class => "first_col") +
+			content_tag(:td, "Percent points tRNAscan-SE Score")
+		) +
+		content_tag(:tr, 
+			content_tag(:td, @stats[:trna_ser].to_s, :class => "first_col") +
+			content_tag(:td, "Alternative codon usage")
+		) +
+		content_tag(:tr, 
+			content_tag(:td, @stats[:trna_leu].to_s, :class => "first_col") +
+			content_tag(:td, "Standard codon usage")
+		) +
+		content_tag(:tr, 
+			content_tag(:td, @stats[:trna_unknown].to_s, :class => "first_col") +
+			content_tag(:td, "Indiscriminative")
+		), 
+		:class => "stats_table"
+	) +
 
 	content_tag(:h3, "Gene prediction") + 
 
 	content_tag(:table,
 		content_tag(:tr, 
-			content_tag(:td, @stats[:n_prots].to_s) +
+			content_tag(:td, @stats[:n_prots].to_s, :class => "first_col") +
 			content_tag(:td, "Predicted " + "protein".pluralize(@stats[:n_prots]))
 		) +
 		# thers are all predicted CTG positions, independent of aligned CTG pos in ref data
 		content_tag(:tr, 
-			content_tag(:td, @stats[:pred_ctg].to_s ) +
+			content_tag(:td, @stats[:pred_ctg].to_s, :class => "first_col") +
 			content_tag(:td, "Predicted CTG " + "position".pluralize(@stats[:pred_ctg]))
 		) +
 		content_tag(:tr, 
-			content_tag(:td, @stats[:pred_ctg_unaligned].to_s ) +
+			content_tag(:td, @stats[:pred_ctg_unaligned].to_s, :class => "first_col") +
 			content_tag(:td, 
 				"Position".pluralize(@stats[:pred_ctg_unaligned]) + " thereof are not aligned to reference data" )
 		) +
 		content_tag(:tr, 
-			content_tag(:td, @stats[:contradiction_ref_chem_ref_ctg].to_s ) +
+			content_tag(:td, @stats[:contradiction_ref_chem_ref_ctg].to_s, :class => "first_col") +
 			content_tag(:td, 
 				"Predicted CTG " + "position".pluralize(@stats[:contradiction_ref_chem_ref_ctg]) + " where sequences similarity and CTG position conservation yield ambiguous results")
-		)
+		),
+		:class => "stats_table"
 	) +
 	content_tag(:h4, "Sequence similarity") +
 	content_tag(:table, 
 		content_tag(:tr, 
-			content_tag(:td, @stats[:ref_chem_ser].to_s) +
+			content_tag(:td, @stats[:ref_chem_ser].to_s, :class => "first_col") +
 			content_tag(:td, "Alternative codon usage")
 		) +
 		content_tag(:tr, 
-			content_tag(:td, @stats[:ref_chem_leu].to_s) +
+			content_tag(:td, @stats[:ref_chem_leu].to_s, :class => "first_col") +
 			content_tag(:td, "Standard codon usage")
 		) +
 		content_tag(:tr, 
-			content_tag(:td, @stats[:ref_chem_unknown].to_s) +
+			content_tag(:td, @stats[:ref_chem_unknown].to_s, :class => "first_col") +
 			content_tag(:td, "Indiscriminative")
-		)
+		),
+	:class => "stats_table"
 	) +
 
 	content_tag(:h4, "CTG position conservation") +
 	content_tag(:table, 
 		content_tag(:tr, 
-			content_tag(:td, @stats[:ref_ctg_ser].to_s) +
+			content_tag(:td, @stats[:ref_ctg_ser].to_s, :class => "first_col") +
 			content_tag(:td, "Alternative codon usage")
 		) +
 		content_tag(:tr, 
-			content_tag(:td, @stats[:ref_ctg_leu].to_s) +
+			content_tag(:td, @stats[:ref_ctg_leu].to_s, :class => "first_col") +
 			content_tag(:td, "Standard codon usage")
 		) +
 		content_tag(:tr, 
-			content_tag(:td, @stats[:ref_ctg_unknown].to_s) +
+			content_tag(:td, @stats[:ref_ctg_unknown].to_s, :class => "first_col") +
 			content_tag(:td, "Indiscriminative")
 		) +
 		content_tag(:tr,
-			content_tag(:td, @stats[:no_ref_ctg].to_s ) +
+			content_tag(:td, @stats[:no_ref_ctg].to_s, :class => "first_col") +
 			content_tag(:td, 
 				"No CTG " + "codon".pluralize(@stats[:no_ref_ctg]) + " in reference data" )
-		)
+		),
+	:class => "stats_table"
 	)
-
-		# # these are predicted CTG positions which occur also in reference data (they are conserved)
-		# content_tag(:tr, 
-		# 	content_tag(:td, "Conserved CTG " + "position".pluralize(@stats[:conserved_pos])) +
-		# 	content_tag(:td, 
-		# 		@stats[:conserved_pos].to_s + 
-		# 		# these are the proteins which contain a predicted, conserved CTG position
-		# 		" (" + @stats[:prot_conserved_pos].to_s + " protein".pluralize(@stats[:prot_conserved_pos]) + ")"
-		# 	)
-		# ) +
-		# # # these are the proteins which contain a predicted, conserved CTG position
-		# # content_tag(:tr, 
-		# # 	content_tag(:td, "Protein".pluralize(@stats["prot_conserved_pos"]) + " with conserved CTG positions") +
-		# # 	content_tag(:td, @stats["prot_conserved_pos"])
-		# # ) +
-		# content_tag(:tr, 
-		# 	content_tag(:td, "Alternative codon usage") +
-		# 	content_tag(:td, @stats[:ser].to_s)
-		# ) +
-		# content_tag(:tr, 
-		# 	content_tag(:td, "Standard codon usage") +
-		# 	content_tag(:td, @stats[:leu].to_s)
-		# )
-%>
-
-<%#=
-content_tag(:p, 
-	"Found #{@stats["sig_pos"].to_s} significant CTG codon #{"position".pluralize(@stats["sig_pos"])} in " << 
-	"#{@stats["n_prots"].to_s} predicted #{"protein".pluralize(@stats["n_prots"])}.",
-	:class => "stats") +
-content_tag(:p,
-	@stats["ser"].to_s << " suggest yeast alternative codon usage.",
-	:class => "stats") +
-content_tag(:p,
-	@stats["leu"].to_s << " suggest usage of the standard code.",
-	:class => "stats") +
-content_tag(:p, 
-	"In #{@stats["ref_ctg"].to_s}" <<
-	" #{"protein".pluralize(@stats["ref_ctg"])} at least one CTG codon position is conserved between query data and Saccharomycetes. The position(s) occur at least in 5% of the reference sequences.", 
-	:class => "stats")
 %>

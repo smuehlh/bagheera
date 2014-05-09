@@ -92,10 +92,13 @@ class TRNAprediction
 		struct = ""
 		anticodon_pos = ""
 		score = ""
+		intron_start = nil
+		intron_stop = nil
 
 
 # gi|92090993|gb|CM000311.1|.trna6 (58090-58009)  Length: 82 bp
 # Type: Leu       Anticodon: CAG at 34-36 (58057-58055)   Score: 53.85
+# Possible intron: 38-63 (1101298-1101323)
 #          *    |    *    |    *    |    *    |    *    |    *    |    *    |    *    | 
 # Seq: GATACGATGGCCGAGTGGTtAAGGCGAAGGATGCAGGTTCCTTTGGGCATTGCCCGCGCAGGTTCGAACCCTGCTCGTGTCG
 # Str: >>>>>>>..>>>..........<<<.>>>>>.......<<<<<.>>>>...<<<<..>>>>>.......<<<<<<<<<<<<.
@@ -107,13 +110,26 @@ class TRNAprediction
 				anticodon_pos = line.match(/at ([\d-]+) /)[1]
 				score = line.match(/Score: ([.\d]+)/)[1]
 			end
+			if is_collect_seq && line.match(/Possible intron/) then 
+				matches = line.match(/(\d+)-(\d+)\s/)
+				intron_start = matches[1].to_i - 1 # convert human to ruby counting
+				intron_stop = matches[2].to_i -1 # convert human to ruby counting
+			end
 			if is_collect_seq && line.match(/^Seq:/) then 
 				seq = line.match(/Seq: (.*)/)[1]
 				seq = seq.upcase
+				# remove intron
+				if intron_start && intron_stop then 
+					seq.slice!(intron_start..intron_stop)
+				end
 				is_collect_seq = false
 			end
 			if is_collect_struct && line.match(/^Str:/) then 
 				struct = line.match(/Str: (.*)/)[1]
+				# remove intron
+				if intron_start && intron_stop then 
+					struct.slice!(intron_start..intron_stop)
+				end
 				is_collect_struct = false
 			end
 			if ! seq.blank? && ! struct.blank? then 
@@ -131,8 +147,8 @@ class TRNAprediction
 			File.open(@f_seq, 'w') {|f| f.write(fasta)}
 		end
 		return seq, struct, anticodon_pos, score
-	rescue 
-		throw :problem, "tRNA scan failed."
+	# rescue 
+	# 	throw :problem, "tRNA scan failed."
 	end
 
 	# parse seq_id and e-values out of all blasthits
@@ -151,8 +167,8 @@ class TRNAprediction
 
 		return seq_ids, e_values, scores
 
-	rescue 
-		throw :problem, "tRNA scan failed."
+	# rescue 
+	# 	throw :problem, "tRNA scan failed."
 	end
 
 	# parse blast output and writes alignment to file
@@ -173,14 +189,21 @@ class TRNAprediction
 			next if line == ""
 			if line.include?("Query") then
 				fields = line.split(/\s+/) 
-				range_start = fields[1].to_i
-				range_stop = fields[3].to_i
-				start_query_seq = line.upcase.index(@tRNA_seq[range_start-1..range_stop-1])
-				stop_query_seq = line.upcase.rindex(@tRNA_seq[range_stop-1])
+
+				# seq_positions = line.match(/(\d+)\s+[-A-X]+\s+(\d+)/)
+				# start_query_seq = seq_positions[1].to_i
+				# stop_query_seq = seq_positions[2].to_i
+
+				# range_start = fields[1].to_i
+				# range_stop = fields[3].to_i
+				# start_query_seq = line.upcase.index(@tRNA_seq[range_start-1..range_stop-1])
+				# stop_query_seq = line.upcase.rindex(@tRNA_seq[range_stop-1])
 			end
 			fields = line.split(/\s+/)
 			header = fields[0]
-			seq = line[start_query_seq..stop_query_seq]
+
+			seq = line.match(/\d+\s+([-A-X]+)\s+\d+/)[1]
+			# seq = line[start_query_seq..stop_query_seq]
 			seq = seq.gsub(" ", "-")
 			if fasta_parts.has_key?(header) then 
 				fasta_parts[header] += seq 
@@ -197,8 +220,8 @@ class TRNAprediction
 
 		File.open(f_alignment, 'w') { |f| f.write(fasta) }
 		return f_alignment 
-	rescue 
-		throw :problem, "tRNA scan failed."
+	# rescue 
+	# 	throw :problem, "tRNA scan failed."
 	end
 
 	# map blast hits to the closes translation
@@ -213,11 +236,14 @@ class TRNAprediction
 				transl: convert_seqid_to_tRNA_identity(seq_id),
 				is_significant: true
 			}
+			if res[seq_id][:transl] == "?" then 
+				res[seq_id][:is_significant] = false
+			end
 		end
 
 		return res
-	rescue 
-		throw :problem, "tRNA scan failed."
+	# rescue 
+	# 	throw :problem, "tRNA scan failed."
 	end 
 
 	# parse translation of fasta header from reference data
@@ -225,7 +251,7 @@ class TRNAprediction
 		transl = "?"
 		if seq_id.match(/Ser/i) then 
 			transl = "S"
-		else
+		elsif seq_id.match(/Leu/i)
 			transl = "L"
 		end
 
