@@ -27,12 +27,16 @@
 	content_tag(:table,
 		content_tag(:tr, 
 			content_tag(:td, @stats[:n_prots].to_s, :class => "first_col") +
-			content_tag(:td, "Predicted " + "protein".pluralize(@stats[:n_prots]))
+			content_tag(:td, "Predicted " + "protein".pluralize(@stats[:n_prots]) + " of #{@stats[:total_n_prots]} tested proteins")
+		) +
+		content_tag(:tr, 
+			content_tag(:td, @stats[:n_prots_wo_ctg].to_s, :class => "first_col") +
+			content_tag(:td, "Predicted " + "protein".pluralize(@stats[:n_prots]) + " contain CTG codons")
 		) +
 		# thers are all predicted CTG positions, independent of aligned CTG pos in ref data
 		content_tag(:tr, 
 			content_tag(:td, @stats[:pred_ctg].to_s, :class => "first_col") +
-			content_tag(:td, "Predicted CTG " + "position".pluralize(@stats[:pred_ctg]))
+			content_tag(:td, "CTG " + "position".pluralize(@stats[:pred_ctg]) + " in predicted proteins")
 		) +
 		content_tag(:tr, 
 			content_tag(:td, @stats[:pred_ctg_unaligned].to_s, :class => "first_col") +

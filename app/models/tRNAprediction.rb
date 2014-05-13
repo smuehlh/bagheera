@@ -113,7 +113,7 @@ class TRNAprediction
 			if is_collect_seq && line.match(/Possible intron/) then 
 				matches = line.match(/(\d+)-(\d+)\s/)
 				intron_start = matches[1].to_i - 1 # convert human to ruby counting
-				intron_stop = matches[2].to_i -1 # convert human to ruby counting
+				intron_stop = matches[2].to_i - 1 # convert human to ruby counting
 			end
 			if is_collect_seq && line.match(/^Seq:/) then 
 				seq = line.match(/Seq: (.*)/)[1]
@@ -147,8 +147,8 @@ class TRNAprediction
 			File.open(@f_seq, 'w') {|f| f.write(fasta)}
 		end
 		return seq, struct, anticodon_pos, score
-	# rescue 
-	# 	throw :problem, "tRNA scan failed."
+	rescue 
+		throw :problem, "tRNA scan failed."
 	end
 
 	# parse seq_id and e-values out of all blasthits
@@ -167,8 +167,8 @@ class TRNAprediction
 
 		return seq_ids, e_values, scores
 
-	# rescue 
-	# 	throw :problem, "tRNA scan failed."
+	rescue 
+		throw :problem, "tRNA scan failed."
 	end
 
 	# parse blast output and writes alignment to file
@@ -220,8 +220,8 @@ class TRNAprediction
 
 		File.open(f_alignment, 'w') { |f| f.write(fasta) }
 		return f_alignment 
-	# rescue 
-	# 	throw :problem, "tRNA scan failed."
+	rescue 
+		throw :problem, "tRNA scan failed."
 	end
 
 	# map blast hits to the closes translation
@@ -242,8 +242,8 @@ class TRNAprediction
 		end
 
 		return res
-	# rescue 
-	# 	throw :problem, "tRNA scan failed."
+	rescue 
+		throw :problem, "tRNA scan failed."
 	end 
 
 	# parse translation of fasta header from reference data

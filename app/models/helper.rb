@@ -106,6 +106,19 @@ module Helper
 		return id
 	end
 
+	# remove all files from specified path
+	# exept files with file_basename allowed_filebasename
+	def clean_up_tmp_dir(base_path, allowed_files)
+		Dir.glob(File.join(base_path, "*")) do |file|
+			if allowed_files.include?(file) then
+				next
+			end
+			if FileTest.file?(file) then 
+				# delete only files, no directories
+				File.delete(file)
+			end
+		end
+	end
 
 	module Sequence
 		extend self

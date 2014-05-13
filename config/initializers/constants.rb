@@ -6,6 +6,8 @@ TRNA_REF_DATA = "tRNAserCAG_wo_intron.fas"
 PATH_REF_WO_EXAMPLE = "without_ca_b/"
 Tmp_path = File.join(Dir::tmpdir, "cug/")
 
+Max_filesize = 26214400 # 25 MB
+
 # FORMATDB = "/usr/bin/formatdb"
 # BLASTALL = "/usr/bin/blastall"
 # FASTACMD = "/usr/bin/fastacmd"

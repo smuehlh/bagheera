@@ -75,6 +75,7 @@
             ).html_safe 
 
             mini_stats_ctg = stats_suggested_transl_as_text( value[:ref_ctg] )
+
         end
     %>
     <%=    
@@ -112,7 +113,11 @@
             if value[:ref_ctg].any? then 
                 content_tag(:h4, "CTG position conservation") + 
                 content_tag(:table, raw(res_table_ctg), :class => "predTable" ) +
-                content_tag(:p, mini_stats_ctg, :class => "highlight_res" )
+                content_tag(:p, mini_stats_ctg, :class => "highlight_res" ) +
+                if value[:no_ref_ctg].any? then 
+                    content_tag(:p, 
+                    "No conserved CTG codons found for " + pluralize(value[:no_ref_ctg].size.to_s, "CTG codon") + " in predicted protein.")
+                end
             end +
 #             if value[:ref_chem].any? || value[:ref_ctg].any? then
 
@@ -121,6 +126,11 @@
 #                 #     content_tag(:p, suggested_transl(value[:ref_chem], value[:ref_ctg]), :class => "highlight_res" )
 #                 # end
 #             end +
+            if value[:pred_ctg_unaligned].any? then 
+                content_tag(:h4, "") +
+                content_tag(:p, pluralize(value[:pred_ctg_unaligned].size.to_s, "CTG codon") + " in predicted protein " + 
+                    "is".pluralize(value[:pred_ctg_unaligned].size) + " not aligned to reference data.")
+            end +
 
             content_tag(:h4, "") +
             content_tag(:p, pluralize(value[:ref_seq_num].to_s, "sequence") << " in reference alignment")

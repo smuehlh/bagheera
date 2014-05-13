@@ -357,6 +357,6 @@ module PredictionsHelper
 
 		return prot
 	end
-	
+
 
 end

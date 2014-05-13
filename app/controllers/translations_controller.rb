@@ -138,7 +138,10 @@ class TranslationsController < ApplicationController
 
 		end
 
-	rescue NoMethodError, TypeError, NameError, RuntimeError, Errno::ENOENT
+	rescue RuntimeError => exp
+		@error = exp.message
+
+	rescue NoMethodError, TypeError, NameError, Errno::ENOENT
 		@error = "An error occured. Cannot check CTG translation in protein."
 
 	ensure

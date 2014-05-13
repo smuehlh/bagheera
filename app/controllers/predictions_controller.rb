@@ -3,8 +3,6 @@ require 'helper.rb'
 
 class PredictionsController < ApplicationController
 
-	MAX_SIZE = 26214400 # 25 MB
-
 	# Render start page for prediction
 	def search
 		prepare_new_session # a fresh session
@@ -37,7 +35,7 @@ class PredictionsController < ApplicationController
 				# genome file uploaded:
 
 				# check file size
-				Helper.filesize_below_limit(params[:uploaded_file], MAX_SIZE)
+				Helper.filesize_below_limit(params[:uploaded_file], Max_filesize)
 
 				# store file in place (i.e. an new folder for this session)
 				Helper.mkdir_or_die( File.join(Tmp_path,id) )
@@ -168,6 +166,10 @@ class PredictionsController < ApplicationController
 
 		require 'open3'
 
+		file_basename = File.dirname(session[:file][:path])
+
+		# remove all files from previous calculations from the session-folder
+		Helper.clean_up_tmp_dir(file_basename, [ session[:file][:path] ])
 
 		# add options to this session
 		ProgCall.set_blast_filtering(true) if params.has_key?(:blast) # use low complexity filter
@@ -190,8 +192,6 @@ class PredictionsController < ApplicationController
 		
 		ref_data = Helper.load_ref_data
 
-		file_basename = File.dirname(session[:file][:path])
-
 		f_stats = File.join(file_basename, "stat")
 
 		# sucessfully loaded reference data file
@@ -204,6 +204,7 @@ class PredictionsController < ApplicationController
 		sorted_ref_prots.push("tRNA")
 
 		results = Parallel.map( sorted_ref_prots ) do |prot|
+		# use :in_processes => 0 for debugging!
 
 			if prot == "tRNA" then 
 				# special execution for tRNA prediction
@@ -271,6 +272,7 @@ class PredictionsController < ApplicationController
 		# convert mapped results to @predicted_prots (accessible in view)
 		@predicted_prots = Hash[results.flatten.each_slice(2).to_a]
 		fix_actin_proteinname
+
 		# delete tRNA key from @predicted_prots
 		@predicted_trna = @predicted_prots.delete("tRNA")
 
@@ -280,7 +282,7 @@ class PredictionsController < ApplicationController
 	rescue RuntimeError => exp
 		@fatal_error = [exp.message]
 
-	rescue NoMethodError, TypeError, NameError, Errno::ENOENT => exp
+	rescue NoMethodError, TypeError, NameError, ArgumentError, Errno::ENOENT => exp
 			@fatal_error = ["Sorry, an error occured. Please contact us."]
 	ensure
 		render :predict_genes, formats: [:js]

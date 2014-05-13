@@ -45,7 +45,6 @@ module WebScipio
 
 	rescue NoMethodError, TypeError, NameError, RuntimeError, Errno::ENOENT, Errno::ETIMEDOUT
 		Helper.raise_runtime_error("An error occured with Webscipio")
-
 	end
 
 	def is_species_valid(species_query)

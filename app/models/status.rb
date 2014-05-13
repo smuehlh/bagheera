@@ -6,8 +6,19 @@ class Status
 	# update data statistics for this query 
 	def self.update(pred_data, stats)
 
-		if pred_data[:pred_prot] then
+		if pred_data[:pred_prot] && ! pred_data[:pred_prot].blank? then
+			# number of proteins with predicted protein sequence
 			stats[:n_prots] += 1
+		end
+
+		if pred_data[:pred_prot] && pred_data[:ctg_pos] && pred_data[:ctg_pos].empty? then 
+			# number of proteins without any ctg
+			stats[:n_prots_wo_ctg] += 1
+		end
+
+		if pred_data[:ref_species] then
+			# one more protein was tested
+			stats[:total_n_prots] += 1
 		end
 
 		if pred_data[:ctg_pos] then
