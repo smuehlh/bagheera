@@ -27,9 +27,13 @@ if ENV && ENV["PWD"] && (ENV["PWD"].include?("fab8") || ENV["PWD"].include?("jen
         LUCULLUS_URL = "http://fab8:8080/tpl_os"
         GBLOCKS = "/usr/local/Gblocks_0.91b/Gblocks"
         New_blast_path = "/usr/local/ncbi_2.2.28+/bin"
+		Webscipio_server = "www.webscipio.org"
+		Webscipio_port = "80"
 else
         LUCULLUS_URL = "http://www.motorprotein.de/tpl_os"
         GBLOCKS = "/usr/local/bin/Gblocks_0.91b/Gblocks"
         New_blast_path = "/usr/local/ncbi-blast-2.2.28+/bin"
+    	Webscipio_server = "localhost"
+		Webscipio_port = "3000"
 end
         

@@ -5,8 +5,6 @@ module WebScipio
 	require "uri"
 	require 'yaml'
 
-	Webscipio_server = "www.webscipio.org"
-	Webscipio_port = "80"
 	Scipio_default_params = {:blattile => 7, :minid => 90, :maxmis => 7, :min_score => 0.3, :exhaust_align_size => 15000}
 	Scipio_less_stringent_params = {:blattile => 7, :minid => 30, :maxmis => 0, :min_score => 0.1, :exhaust_align_size => 15000}
 
