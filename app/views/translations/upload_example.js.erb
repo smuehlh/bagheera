@@ -1,0 +1,21 @@
+hide_show_waiting('hide');
+$('#<%=@textarea_id%>').val('<%= raw(@sequence) %>');
+$('#results_section').show();
+$('#results_section').html("Start translation first.");
+<% if @is_mrna then %>
+    $('#mrna_button').removeAttr('disabled');
+    // this sets the selected code to the one matching the example; the user should not be able to change this
+    $('#codonusage').val("L");
+    $('#codonusage').attr('disabled', 'disabled');
+
+    // disable other submit
+	$('#protein_button').attr('disabled', 'disabled');
+<% else %>
+	$('#protein_button').removeAttr('disabled');
+	// this sets the selected species to the one matching the example; the user should not be able to change this
+	$('#species').val("Saccharomyces cerevisiae S288c");
+	$('#species').attr('disabled', 'disabled');
+
+	// disable other submit
+    $('#mrna_button').attr('disabled', 'disabled');
+<% end %>

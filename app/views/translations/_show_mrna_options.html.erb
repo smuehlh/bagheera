@@ -5,6 +5,18 @@
 	form_tag(transl_mrna_path, :remote => true) do
 		text_area_tag(:mrna_seq, nil, placeholder: "Enter mRNA sequence", size: "50x10"
 		) +
+		tag(:br) +
+		content_tag(:small, 
+			"or ".html_safe +
+			link_to("load example", 
+				upload_example_path( is_mrna: true, textarea_id: "mrna_seq" ),
+				remote: true, 
+				onclick: "hide_show_waiting('show');",
+				style: "text-decoration: underline;",
+				method: :get
+			)
+		) +
+		tag(:br) +
 		content_tag(:table, :class => "param_table") do
 			# content_tag(:tr) do
 			# 	content_tag(:td, label_tag(:std, "Standard codon usage") ) +

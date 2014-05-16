@@ -5,6 +5,18 @@
 	form_tag(transl_protein_path, :remote => true) do
 		text_area_tag(:protein_seq, nil, placeholder: "Enter protein sequence", size: "50x10"
 		) +
+		tag(:br) +
+		content_tag(:small, 
+			"or ".html_safe +
+			link_to("load example", 
+				upload_example_path( is_protein: true, textarea_id: "protein_seq" ),
+				remote: true, 
+				onclick: "hide_show_waiting('show');",
+				style: "text-decoration: underline;",
+				method: :get
+			)
+		) +
+		tag(:br) +
 		content_tag(:table, :class => "param_table") do
 			content_tag(:tr) do 
 				content_tag(:td, "Reference species for gene prediction (WebScipio)") + 

@@ -19,6 +19,7 @@ Bagheera::Application.routes.draw do
     match 'transl_mrna', to: 'translations#transl_mrna', as: 'transl_mrna', :via => [:post]
     match 'transl_protein', to: 'translations#transl_protein', as: 'transl_protein', :via => [:post]
     match 'download_seq', to: 'translations#download', as: 'download_seq', :via => [:get]
+    match 'upload_example', to: 'translations#upload_example', as: 'upload_example', :via => [:get]
 
     # match 'read_status', to: 'predictions#read_status', as: 'read_status', :via => [:get]
   else
@@ -43,6 +44,7 @@ Bagheera::Application.routes.draw do
       match 'transl_mrna', to: 'translations#transl_mrna', as: 'transl_mrna', :via => [:post]
       match 'transl_protein', to: 'translations#transl_protein', as: 'transl_protein', :via => [:post]
       match 'download_seq', to: 'translations#download', as: 'download_seq', :via => [:get]
+      match 'upload_example', to: 'translations#upload_example', as: 'upload_example', :via => [:get]
     end
   end
 
