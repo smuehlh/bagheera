@@ -2,7 +2,7 @@
 <%= 
 	content_tag(:p, 
 		"Reverse translate protein into mRNA sequence. Via a gene prediction of the given protein sequence in the selected genome, the coding sequence is obtained. This sequence is then used to check if CTG codons are correctly translated in the input protein sequence.") +
-	form_tag(transl_protein_path, :remote => true) do
+	form_tag(transl_protein_path, :remote => true, :id => "form_transl_protein") do
 		text_area_tag(:protein_seq, nil, placeholder: "Enter protein sequence", size: "50x10"
 		) +
 		tag(:br) +
@@ -34,6 +34,9 @@
 					)
 			end
 		end + 
+		hidden_field_tag(:species_param, 
+			value: preselected_species,
+		) +
 		submit_tag("Translate",
 			:id => "protein_button",
 			onclick: "hide_show_waiting('show');",

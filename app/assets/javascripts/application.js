@@ -224,6 +224,14 @@ function toggle_mrna_seq_button(field_id) {
         $('#codonusage').attr('disabled', 'disabled');
     }
 };
+// toggles translation-check protein buttons enabled in last instance
+// this is necessary as params of disabled selects are not submitted!
+$(document).ready(function(){
+    $('#form_transl_protein').bind('submit', function(){
+        $(this).find(':input').removeAttr('disabled');
+    });
+});
+
 
 function toggle_icon(img, div, mode) {
     // if(!mode) mode = 'block';
