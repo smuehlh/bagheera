@@ -11,8 +11,12 @@ class Status
 			stats[:n_prots] += 1
 		end
 
-		if pred_data[:pred_prot] && pred_data[:ctg_pos] && pred_data[:ctg_pos].empty? then 
-			# number of proteins without any ctg
+		# if pred_data[:pred_prot] && pred_data[:ctg_pos] && pred_data[:ctg_pos].empty? then 
+		# 	# number of proteins without any ctg
+		# 	stats[:n_prots_wo_ctg] += 1
+		# end
+
+		if pred_data[:pred_prot] && pred_data[:no_pred_ctg] then 
 			stats[:n_prots_wo_ctg] += 1
 		end
 

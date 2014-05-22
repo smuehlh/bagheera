@@ -226,7 +226,7 @@ class Prediction
 	end
 
 	def compare_pred_ref
-		results = {ctg_pos: [], ref_chem: {}, ref_ctg: {}, pred_ctg_unaligned: [], no_ref_ctg: []}
+		results = {ctg_pos: [], ref_chem: {}, ref_ctg: {}, pred_ctg_unaligned: [], no_ref_ctg: [], no_pred_ctg: ""}
 		headers, seqs = Helper::Sequence.fasta2str(File.read(@f_align))
 		pred_seq_aligned = seqs[-1]
 		codons = pred_dnaseq.scan(/.{1,3}/)
@@ -235,6 +235,7 @@ class Prediction
 		results[:pred_prot] = pred_seq_aligned.gsub("-", "")
 		# has predicted protein CTG codon(s)?
 		if ctg_pos.empty? then
+			# results[:no_pred_ctg] must be set in save method!
 			Helper.worked_or_throw_error(false, "No CTG in predicted gene")
 		end
 		results[:ref_seq_num] = @protein.ref_alignment.keys.size # total number of reference sequences
@@ -446,6 +447,12 @@ class Prediction
 
 		if @pred_cug then
 			results.merge!(@pred_cug)
+		end
+
+		if @err_msg == "No CTG in predicted gene" then 
+			results[:no_pred_ctg] = true
+		else
+			results[:no_pred_ctg] = false
 		end
 	end
 

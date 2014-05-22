@@ -234,7 +234,7 @@ class PredictionsController < ApplicationController
 					pred_prot: "", 
 					n_hits: "", hit_shown: "", 
 					message: [], 
-					ctg_pos: [], pred_ctg_unaligned: [], no_ref_ctg: [],
+					ctg_pos: [], no_pred_ctg: false, pred_ctg_unaligned: [], no_ref_ctg: [],
 					ref_chem: {}, ref_ctg: {}
 				}
 				
@@ -356,7 +356,7 @@ class PredictionsController < ApplicationController
 				pred_prot: "", 
 				n_hits: "", hit_shown: "", 
 				message: [], 
-				ctg_pos: [], pred_ctg_unaligned: [], no_ref_ctg: [],
+				ctg_pos: [], no_pred_ctg: false, pred_ctg_unaligned: [], no_ref_ctg: [],
 				ref_chem: {}, ref_ctg: {}
 			}
 
