@@ -1,14 +1,22 @@
 <%= provide(:title, 'Home') %>
 <%= content_tag(:h1, "Welcome to Bagheera") %>
 <p>
+	If you use Bagheera, please cite <b>M&#252;hlhausen S and Kollmar M (2014) </b> <%=link_to "Predicting the fungal CUG codon translation with Bagheera","http://www.biomedcentral.com/1471-2164/15/411", :class => "external", :target => "_blank"%> <i>BMC Genomics 2014, <b>15</b>:411</i>
+</p>
+<p>
+	If you are interested in the background of yeast CTG codon usage you might be interested in reading <b>M&#252;hlhausen S and Kollmar M (2014) </b> <%=link_to "Molecular Phylogeny of Sequenced Saccharomycetes Reveals Polyphyly of the Alternative Yeast Codon Usage","http://gbe.oxfordjournals.org/content/early/2014/07/16/gbe.evu152.abstract", :class => "external", :target => "_blank"%> <i>Genome Biol Evol (2014)</i>
+</p>
+<%= content_tag(:h2, "Scope of Bagheera") %>
+<p>
 	The translation of DNA into protein is not same for all organisms. Some yeast uses an alternative translation of the leucine codon CUG. In the <i>Schizosaccharomyces</i> and the <i>Saccharomyces</i> clades CUG is translated as leucine, while species of the “<i>Candida</i> clade” translate CUG as serine.
 </p>
 <p>
-	Species names are not sufficient to assign the correct translation scheme. In detail, some species with telemorph or anamorph named <i>Candida</i> translate CUG as leucine.
+	Species names are not sufficient to assign the correct translation scheme. In detail, some species with telemorph or anamorph named <i>Candida</i> translate CUG as leucine. In the figure, all species with telemorph or anamorph named <i>Candida</i> are highlighted in bold.
 </p>
-<%#= image_tag("help/startpage.png", :alt=>"phylogenetic net", :width=> "700px") %>
 <p>
 	This webserver is designed to detect the most probable translation scheme of a given species.
 </p>
+<%= image_tag("help/startpage.png", :alt=>"phylogenetic net", :width=> "700px", :class => "img_startpage") %>
+
 <%= content_tag(:h2, "Restrictions and Licence") %>
 Using Bagheera by non-academics requires permission. The source code of a command-line version of Bagheera can be obtained upon request and used under a GNU Creative Commons License.
