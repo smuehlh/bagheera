@@ -10,7 +10,7 @@ group :development, :test do
   gem 'rspec-rails', '2.11.0' # test evironment
   gem 'guard-rspec', '1.2.1' # listen changes
   gem 'guard-spork', '0.3.2'
-  gem 'spork', '0.9.2' # preload rails environment 
+  gem 'spork', '0.9.2' # preload rails environment
   gem "yard"
   gem "redcarpet"   # for yard to process .md files
   gem "rails_best_practices"

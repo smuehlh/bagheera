@@ -17,7 +17,7 @@ Dir[File.join(File.dirname(__FILE__), 'update_ref_fab8_lib', '*.rb')].each {|fil
 Path = "/tmp/new_cug"
 Json = "alignment_gene_structure.json"
 tmp_path_new_data = ""
-final_pathes_new_data = ["/fab8/server/bagheera/db/ref_data/protein", 
+final_pathes_new_data = [ "/fab8/server/bagheera/db/ref_data/protein",
 	"/fab8/smuehlh/rails_projects/bagheera/db/ref_data/protein"]
 subfolder = "without_ca_b" # should be expanded to tmp_path_new_data
 
@@ -67,7 +67,7 @@ end
 def validate_save_alignment_and_precalc_profile(ref_data_obj, prot, prot_obj, tmp_path)
 	# 1) adapt alignments: ensure same lenght of all seqs and remove common gaps
 	prot_obj.ensure_same_length
-	prot_obj.remove_common_gaps
+	prot_obj.remove_common_gaps 
 
 	# 2) save alignments to file and to reference data
 

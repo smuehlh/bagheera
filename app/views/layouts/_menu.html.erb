@@ -7,7 +7,7 @@
     <li<%=raw(selected)%>><%= link_to "Prediction", prediction_path %></li>
 
     <% if controller.action_name == "start" then selected = " class='selected'" else selected = "" end%>
-    <li<%=raw(selected)%>><%= link_to "Translation", translation_path %></li>  
+    <li<%=raw(selected)%>><%= link_to "Translation", translation_path %></li>
 
     <% if controller.action_name == "specieslist" then selected = " class='selected'" else selected = "" end%>
     <li<%=raw(selected)%>><%= link_to "Species List", specieslist_path %></li>
