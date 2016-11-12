@@ -1,9 +1,0 @@
-Spider mode enabled. Check if remote file exists.
---2014-05-24 10:44:04--  http://fab8:2001/api_cug_alignment/all
-Resolving fab8 (fab8)... 127.0.1.1
-Connecting to fab8 (fab8)|127.0.1.1|:2001... connected.
-HTTP request sent, awaiting response... 200 OK
-Length: 4 [text/html]
-Remote file exists and could contain further links,
-but recursion is disabled -- not retrieving.
-
