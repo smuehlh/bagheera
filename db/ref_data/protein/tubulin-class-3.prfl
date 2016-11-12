@@ -9,7 +9,7 @@ unknown
 [block]
 # block no. 0 follows, 81 sequences, length 31
 # corresponding to MSA columns:
-# 98-100,102-117,119-123,126-132
+# 3-33
 name=unknown_A
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -54,7 +54,7 @@ name=unknown_A
 [block]
 # block no. 1 follows, 81 sequences, length 11
 # corresponding to MSA columns:
-# 224-234
+# 80-90
 name=unknown_B
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -79,7 +79,7 @@ name=unknown_B
 [block]
 # block no. 2 follows, 81 sequences, length 17
 # corresponding to MSA columns:
-# 324-340
+# 92-108
 name=unknown_C
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -110,7 +110,7 @@ name=unknown_C
 [block]
 # block no. 3 follows, 81 sequences, length 6
 # corresponding to MSA columns:
-# 346-351
+# 112-117
 name=unknown_D
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -130,7 +130,7 @@ name=unknown_D
 [block]
 # block no. 4 follows, 81 sequences, length 25
 # corresponding to MSA columns:
-# 519-530,545-556,619
+# 121-145
 name=unknown_E
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -169,7 +169,7 @@ name=unknown_E
 [block]
 # block no. 5 follows, 81 sequences, length 13
 # corresponding to MSA columns:
-# 719-731
+# 199-211
 name=unknown_F
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -196,7 +196,7 @@ name=unknown_F
 [block]
 # block no. 6 follows, 81 sequences, length 44
 # corresponding to MSA columns:
-# 738,739,749-767,779-784,787-803
+# 218-261
 name=unknown_G
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -254,7 +254,7 @@ name=unknown_G
 [block]
 # block no. 7 follows, 81 sequences, length 52
 # corresponding to MSA columns:
-# 892-907,956-968,987-1009
+# 282-333
 name=unknown_H
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -320,7 +320,7 @@ name=unknown_H
 [block]
 # block no. 8 follows, 81 sequences, length 22
 # corresponding to MSA columns:
-# 1061-1082
+# 353-374
 name=unknown_I
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -356,7 +356,7 @@ name=unknown_I
 [block]
 # block no. 9 follows, 81 sequences, length 11
 # corresponding to MSA columns:
-# 1180-1190
+# 387-397
 name=unknown_J
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -381,7 +381,7 @@ name=unknown_J
 [block]
 # block no. 10 follows, 81 sequences, length 6
 # corresponding to MSA columns:
-# 1200-1205
+# 407-412
 name=unknown_K
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -401,7 +401,7 @@ name=unknown_K
 [block]
 # block no. 11 follows, 81 sequences, length 6
 # corresponding to MSA columns:
-# 1225-1230
+# 422-427
 name=unknown_L
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -421,7 +421,7 @@ name=unknown_L
 [block]
 # block no. 12 follows, 81 sequences, length 6
 # corresponding to MSA columns:
-# 1290-1295
+# 436-441
 name=unknown_M
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -441,7 +441,7 @@ name=unknown_M
 [block]
 # block no. 13 follows, 81 sequences, length 39
 # corresponding to MSA columns:
-# 1368-1377,1391-1410,1415-1423
+# 488-526
 name=unknown_N
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -494,7 +494,7 @@ name=unknown_N
 [block]
 # block no. 14 follows, 81 sequences, length 28
 # corresponding to MSA columns:
-# 1439-1466
+# 542-569
 name=unknown_O
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>

@@ -8,7 +8,7 @@ class ReferenceData
 
 	# separate by class & delete unseparated data & store back in ref_data
 	def split_prot_into_classes(prot)
-		prot_fam_obj = ProteinFamily.new(prot,@data[prot])	
+		prot_fam_obj = ProteinFamily.new(prot,@data[prot])
 
 		# first: delete unseparated data
 		del_prot(prot)
@@ -63,6 +63,23 @@ class ReferenceData
 		@data.delete(key)
 	end
 
+	def del_species(species)
+		@data.each do |prot, prot_data|
+			prot_fam_obj = ProteinFamily.new(prot, prot_data)
+			# delete unwanted species
+			prot_fam_obj.ref_alignment.delete_if{|k,v| k =~ /^#{species}[A-Z]/}
+			prot_fam_obj.ref_genes.delete_if{|k,v| k =~ /^#{species}[A-Z]/}
+
+			# save data back into @data
+			@data[prot]["alignment"] = ""
+			prot_fam_obj.ref_alignment.each do |header, seq|
+				fasta = Helper::Sequence.str2fasta(header, seq) + "\n"
+				@data[prot]["alignment"] += fasta
+			end
+			@data[prot]["genes"] = prot_fam_obj.ref_genes
+		end
+	end
+
 	def update_alignment(key, fasta_hash)
 		@data[key]["alignment"] = fasta_hash.map{|k,v| ">#{k}\n#{v}"}.join("\n") + "\n"
 	end
@@ -72,12 +89,12 @@ class ReferenceData
 	end
 
 	def create_protfam_obj(key)
-		obj = ProteinFamily.new(key,@data[key])	
+		obj = ProteinFamily.new(key,@data[key])
 	end
 
 	def load_ref_data
 		Helper.file_exist_or_die(@path)
-		return JSON.load(File.read(@path)) 
+		return JSON.load(File.read(@path))
 	end
 
 	def save_ref_data(this_path=@path)

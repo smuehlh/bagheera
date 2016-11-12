@@ -9,7 +9,7 @@ unknown
 [block]
 # block no. 0 follows, 26 sequences, length 24
 # corresponding to MSA columns:
-# 221-244
+# 11-34
 name=unknown_A
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
@@ -47,7 +47,7 @@ name=unknown_A
 [block]
 # block no. 1 follows, 26 sequences, length 58
 # corresponding to MSA columns:
-# 251-257,283-291,293-299,324-330,334-352,356-364
+# 36-93
 name=unknown_B
 #
 # <colnr> <probs for GDERKNQSTAVLIFYWHMCP>
