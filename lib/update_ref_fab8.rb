@@ -26,7 +26,7 @@ if File.writable?(Path) then
 	tmp_path_new_data = Path
 else
 	# a fresh dir under /tmp should be writable!
-	tmp_path_new_data = "/tmp/new_cug2" 
+	tmp_path_new_data = "/tmp/new_cug2"
 	Helper.mkdir_or_die(tmp_path_new_data)
 end
 Helper.mkdir_or_die( File.join(tmp_path_new_data, subfolder) )
@@ -41,15 +41,16 @@ path_to_native_json = File.join(Path, Json) # this comes directly from cymo-API
 path_to_revised_json = File.join(tmp_path_new_data, Json) # this is the revised json (adapted to actual needs ... )
 
 ### details about how to handle protein families
-Del_unusual_prots = ["Calcineurin", "Calmodulin", "Centrin", "Frequenin", 
+Del_unusual_prots = ["Calcineurin", "Calmodulin", "Centrin", "Frequenin",
 	"Dynein Light Intermediate Chain",
 	"Myosin heavy chain", "Myosin essential light chain", "Myosin regulatory light chain", "Myosin heavy chain Class 17",
 	"Kinesin", "Kinesin Class 4", "Kinesin Class 16"]
+Del_species_with_too_few_prots = ["Oap", "Ke", "Sse", "Su", "Km", "Lak_b", "Suv", "Sc_an", "Sc_aq", "Sc_al", "Sc_am"]
 Split_prot_families = ["Myosin heavy chain", "Actin related protein", "Kinesin", "Tubulin", "Capping Protein"]
-Split_prot_abbrs = { "Myosin heavy chain" => "Myo", 
-	"Actin related protein" => "Arp", 
-	"Kinesin" => "Kinesin", 
-	"Tubulin" => "Tub", 
+Split_prot_abbrs = { "Myosin heavy chain" => "Myo",
+	"Actin related protein" => "Arp",
+	"Kinesin" => "Kinesin",
+	"Tubulin" => "Tub",
 	"Capping Protein" => "CAP" }
 
 
@@ -67,11 +68,11 @@ end
 def validate_save_alignment_and_precalc_profile(ref_data_obj, prot, prot_obj, tmp_path)
 	# 1) adapt alignments: ensure same lenght of all seqs and remove common gaps
 	prot_obj.ensure_same_length
-	prot_obj.remove_common_gaps 
+	prot_obj.remove_common_gaps
 
 	# 2) save alignments to file and to reference data
 
-	f_out = File.join(tmp_path, "#{prot_obj.prot_filesave_name}.fasta")	
+	f_out = File.join(tmp_path, "#{prot_obj.prot_filesave_name}.fasta")
 	Helper::Sequence.save_alignment(f_out, prot_obj.ref_alignment)
 	ref_data_obj.update_alignment(prot, prot_obj.ref_alignment)
 	ref_data_obj.update_genes(prot, prot_obj.ref_genes)
@@ -107,9 +108,13 @@ Split_prot_families.each do |fam|
 	ref_data_obj.split_prot_into_classes(fam)
 end
 
-# delete unusual proteins 
-Del_unusual_prots.each do |prot| 
+# delete unusual proteins
+Del_unusual_prots.each do |prot|
 	ref_data_obj.del_prot(prot)
+end
+# delete species with too few proteins
+Del_species_with_too_few_prots.each do |sp|
+	ref_data_obj.del_species(sp)
 end
 ref_data_obj.save_ref_data(path_to_revised_json)
 
